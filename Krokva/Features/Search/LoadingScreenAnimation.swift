@@ -1,330 +1,393 @@
 import SwiftUI
+import MapKit
 
-// MARK: - LoadingScreenAnimation (Civic Modernist)
+// MARK: - LoadingScreenAnimation
 //
-// Blueprint-inspired loading screen shown while a dossier is being fetched.
-// It communicates the real shape of the fetch: normalize address, locate the
-// property record, then assemble assessment, permit, emergency, health,
-// infrastructure, map, and comparable datasets.
+// Fullscreen overlay while a report fetches.
+// Layout:
+//   • Brand header + live dot
+//   • Address chip (typewriter on appear)
+//   • Map hero — slowly zooms in; current-stage icon floats center
+//   • Sliding step window — old rows exit upward, new ones enter from below
+//   • Subtle progress bar
 
 struct LoadingScreenAnimation: View {
     let addressText: String
     var cityName: String = "Winnipeg, MB"
-    var stage: DossierLoadingStage = .normalizing
+    var stage: ReportLoadingStage = .normalizing
+    var onCancel: (() -> Void)? = nil
 
-    @State private var gridOpacity: CGFloat = 0
-    @State private var cornerTicks: CGFloat = 0
-    @State private var propertyBox: CGFloat = 0
-    @State private var pinScale: CGFloat = 0
-    @State private var pinOpacity: CGFloat = 0
-    @State private var addressTyped: Int = 0
-    @State private var statusPulse: CGFloat = 0.55
-    @State private var scanOffset: CGFloat = -120
+    @State private var addressTyped = 0
+    @State private var liveDot = false
+    @State private var iconScale: CGFloat = 0.8
+    @State private var displayProgress: Double = 0   // smoothly eased 0...1
+    @State private var targetProgress: Double = 0
+    @State private var progressTimer: Timer?
+    @State private var mapPosition: MapCameraPosition = .region(
+        MKCoordinateRegion(
+            center: CLLocationCoordinate2D(latitude: 49.8951, longitude: -97.1384),
+            span: MKCoordinateSpan(latitudeDelta: 0.06, longitudeDelta: 0.06)
+        )
+    )
+    private let fallbackCoord = CLLocationCoordinate2D(latitude: 49.8951, longitude: -97.1384)
 
-    private var activeStage: LoadingDataStage {
-        stage.data
+    private var idx: Int { stage.rawValue }
+    private var active: LoadingDataStage { stage.data }
+
+    // Sliding window: one completed behind + current + two upcoming
+    private var visibleIndices: [Int] {
+        let start = max(0, idx - 1)
+        let end = min(loadingStages.count, start + 4)
+        return Array(start..<end)
     }
-
-    private var currentStageIndex: Int { stage.rawValue }
 
     var body: some View {
         ZStack {
-            Color.krokvaPaper.ignoresSafeArea()
+            Color.cleanBg.ignoresSafeArea()
 
             VStack(spacing: 0) {
-                headerBar
-                    .padding(.top, 6)
-
-                GeometryReader { geo in
-                    ZStack {
-                        blueprintGrid
-                            .opacity(gridOpacity)
-
-                        scanningLine(height: geo.size.height)
-
-                        ScrollView {
-                            VStack(alignment: .leading, spacing: 18) {
-                                Spacer(minLength: 28)
-
-                                HStack(alignment: .center, spacing: 18) {
-                                    propertyBlueprint
-                                    VStack(alignment: .leading, spacing: 8) {
-                                        Text("Building municipal record")
-                                            .eyebrow(color: Color.krokvaInk3)
-                                        Text(String(addressText.prefix(addressTyped)))
-                                            .font(.system(size: 19, weight: .bold))
-                                            .foregroundStyle(Color.krokvaInk)
-                                            .lineLimit(2)
-                                            .fixedSize(horizontal: false, vertical: true)
-                                            .frame(minHeight: 48, alignment: .topLeading)
-                                        cityChip
-                                    }
-                                }
-
-                                currentWorkPanel
-
-                                datasetPanel
-
-                                Text("Open data can respond at different speeds. The app keeps checking each source until the dossier is ready.")
-                                    .font(KrokvaTypography.caption)
-                                    .foregroundStyle(Color.krokvaInk3)
-                                    .multilineTextAlignment(.leading)
-                                    .opacity(statusPulse)
-                                    .padding(.top, 2)
-
-                                Spacer(minLength: 28)
-                            }
-                            .padding(.horizontal, 20)
-                            .frame(minHeight: geo.size.height)
+                header
+                ScrollView(showsIndicators: false) {
+                    VStack(spacing: 24) {
+                        addressChip
+                            .padding(.top, 4)
+                        mapHero
+                        stepTimeline
+                        progressBar
+                        if onCancel != nil {
+                            cancelButton
                         }
-                        .scrollIndicators(.hidden)
+                        Spacer(minLength: 0)
+                            .frame(height: 32)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 16)
+                }
+            }
+        }
+        .onAppear { startAnimations() }
+        .onDisappear {
+            progressTimer?.invalidate()
+            progressTimer = nil
+        }
+        .onChange(of: stage) { _, newStage in
+            targetProgress = Double(newStage.rawValue + 1) / Double(loadingStages.count)
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) {
+                iconScale = 0.7
+            }
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.72).delay(0.08)) {
+                iconScale = 1.0
+            }
+        }
+    }
+
+    // MARK: Header
+
+    private var header: some View {
+        HStack(spacing: 6) {
+            Circle()
+                .fill(Color.cleanSky)
+                .frame(width: 6, height: 6)
+                .scaleEffect(liveDot ? 1.0 : 0.55)
+                .opacity(liveDot ? 1.0 : 0.35)
+            Text("LOADING")
+                .font(.system(size: 10, weight: .heavy))
+                .tracking(1.6)
+                .foregroundStyle(Color.cleanLabel3)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 20)
+        .padding(.bottom, 8)
+        .background(Color.cleanBg)
+    }
+
+    // MARK: Address chip
+
+    private var addressChip: some View {
+        HStack(spacing: 10) {
+            Circle()
+                .fill(Color.cleanGreen)
+                .frame(width: 8, height: 8)
+            Text(String(addressText.prefix(addressTyped)))
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.cleanLabel)
+                .lineLimit(1)
+                .animation(nil, value: addressTyped)
+            if addressTyped < addressText.count {
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(Color.cleanSky)
+                    .frame(width: 2, height: 15)
+                    .opacity(liveDot ? 1 : 0.2)
+            }
+            Spacer(minLength: 0)
+            Text(cityName)
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color.cleanLabel3)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .background(Color.cleanCard, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+        .shadow(color: .black.opacity(0.05), radius: 6, x: 0, y: 1)
+    }
+
+    // MARK: Map hero
+
+    private var mapHero: some View {
+        ZStack {
+            Map(position: $mapPosition)
+                .mapStyle(.standard(elevation: .flat, emphasis: .muted, pointsOfInterest: .excludingAll, showsTraffic: false))
+                .mapControls {}
+                .disabled(true)
+                .allowsHitTesting(false)
+
+            // Stage icon — frosted ring + solid disk
+            ZStack {
+                Circle()
+                    .fill(.ultraThinMaterial)
+                    .frame(width: 68, height: 68)
+                Circle()
+                    .fill(Color.cleanSky)
+                    .frame(width: 54, height: 54)
+                    .shadow(color: Color.cleanSky.opacity(0.42), radius: 16, x: 0, y: 4)
+                Image(systemName: active.systemImage)
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundStyle(.white)
+                    .scaleEffect(iconScale)
+                    .contentTransition(.symbolEffect(.replace))
+            }
+        }
+        .frame(height: 210)
+        .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .shadow(color: .black.opacity(0.08), radius: 12, x: 0, y: 3)
+    }
+
+    // MARK: Step timeline — sliding window
+
+    private var stepTimeline: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(visibleIndices.enumerated()), id: \.element) { pos, i in
+                stepRow(index: i)
+                    .transition(.asymmetric(
+                        insertion: .move(edge: .bottom).combined(with: .opacity),
+                        removal: .move(edge: .top).combined(with: .opacity)
+                    ))
+                if pos < visibleIndices.count - 1 {
+                    Divider()
+                        .padding(.leading, 62)
+                        .foregroundStyle(Color.cleanSep)
+                        .transition(.opacity)
+                }
+            }
+        }
+        .animation(.spring(response: 0.45, dampingFraction: 0.82), value: idx)
+        .background(Color.cleanCard)
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(color: .black.opacity(0.05), radius: 8, x: 0, y: 2)
+    }
+
+    @ViewBuilder
+    private func stepRow(index: Int) -> some View {
+        let isComplete = index < idx
+        let isCurrent = index == idx
+        let stage = loadingStages[index]
+
+        HStack(spacing: 14) {
+            // Icon circle
+            ZStack {
+                Circle()
+                    .fill(isComplete ? Color.cleanSky : isCurrent ? Color.cleanSky.opacity(0.12) : Color.cleanBg)
+                    .frame(width: 32, height: 32)
+                if isComplete {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 12, weight: .heavy))
+                        .foregroundStyle(.white)
+                        .transition(.scale.combined(with: .opacity))
+                } else {
+                    Image(systemName: stage.systemImage)
+                        .font(.system(size: 12, weight: isCurrent ? .bold : .regular))
+                        .foregroundStyle(isCurrent ? Color.cleanSky : Color.cleanLabel3)
+                }
+            }
+            .animation(.spring(response: 0.35, dampingFraction: 0.7), value: isComplete)
+
+            // Text
+            VStack(alignment: .leading, spacing: 2) {
+                Text(stage.title)
+                    .font(.system(size: 14, weight: isCurrent ? .semibold : isComplete ? .medium : .regular))
+                    .foregroundStyle(isCurrent ? Color.cleanLabel : isComplete ? Color.cleanLabel : Color.cleanLabel3)
+                    .lineLimit(1)
+                if isCurrent {
+                    Text(stage.detail)
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.cleanLabel2)
+                        .lineLimit(2)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
+            .animation(.spring(response: 0.4, dampingFraction: 0.8), value: isCurrent)
+
+            Spacer(minLength: 0)
+
+            // Status badge
+            if isComplete {
+                Text("Done")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(Color.cleanGreen)
+                    .transition(.scale(scale: 0.7).combined(with: .opacity))
+            } else if isCurrent {
+                LoadingDots()
+            }
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, isCurrent ? 14 : 11)
+        .background(isCurrent ? Color.cleanSkyWash : Color.clear)
+        .animation(.easeInOut(duration: 0.2), value: isCurrent)
+    }
+
+    // MARK: Progress bar
+
+    private var progressBar: some View {
+        VStack(spacing: 8) {
+            GeometryReader { geo in
+                ZStack(alignment: .leading) {
+                    Capsule()
+                        .fill(Color.cleanTrack)
+                    Capsule()
+                        .fill(
+                            LinearGradient(
+                                colors: [.cleanSky, .cleanIndigo],
+                                startPoint: .leading, endPoint: .trailing
+                            )
+                        )
+                        .frame(width: geo.size.width * CGFloat(displayProgress))
+                        .animation(.linear(duration: 0.02), value: displayProgress)
+                }
+            }
+            .frame(height: 5)
+
+            HStack {
+                Text("\(idx + 1) of \(loadingStages.count) checks")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.cleanLabel3)
+                Spacer()
+                Text("\(Int((displayProgress * 100).rounded()))%")
+                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                    .foregroundStyle(Color.cleanSky)
+            }
+        }
+    }
+
+    // MARK: Cancel button
+
+    private var cancelButton: some View {
+        Button {
+            onCancel?()
+        } label: {
+            HStack(spacing: 8) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .bold))
+                Text("Cancel")
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .foregroundStyle(Color.cleanLabel2)
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 14)
+            .background(Color.cleanCard, in: Capsule())
+            .overlay(Capsule().stroke(Color.cleanSep, lineWidth: 1))
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 4)
+    }
+
+    // MARK: Animations
+
+    private func startAnimations() {
+        withAnimation(.easeInOut(duration: 0.7).repeatForever(autoreverses: true)) {
+            liveDot = true
+        }
+        withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+            iconScale = 1.0
+        }
+
+        // Typewriter
+        let count = addressText.count
+        guard count > 0 else { addressTyped = count; return }
+        let delay = min(0.04, 0.9 / Double(count))
+        for i in 1...count {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2 + Double(i) * delay) {
+                addressTyped = i
+            }
+        }
+
+        // Smoothly ease the progress bar / percentage toward the current stage
+        // target so it glides between values instead of jumping in 10% steps.
+        targetProgress = Double(idx + 1) / Double(loadingStages.count)
+        progressTimer?.invalidate()
+        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.02, repeats: true) { _ in
+            let diff = targetProgress - displayProgress
+            if diff > 0.0001 {
+                // Asymptotic ease-out with a small floor so the number keeps
+                // ticking even as it approaches the target; never overshoot it.
+                let step = max(0.0007, diff * 0.05)
+                displayProgress = min(targetProgress, displayProgress + step)
+            } else if diff < 0 {
+                displayProgress = targetProgress
+            }
+        }
+
+        // Geocode address then start map zoom animation at the real location
+        geocodeAndAnimate()
+    }
+
+    private func geocodeAndAnimate() {
+        CLGeocoder().geocodeAddressString("\(addressText), \(cityName)") { placemarks, _ in
+            let coord = placemarks?.first?.location?.coordinate ?? fallbackCoord
+            DispatchQueue.main.async {
+                mapPosition = .region(MKCoordinateRegion(
+                    center: coord,
+                    span: MKCoordinateSpan(latitudeDelta: 0.06, longitudeDelta: 0.06)
+                ))
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                    withAnimation(.easeInOut(duration: 9).repeatForever(autoreverses: true)) {
+                        mapPosition = .region(MKCoordinateRegion(
+                            center: coord,
+                            span: MKCoordinateSpan(latitudeDelta: 0.007, longitudeDelta: 0.007)
+                        ))
                     }
                 }
             }
         }
-        .onAppear { playAnimation() }
     }
+}
 
-    private var headerBar: some View {
-        HStack {
-            BrandMarkView(color: .krokvaNavy, lineWidth: 2.3)
-                .frame(width: 20, height: 20)
+// MARK: - Animated loading dots
 
-            Text("Krokva")
-                .font(KrokvaTypography.wordmark)
-                .foregroundStyle(Color.krokvaNavy)
+private struct LoadingDots: View {
+    @State private var phase = 0
 
-            Spacer()
-
-            Text("Loading")
-                .font(KrokvaTypography.monoSmall)
-                .tracking(2.2)
-                .foregroundStyle(Color.krokvaInk3)
-        }
-        .padding(.horizontal, 18)
-        .padding(.top, 13)
-        .padding(.bottom, 13)
-        .background(Color.krokvaSurface.opacity(0.92))
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(Color.krokvaLineSoft).frame(height: 1)
-        }
-    }
-
-    private var blueprintGrid: some View {
-        Canvas { context, size in
-            var path = Path()
-            let spacing: CGFloat = 40
-            for x in stride(from: CGFloat(0), through: size.width, by: spacing) {
-                path.move(to: CGPoint(x: x, y: 0))
-                path.addLine(to: CGPoint(x: x, y: size.height))
-            }
-            for y in stride(from: CGFloat(0), through: size.height, by: spacing) {
-                path.move(to: CGPoint(x: 0, y: y))
-                path.addLine(to: CGPoint(x: size.width, y: y))
-            }
-            context.stroke(path, with: .color(Color.krokvaInk.opacity(0.07)), lineWidth: 0.5)
-        }
-        .ignoresSafeArea()
-    }
-
-    private func scanningLine(height: CGFloat) -> some View {
-        Rectangle()
-            .fill(
-                LinearGradient(
-                    colors: [
-                        Color.krokvaGold.opacity(0.00),
-                        Color.krokvaGold.opacity(0.32),
-                        Color.krokvaGold.opacity(0.00)
-                    ],
-                    startPoint: .leading,
-                    endPoint: .trailing
-                )
-            )
-            .frame(width: 120, height: height)
-            .blur(radius: 10)
-            .offset(x: scanOffset)
-            .allowsHitTesting(false)
-    }
-
-    private var propertyBlueprint: some View {
-        ZStack(alignment: .topLeading) {
-            RoundedRectangle(cornerRadius: 8)
-                .stroke(Color.krokvaNavy, lineWidth: 1.5)
-                .frame(width: 118, height: 92)
-                .opacity(propertyBox)
-
-            cornerTickMark(at: .topLeading).opacity(cornerTicks)
-            cornerTickMark(at: .topTrailing).opacity(cornerTicks)
-            cornerTickMark(at: .bottomLeading).opacity(cornerTicks)
-            cornerTickMark(at: .bottomTrailing).opacity(cornerTicks)
-
-            ZStack {
+    var body: some View {
+        HStack(spacing: 3) {
+            ForEach(0..<3, id: \.self) { i in
                 Circle()
-                    .fill(Color.krokvaGold.opacity(0.10))
-                    .frame(width: 58, height: 58)
-                    .scaleEffect(pinScale * 0.55)
-                Circle()
-                    .stroke(Color.krokvaGold.opacity(0.42), lineWidth: 1)
-                    .frame(width: 42, height: 42)
-                    .scaleEffect(pinScale)
-                Circle()
-                    .fill(Color.krokvaGold)
-                    .frame(width: 16, height: 16)
-                Circle()
-                    .fill(Color.krokvaPaper)
-                    .frame(width: 5, height: 5)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
-            .opacity(pinOpacity)
-        }
-        .frame(width: 118, height: 92)
-    }
-
-    private var cityChip: some View {
-        HStack(spacing: 8) {
-            Circle()
-                .fill(Color.krokvaGreen)
-                .frame(width: 7, height: 7)
-            Text(cityName)
-            Text("LIVE")
-                .foregroundStyle(Color.krokvaGreen)
-        }
-        .font(KrokvaTypography.monoSmall)
-        .tracking(0.8)
-        .foregroundStyle(Color.krokvaInk2)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(Color.krokvaSurface, in: Capsule())
-        .overlay(Capsule().stroke(Color.krokvaLineSoft, lineWidth: 1))
-    }
-
-    private var currentWorkPanel: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .top, spacing: 12) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 7, style: .continuous)
-                        .fill(Color.krokvaGold.opacity(0.12))
-                    Image(systemName: activeStage.systemImage)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundStyle(Color.krokvaGold)
-                        .symbolEffect(.pulse, value: stage)
-                }
-                .frame(width: 38, height: 38)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Now checking")
-                        .eyebrow(color: Color.krokvaInk3)
-                    Text(activeStage.title)
-                        .font(KrokvaTypography.body.weight(.semibold))
-                        .foregroundStyle(Color.krokvaInk)
-                    Text(activeStage.detail)
-                        .font(KrokvaTypography.caption)
-                        .foregroundStyle(Color.krokvaInk3)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Spacer(minLength: 0)
-            }
-
-            ProgressView(value: Double(currentStageIndex + 1), total: Double(loadingStages.count))
-                .tint(Color.krokvaGold)
-                .animation(.easeInOut(duration: 0.35), value: stage)
-        }
-        .padding(16)
-        .background(Color.krokvaSurface, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.krokvaLineSoft, lineWidth: 1)
-        )
-    }
-
-    private var datasetPanel: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack {
-                Text("Data being assembled")
-                    .eyebrow(color: Color.krokvaInk3)
-                Spacer()
-                Text("\(currentStageIndex + 1)/\(loadingStages.count)")
-                    .font(KrokvaTypography.monoSmall)
-                    .foregroundStyle(Color.krokvaInk3)
-            }
-
-            VStack(spacing: 9) {
-                ForEach(loadingStages.indices, id: \.self) { index in
-                    LoadingStageRow(
-                        stage: loadingStages[index],
-                        state: rowState(for: index),
-                        isCurrent: index == currentStageIndex
-                    )
-                }
+                    .fill(Color.cleanSky)
+                    .frame(width: 4, height: 4)
+                    .scaleEffect(phase == i ? 1.4 : 0.8)
+                    .opacity(phase == i ? 1.0 : 0.4)
             }
         }
-        .padding(16)
-        .background(Color.krokvaSurface.opacity(0.92), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.krokvaLineSoft, lineWidth: 1)
-        )
+        .onAppear { animate() }
     }
 
-    @ViewBuilder
-    private func cornerTickMark(at alignment: Alignment) -> some View {
-        ZStack {
-            Rectangle().frame(width: 12, height: 1.2)
-            Rectangle().frame(width: 1.2, height: 12)
-        }
-        .frame(width: 12, height: 12, alignment: alignment)
-        .foregroundStyle(Color.krokvaGold.opacity(0.8))
-        .frame(maxWidth: 118, maxHeight: 92, alignment: alignment)
-        .padding(7)
-    }
-
-    private func rowState(for index: Int) -> LoadingStageState {
-        if index == currentStageIndex { return .current }
-        if index < currentStageIndex { return .complete }
-        return .pending
-    }
-
-    private func playAnimation() {
-        withAnimation(.easeOut(duration: 0.4)) { gridOpacity = 1 }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            withAnimation(.easeInOut(duration: 0.55)) { propertyBox = 1 }
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-            withAnimation(.easeOut(duration: 0.35)) { cornerTicks = 1 }
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.65) {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.65)) {
-                pinOpacity = 1
-                pinScale = 1
-            }
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.8) {
-            let charCount = addressText.count
-            guard charCount > 0 else { addressTyped = 0; return }
-            let delayPerChar = min(0.035, 0.9 / Double(max(charCount, 1)))
-            for i in 1...charCount {
-                DispatchQueue.main.asyncAfter(deadline: .now() + Double(i) * delayPerChar) {
-                    addressTyped = i
-                }
-            }
-        }
-
-        withAnimation(.linear(duration: 2.2).repeatForever(autoreverses: false)) {
-            scanOffset = UIScreen.main.bounds.width + 140
-        }
-
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-            withAnimation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true)) {
-                statusPulse = 1.0
+    private func animate() {
+        Timer.scheduledTimer(withTimeInterval: 0.28, repeats: true) { _ in
+            withAnimation(.spring(response: 0.25, dampingFraction: 0.6)) {
+                phase = (phase + 1) % 3
             }
         }
     }
 }
+
+// MARK: - Data model (unchanged)
 
 struct LoadingDataStage: Identifiable {
     let id: String
@@ -334,7 +397,7 @@ struct LoadingDataStage: Identifiable {
     let systemImage: String
 }
 
-enum DossierLoadingStage: Int, CaseIterable, Identifiable {
+enum ReportLoadingStage: Int, CaseIterable, Identifiable {
     case normalizing
     case assessment
     case nearbyRecords
@@ -347,144 +410,86 @@ enum DossierLoadingStage: Int, CaseIterable, Identifiable {
     case assembling
 
     var id: Int { rawValue }
-
-    var data: LoadingDataStage {
-        loadingStages[rawValue]
-    }
-}
-
-private enum LoadingStageState {
-    case complete
-    case current
-    case pending
-}
-
-private struct LoadingStageRow: View {
-    let stage: LoadingDataStage
-    let state: LoadingStageState
-    let isCurrent: Bool
-
-    var body: some View {
-        HStack(spacing: 10) {
-            statusMark
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(stage.dataset)
-                    .font(KrokvaTypography.caption)
-                    .foregroundStyle(isCurrent ? Color.krokvaInk : Color.krokvaInk2)
-                    .lineLimit(1)
-                Text(stage.title)
-                    .font(KrokvaTypography.monoSmall)
-                    .tracking(0.6)
-                    .foregroundStyle(Color.krokvaInk3)
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: 0)
-        }
-        .padding(.vertical, 2)
-    }
-
-    @ViewBuilder
-    private var statusMark: some View {
-        switch state {
-        case .complete:
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Color.krokvaGreen)
-                .frame(width: 20)
-        case .current:
-            ZStack {
-                Circle()
-                    .fill(Color.krokvaGold.opacity(0.18))
-                    .frame(width: 20, height: 20)
-                Circle()
-                    .fill(Color.krokvaGold)
-                    .frame(width: 8, height: 8)
-            }
-            .scaleEffect(isCurrent ? 1.05 : 1.0)
-        case .pending:
-            Circle()
-                .stroke(Color.krokvaLine, lineWidth: 1.2)
-                .frame(width: 12, height: 12)
-                .frame(width: 20)
-        }
-    }
+    var data: LoadingDataStage { loadingStages[rawValue] }
 }
 
 let loadingStages: [LoadingDataStage] = [
     LoadingDataStage(
         id: "normalize",
-        title: "Parsing civic number and street",
-        detail: "Normalizing the address so city records can be queried reliably.",
+        title: "Parsing address",
+        detail: "Normalizing civic number and street so city records can be matched reliably.",
         dataset: "Address index",
         systemImage: "number"
     ),
     LoadingDataStage(
         id: "assessment",
-        title: "Finding the property assessment",
-        detail: "Looking for roll number, assessed value, property tax, lot size, living area, and year built.",
+        title: "Property assessment",
+        detail: "Roll number, assessed value, property tax, lot size, living area, year built.",
         dataset: "Assessment records",
         systemImage: "house.and.flag"
     ),
     LoadingDataStage(
         id: "nearby",
-        title: "Finding nearby record keys",
-        detail: "Matching the street core so permits and orders can be linked to the right address area.",
+        title: "Nearby record keys",
+        detail: "Matching the street core to link permits and orders to the right area.",
         dataset: "Nearby street records",
         systemImage: "point.3.connected.trianglepath.dotted"
     ),
     LoadingDataStage(
         id: "permits",
-        title: "Reading building permit history",
-        detail: "Checking detailed permits, trade permits, and nearby structural activity.",
+        title: "Building permit history",
+        detail: "Detailed permits, trade permits, and nearby structural activity.",
         dataset: "Permit datasets",
         systemImage: "hammer"
     ),
     LoadingDataStage(
         id: "emergency",
-        title: "Counting emergency response activity",
-        detail: "Aggregating anonymized response records by year and neighbourhood.",
+        title: "Emergency response",
+        detail: "Anonymized response records aggregated by year and neighbourhood.",
         dataset: "WFPS call logs",
         systemImage: "cross.case"
     ),
     LoadingDataStage(
         id: "health",
-        title: "Building public-health context",
-        detail: "Comparing neighbourhood totals with citywide averages and age-group context.",
+        title: "Public-health context",
+        detail: "Neighbourhood totals vs citywide averages, age-group breakdown.",
         dataset: "Public-health records",
         systemImage: "list.clipboard"
     ),
     LoadingDataStage(
         id: "infrastructure",
-        title: "Checking street and infrastructure signals",
-        detail: "Looking at speed limits, pothole repairs, trees, and active vacant orders.",
+        title: "Street & infrastructure",
+        detail: "Speed limits, pothole repairs, trees, and vacant orders.",
         dataset: "Infrastructure data",
         systemImage: "road.lanes"
     ),
     LoadingDataStage(
         id: "map",
-        title: "Placing nearby records on the map",
+        title: "Map coordinates",
         detail: "Resolving coordinates for the subject property and nearby records.",
         dataset: "Map coordinates",
         systemImage: "map"
     ),
     LoadingDataStage(
         id: "comparables",
-        title: "Finding assessment comparables",
-        detail: "Collecting nearby assessed properties for same-area context.",
+        title: "Assessment comparables",
+        detail: "Nearby assessed properties for same-area context.",
         dataset: "Comparable properties",
         systemImage: "chart.bar.xaxis"
     ),
     LoadingDataStage(
         id: "assembling",
-        title: "Assembling the dossier",
-        detail: "Combining the finished records into the cards, charts, and map layers.",
-        dataset: "Final dossier",
+        title: "Assembling report",
+        detail: "Combining finished records into cards, charts, and map layers.",
+        dataset: "Final report",
         systemImage: "doc.text.magnifyingglass"
-    )
+    ),
 ]
 
 #Preview {
-    LoadingScreenAnimation(addressText: "412 Wellington Crescent", cityName: "Winnipeg, MB")
+    LoadingScreenAnimation(
+        addressText: "412 Wellington Crescent",
+        cityName: "Winnipeg, MB",
+        stage: .permits
+    )
 }

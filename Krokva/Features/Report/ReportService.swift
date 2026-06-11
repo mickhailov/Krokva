@@ -1,9 +1,9 @@
 import Foundation
 
-struct DossierService {
-    typealias ProgressHandler = (DossierLoadingStage) async -> Void
+struct ReportService {
+    typealias ProgressHandler = (ReportLoadingStage) async -> Void
 
-    func dossier(for rawAddress: String, progress: ProgressHandler? = nil) async -> AddressDossier {
+    func report(for rawAddress: String, progress: ProgressHandler? = nil) async -> AddressReport {
         let registry = CityRegistry.shared
         await progress?(.normalizing)
         let provider = registry.provider(for: rawAddress) ?? WinnipegProvider()
@@ -12,8 +12,8 @@ struct DossierService {
             return .comingSoon(address: normalized, provider: provider)
         }
         if let winnipegProvider = provider as? WinnipegProvider {
-            return await winnipegProvider.fetchDossier(for: normalized, progress: progress)
+            return await winnipegProvider.fetchReport(for: normalized, progress: progress)
         }
-        return await provider.fetchDossier(for: normalized)
+        return await provider.fetchReport(for: normalized)
     }
 }

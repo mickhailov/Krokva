@@ -2,6 +2,12 @@ import CoreLocation
 import Foundation
 import MapKit
 
+private struct SchoolDivisionBoundaryInfo {
+    var name: String?
+    var code: String?
+    var website: String?
+}
+
 final class WinnipegProvider: SocrataProvider, CityDataProvider {
     private static var policeCrimeCSVCache: String?
 
@@ -39,8 +45,15 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         laneClosures: "h367-iifg",
         pavementCondition: "enpg-8cug",
         schoolSpeedLimits: "k56t-9dvi",
+        schools: "5298-dhjx",
         cyclingNetwork: "kjd9-dvf5",
-        policeCrimeMaps: "d920a305d0024913a64e61ee1ef1d2a3"
+        policeCrimeMaps: "d920a305d0024913a64e61ee1ef1d2a3",
+        addresses: "cam2-ii3u",
+        schoolDivisions: "capx-4rye",
+        recreationComplexes: "bmi4-vvs2",
+        leisureActivities: "a2fq-ufu6",
+        snowRouteAddresses: "g3p4-h83y",
+        plowZones: "39ur-higg"
     )
     let fieldMappings = FieldMappings(
         assessment: [
@@ -63,11 +76,11 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         super.init(domain: "data.winnipeg.ca")
     }
 
-    func fetchDossier(for address: NormalizedAddress) async -> AddressDossier {
-        await fetchDossier(for: address, progress: nil)
+    func fetchReport(for address: NormalizedAddress) async -> AddressReport {
+        await fetchReport(for: address, progress: nil)
     }
 
-    func fetchDossier(for address: NormalizedAddress, progress: DossierService.ProgressHandler?) async -> AddressDossier {
+    func fetchReport(for address: NormalizedAddress, progress: ReportService.ProgressHandler?) async -> AddressReport {
         await progress?(.assessment)
         async let property = fetchAssessment(address)
         async let infrastructure = fetchInfrastructure(address)
@@ -93,8 +106,12 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         await progress?(.emergency)
         async let emergency = fetchEmergency(neighbourhood: assessment?.neighbourhood)
         await progress?(.health)
-        async let health = fetchPublicHealth(neighbourhood: assessment?.neighbourhood)
+        async let health = fetchPublicHealth(neighbourhood: assessment?.neighbourhood, coordinate: assessment?.coordinate)
         async let policeCrime = fetchPoliceCrime(neighbourhood: assessment?.neighbourhood)
+        async let civicContext = fetchCivicContext(address: address, property: assessment)
+        async let shortTermRentals = fetchShortTermRentals(address: address, streetCores: nearbyStreetCores)
+        async let recreation = fetchRecreation(property: assessment)
+        async let schools = fetchNearbySchools(property: assessment)
 
         await progress?(.infrastructure)
         let infrastructureSummary = await infrastructure
@@ -118,15 +135,26 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         let emergencySummary = await emergency
         let publicHealthSummary = await health
         let policeCrimeSummary = await policeCrime
+        let civicContextSummary = await civicContext
+        let shortTermRentalSummary = await shortTermRentals
+        let recreationSummary = await recreation
+        let nearbySchoolsList = await schools
 
         await progress?(.assembling)
 
-        return AddressDossier(
+        // The assessment feed has no postal code; backfill it from civic context so the
+        // hero card and facts both show it.
+        var propertyForReport = assessment
+        if propertyForReport?.postalCode == nil {
+            propertyForReport?.postalCode = civicContextSummary?.postalCode
+        }
+
+        return AddressReport(
             address: address,
             providerID: cityID,
             cityName: displayName,
             providerState: .live,
-            property: assessment,
+            property: propertyForReport,
             neighbourhoodValues: neighbourhoodValues,
             comparables: comparableProperties,
             permits: permits,
@@ -145,6 +173,10 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             emergency: emergencySummary,
             publicHealth: publicHealthSummary,
             policeCrime: policeCrimeSummary,
+            shortTermRentals: shortTermRentalSummary,
+            civicContext: civicContextSummary,
+            recreation: recreationSummary,
+            nearbySchools: nearbySchoolsList,
             sources: sourceList()
         )
     }
@@ -280,7 +312,14 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             ("Lane Closure", datasets.laneClosures),
             ("Street Pavement Surface Condition Data", datasets.pavementCondition),
             ("LRS School Speed Limits", datasets.schoolSpeedLimits),
-            ("Cycling Network", datasets.cyclingNetwork)
+            ("School Zone Signage", datasets.schools),
+            ("Cycling Network", datasets.cyclingNetwork),
+            ("Addresses", datasets.addresses),
+            ("School Divisions", datasets.schoolDivisions),
+            ("Recreation Complex", datasets.recreationComplexes),
+            ("LeisureONLINE Activities", datasets.leisureActivities),
+            ("Snow Clearing Status & Winter Parking Bans", datasets.snowRouteAddresses),
+            ("Plow Zones", datasets.plowZones)
         ]
         let citySources: [DatasetSource] = sourcePairs.compactMap { pair -> DatasetSource? in
             let (name, id) = pair
@@ -315,7 +354,7 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         ])) ?? []
         if rows.isEmpty {
             let streetOnly = address.streetName
-                .replacingOccurrences(of: #"(?i)\b(avenue|ave|av|street|st|road|rd|drive|dr|boulevard|blvd|crescent|cres|place|pl|way)\b"#, with: "", options: .regularExpression)
+                .replacingOccurrences(of: #"(?i)\b(avenue|ave|av|street|st|road|rd|drive|dr|boulevard|blvd|crescent|cres|place|pl|way|lane|ln|court|crt|ct|trail|trl|close|bay|bv|terrace|terr|circle|cir|grove|grv|heights|hts|bend|glen|mews|run)\b"#, with: "", options: .regularExpression)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
                 .uppercased()
             if !streetOnly.isEmpty {
@@ -340,6 +379,9 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         }
         let directPropertyTax = propertyTax(from: row)
         let estimatedPropertyTax = directPropertyTax == nil ? estimatedPropertyTax(from: row) : nil
+        let assessmentYear = row.int("assessment_year") ?? row.int("roll_year") ?? row.int("year")
+        // Estimated tax uses 2026 mill rates; direct tax year unknown so also use current year.
+        let propertyTaxYear = 2026
 
         return PropertyAssessment(
             fullAddress: row.string("full_address") ?? address.raw,
@@ -361,7 +403,9 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             rollNumber: row.string("roll_number"),
             houseStyle: row.string("building_type") ?? row.string("house_style"),
             storeys: nil,
-            coordinate: parseCoordinate(row)
+            coordinate: parseCoordinate(row),
+            assessmentYear: assessmentYear,
+            propertyTaxYear: propertyTaxYear
         )
     }
 
@@ -563,7 +607,7 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
     }
 
     private func streetCore(_ name: String) -> String {
-        name.replacingOccurrences(of: #"(?i)\s+(avenue|ave|av|street|st|road|rd|drive|dr|boulevard|blvd|crescent|cres|place|pl|way|bay|bv)\.?$"#, with: "", options: .regularExpression)
+        name.replacingOccurrences(of: #"(?i)\s+(avenue|ave|av|street|st|road|rd|drive|dr|boulevard|blvd|crescent|cres|place|pl|way|lane|ln|court|crt|ct|trail|trl|close|bay|bv|terrace|terr|circle|cir|grove|grv|heights|hts|bend|glen|mews|run)\.?$"#, with: "", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .uppercased()
     }
@@ -914,6 +958,273 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         )
     }
 
+    private func fetchNearbySchools(property: PropertyAssessment?) async -> [SchoolAmenity] {
+        guard let dataset = datasets.schools,
+              let subject = property?.coordinate else { return [] }
+        // School Zone Signage carries one Point per sign, so a single school appears as
+        // many rows. Pull every sign within range, then collapse to one entry per school
+        // using the averaged sign location as the school's approximate position.
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "school,street_name,location"),
+            URLQueryItem(name: "$where", value: "within_circle(location,\(subject.latitude),\(subject.longitude),2000) AND school IS NOT NULL"),
+            URLQueryItem(name: "$limit", value: "400")
+        ])) ?? []
+
+        struct SchoolAccumulator { var latSum = 0.0; var lonSum = 0.0; var count = 0; var street: String? }
+        var bySchool: [String: SchoolAccumulator] = [:]
+        for row in rows {
+            guard let name = row.string("school")?.trimmingCharacters(in: .whitespacesAndNewlines).repairedFrenchCivicName,
+                  !name.isEmpty,
+                  let coordinate = parseCoordinate(row) else { continue }
+            var acc = bySchool[name] ?? SchoolAccumulator()
+            acc.latSum += coordinate.latitude
+            acc.lonSum += coordinate.longitude
+            acc.count += 1
+            if acc.street == nil { acc.street = row.string("street_name") }
+            bySchool[name] = acc
+        }
+
+        let subjectLocation = CLLocation(latitude: subject.latitude, longitude: subject.longitude)
+        return bySchool.compactMap { name, acc -> (school: SchoolAmenity, distance: Double)? in
+            guard acc.count > 0 else { return nil }
+            let coordinate = CLLocationCoordinate2D(
+                latitude: acc.latSum / Double(acc.count),
+                longitude: acc.lonSum / Double(acc.count)
+            )
+            let distance = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude).distance(from: subjectLocation)
+            let school = SchoolAmenity(
+                name: name,
+                address: acc.street ?? "Winnipeg, MB",
+                distanceDescription: distanceDescription(meters: distance),
+                coordinate: coordinate
+            )
+            return (school, distance)
+        }
+        .sorted { $0.distance < $1.distance }
+        .prefix(6)
+        .map(\.school)
+    }
+
+    private func fetchCivicContext(address: NormalizedAddress, property: PropertyAssessment?) async -> AddressCivicContext? {
+        // Ward / neighbourhood / school division come from the Addresses dataset; postal code
+        // and plow zone are NOT columns there, so they are sourced separately (snow-route
+        // address dataset for postal code, plow-zone polygons for the zone).
+        async let addressRow = fetchCivicAddressRow(address: address, property: property)
+        async let postal = fetchPostalCode(address: address)
+        async let plow = fetchPlowZone(coordinate: property?.coordinate)
+
+        let row = await addressRow
+        let postalCode = await postal
+        let plowZone = await plow
+
+        guard row != nil || postalCode != nil || plowZone != nil else { return nil }
+
+        let schoolDivision = row?.string("school_division")
+        let divisionInfo = await fetchSchoolDivisionInfo(named: schoolDivision)
+        return AddressCivicContext(
+            addressID: row?.string("address_id"),
+            ward: row?.string("ward"),
+            neighbourhood: row?.string("neighbourhood"),
+            postalCode: postalCode,
+            plowZone: plowZone,
+            schoolDivision: schoolDivision,
+            schoolDivisionBoundaryName: divisionInfo?.name,
+            schoolDivisionCode: divisionInfo?.code,
+            schoolDivisionWard: row?.string("school_division_ward"),
+            schoolDivisionWebsite: divisionInfo?.website
+        )
+    }
+
+    private func fetchCivicAddressRow(address: NormalizedAddress, property: PropertyAssessment?) async -> [String: Any]? {
+        guard let dataset = datasets.addresses else { return nil }
+        let select = "full_address,ward,neighbourhood,school_division,school_division_ward"
+        var rows: [[String: Any]] = []
+
+        if let fullAddress = property?.fullAddress, !fullAddress.isEmpty {
+            rows = (try? await fetch(dataset, queryItems: [
+                URLQueryItem(name: "$select", value: select),
+                URLQueryItem(name: "$where", value: "upper(full_address)='\(escaped(fullAddress.uppercased()))'"),
+                URLQueryItem(name: "$limit", value: "1")
+            ])) ?? []
+        }
+
+        if rows.isEmpty, let civic = address.civicNumber {
+            let streetClauses = addressNormalizer.streetVariants(for: address)
+                .map { "upper(street_name)='\(escaped($0.uppercased()))'" }
+                .joined(separator: " OR ")
+            if !streetClauses.isEmpty {
+                rows = (try? await fetch(dataset, queryItems: [
+                    URLQueryItem(name: "$select", value: select),
+                    URLQueryItem(name: "$where", value: "street_number='\(civic)' AND (\(streetClauses))"),
+                    URLQueryItem(name: "$limit", value: "1")
+                ])) ?? []
+            }
+        }
+
+        return rows.first
+    }
+
+    private func fetchPostalCode(address: NormalizedAddress) async -> String? {
+        guard let dataset = datasets.snowRouteAddresses,
+              let civic = address.civicNumber else { return nil }
+        // In the snow-route dataset street_name excludes the type (e.g. "SOLSTICE", not
+        // "SOLSTICE LANE"), so match on the street core.
+        let token = escaped(streetCore(address.streetName))
+        guard !token.isEmpty else { return nil }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "postal_code"),
+            URLQueryItem(name: "$where", value: "address_number='\(civic)' AND upper(street_name)='\(token)' AND postal_code IS NOT NULL"),
+            URLQueryItem(name: "$limit", value: "1")
+        ])) ?? []
+        return rows.first?.string("postal_code")
+    }
+
+    private func fetchPlowZone(coordinate: CLLocationCoordinate2D?) async -> String? {
+        guard let dataset = datasets.plowZones, let coordinate else { return nil }
+        let point = "POINT (\(coordinate.longitude) \(coordinate.latitude))"
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "plow_zone,city_area"),
+            URLQueryItem(name: "$where", value: "intersects(the_geom,'\(point)')"),
+            URLQueryItem(name: "$limit", value: "1")
+        ])) ?? []
+        guard let row = rows.first, let zone = row.string("plow_zone") else { return nil }
+        if let area = row.string("city_area"), !area.isEmpty {
+            return "\(zone) · \(area)"
+        }
+        return zone
+    }
+
+    private func fetchSchoolDivisionInfo(named name: String?) async -> SchoolDivisionBoundaryInfo? {
+        guard let dataset = datasets.schoolDivisions,
+              let name,
+              !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        let token = escaped(name.uppercased())
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "name,division,website"),
+            URLQueryItem(name: "$where", value: "upper(name)='\(token)' OR upper(division)='\(token)'"),
+            URLQueryItem(name: "$limit", value: "1")
+        ])) ?? []
+        guard let row = rows.first else { return nil }
+        return SchoolDivisionBoundaryInfo(
+            name: row.string("name"),
+            code: row.string("division"),
+            website: row.string("website")
+        )
+    }
+
+    private func fetchShortTermRentals(address: NormalizedAddress, streetCores: [String]) async -> ShortTermRentalSummary? {
+        guard let dataset = datasets.shortTermRentals else { return nil }
+        let cores = limitedStreetCores(streetCores, limit: 8)
+        let streetClauses = cores
+            .map { "upper(short_term_rental_accommodation_address) like '%\(escaped($0))%'" }
+            .joined(separator: " OR ")
+        guard !streetClauses.isEmpty else { return nil }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "primary_non_primary,short_term_rental_accommodation_address,date_licence_was_issued,electoral_ward"),
+            URLQueryItem(name: "$where", value: "(\(streetClauses))"),
+            URLQueryItem(name: "$order", value: "date_licence_was_issued DESC"),
+            URLQueryItem(name: "$limit", value: "100")
+        ])) ?? []
+        guard !rows.isEmpty else { return nil }
+
+        let records = rows.map { row in
+            ShortTermRentalRecord(
+                address: row.string("short_term_rental_accommodation_address") ?? "Address unavailable",
+                primaryStatus: row.string("primary_non_primary"),
+                issuedDate: parseDate(row.string("date_licence_was_issued")),
+                ward: row.string("electoral_ward")
+            )
+        }
+        let nonPrimary = records.filter { ($0.primaryStatus ?? "").localizedCaseInsensitiveContains("non") }.count
+        let primary = records.filter {
+            let status = $0.primaryStatus ?? ""
+            return status.localizedCaseInsensitiveContains("primary") && !status.localizedCaseInsensitiveContains("non")
+        }.count
+
+        return ShortTermRentalSummary(
+            total: records.count,
+            primaryCount: primary,
+            nonPrimaryCount: nonPrimary,
+            recent: Array(records.prefix(8))
+        )
+    }
+
+    private func fetchRecreation(property: PropertyAssessment?) async -> RecreationSummary? {
+        let complexes = await fetchNearbyRecreationComplexes(property: property)
+        let activities = await fetchLeisureActivities(for: complexes)
+        if complexes.isEmpty && activities.isEmpty { return nil }
+        return RecreationSummary(nearestComplex: complexes.first, complexes: complexes, activities: activities)
+    }
+
+    private func fetchNearbyRecreationComplexes(property: PropertyAssessment?, limit: Int = 8) async -> [RecreationComplex] {
+        guard let dataset = datasets.recreationComplexes,
+              let subject = property?.coordinate else { return [] }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "complex_name,address,location_1,skate_park,fitness_leisure_centre,outdoor_pool,indoor_pool,arena,community_centre,wading_pool,library,indoor_soccer,spray_pad"),
+            URLQueryItem(name: "$where", value: "within_circle(location_1,\(subject.latitude),\(subject.longitude),3000)"),
+            URLQueryItem(name: "$limit", value: "80")
+        ])) ?? []
+        let subjectLocation = CLLocation(latitude: subject.latitude, longitude: subject.longitude)
+        return rows.compactMap { row -> (RecreationComplex, Double)? in
+            guard let name = row.string("complex_name"),
+                  let coordinate = parseCoordinate(row) else { return nil }
+            let distance = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude).distance(from: subjectLocation)
+            let amenities: [(String, String)] = [
+                ("Arena", "arena"),
+                ("Community centre", "community_centre"),
+                ("Fitness", "fitness_leisure_centre"),
+                ("Indoor pool", "indoor_pool"),
+                ("Outdoor pool", "outdoor_pool"),
+                ("Wading pool", "wading_pool"),
+                ("Spray pad", "spray_pad"),
+                ("Skate park", "skate_park"),
+                ("Indoor soccer", "indoor_soccer"),
+                ("Library", "library")
+            ]
+            let enabled = amenities.compactMap { label, key in row.bool(key) ? label : nil }
+            return (
+                RecreationComplex(
+                    name: name,
+                    address: row.string("address"),
+                    distanceDescription: distanceDescription(meters: distance),
+                    amenities: enabled,
+                    coordinate: coordinate
+                ),
+                distance
+            )
+        }
+        .sorted { $0.1 < $1.1 }
+        .prefix(limit)
+        .map(\.0)
+    }
+
+    private func fetchLeisureActivities(for complexes: [RecreationComplex]) async -> [RecreationActivity] {
+        guard let dataset = datasets.leisureActivities else { return [] }
+        let placeNames = Array(Set(complexes.map(\.name).filter { !$0.isEmpty }).prefix(6))
+        guard !placeNames.isEmpty else { return [] }
+        let placeList = placeNames.map { "'\(escaped($0.uppercased()))'" }.joined(separator: ",")
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "activity_name,place_name,category,activity_type,activity_status,default_beginning_date,default_ending_date,open_spaces,public_url"),
+            URLQueryItem(name: "$where", value: "upper(place_name) in (\(placeList)) AND default_beginning_date >= '\(yearOffset(0))-01-01T00:00:00'"),
+            URLQueryItem(name: "$order", value: "default_beginning_date ASC"),
+            URLQueryItem(name: "$limit", value: "24")
+        ])) ?? []
+        return rows.compactMap { row in
+            guard let name = row.string("activity_name") else { return nil }
+            return RecreationActivity(
+                name: name,
+                placeName: row.string("place_name"),
+                category: row.string("category"),
+                activityType: row.string("activity_type"),
+                status: row.string("activity_status"),
+                startDate: parseDate(row.string("default_beginning_date")),
+                endDate: parseDate(row.string("default_ending_date")),
+                openSpaces: row.string("open_spaces"),
+                publicURL: row.string("public_url")
+            )
+        }
+    }
+
     private func fetchServiceRequests(neighbourhood: String?) async -> ServiceRequestSummary? {
         guard let dataset = datasets.serviceRequests,
               let neighbourhood else { return nil }
@@ -1026,24 +1337,8 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
     }
 
     private func serviceNeighbourhoodClause(_ neighbourhood: String) -> String {
-        let upper = escaped(neighbourhood.uppercased())
-        let words = neighbourhood
-            .uppercased()
-            .split { !$0.isLetter && !$0.isNumber }
-            .map(String.init)
-            .filter { $0.count > 3 }
-        let allWordsClause = words.isEmpty
-            ? nil
-            : words.map { "upper(neighbourhood) like '%\(escaped($0))%'" }.joined(separator: " AND ")
-
-        var clauses = [
-            "upper(neighbourhood)='\(upper)'",
-            "upper(neighbourhood) like '%\(upper)%'"
-        ]
-        if let allWordsClause {
-            clauses.append("(\(allWordsClause))")
-        }
-        return "(\(clauses.joined(separator: " OR ")))"
+        let trimmed = neighbourhood.trimmingCharacters(in: .whitespacesAndNewlines)
+        return "upper(neighbourhood)='\(escaped(trimmed.uppercased()))'"
     }
 
     private func fetchPlanningContext(property: PropertyAssessment?) async -> PlanningContextSummary? {
@@ -1114,6 +1409,8 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         let activeClosures = await closures
 
         if pavementSummary.condition == nil,
+           pavementSummary.surface == nil,
+           pavementSummary.roadType == nil,
            schoolSpeedLimit == nil,
            cyclingCount == 0,
            activeDisruptions.isEmpty,
@@ -1124,6 +1421,7 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         return StreetAccessSummary(
             pavementCondition: pavementSummary.condition,
             pavementSurface: pavementSummary.surface,
+            roadType: pavementSummary.roadType,
             schoolSpeedLimit: schoolSpeedLimit,
             cyclingRoutesNearby: cyclingCount,
             activeDisruptions: activeDisruptions,
@@ -1131,16 +1429,16 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         )
     }
 
-    private func fetchPavementCondition(_ address: NormalizedAddress) async -> (condition: String?, surface: String?) {
-        guard let dataset = datasets.pavementCondition else { return (nil, nil) }
+    private func fetchPavementCondition(_ address: NormalizedAddress) async -> (condition: String?, surface: String?, roadType: String?) {
+        guard let dataset = datasets.pavementCondition else { return (nil, nil, nil) }
         let token = escaped(streetCore(address.streetName))
-        guard !token.isEmpty else { return (nil, nil) }
+        guard !token.isEmpty else { return (nil, nil, nil) }
         let rows = (try? await fetch(dataset, queryItems: [
             URLQueryItem(name: "$select", value: "general_condition,surface_type"),
             URLQueryItem(name: "$where", value: "upper(street_name) like '\(token)%'"),
             URLQueryItem(name: "$limit", value: "1")
         ])) ?? []
-        return (rows.first?.string("general_condition"), rows.first?.string("surface_type"))
+        return (rows.first?.string("general_condition"), rows.first?.string("surface_type"), nil)
     }
 
     private func fetchSchoolSpeedLimit(_ address: NormalizedAddress) async -> SchoolSpeedLimit? {
@@ -1153,7 +1451,7 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             URLQueryItem(name: "$limit", value: "1")
         ])) ?? []
         guard let row = rows.first,
-              let school = row.string("school") else { return nil }
+              let school = row.string("school")?.repairedFrenchCivicName else { return nil }
         let speed = row.string("speed_limit") ?? row.int("speed_limit").map { "\($0)" } ?? "30"
         return SchoolSpeedLimit(
             school: school,
@@ -1516,7 +1814,7 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             .compare(rhs.trimmingCharacters(in: .whitespacesAndNewlines), options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
     }
 
-    private func fetchPublicHealth(neighbourhood: String?) async -> PublicHealthSummary? {
+    private func fetchPublicHealth(neighbourhood: String?, coordinate: CLLocationCoordinate2D? = nil) async -> PublicHealthSummary? {
         guard let dataset = datasets.naloxone else { return nil }
         let substanceDataset = datasets.substanceUse
         let citywideNeighbourhoodYears = (try? await fetch(dataset, queryItems: [
@@ -1603,7 +1901,10 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         for (year, count) in substanceTotalsByYear where mergedYears[year, default: (0, 0)].neighbourhood == 0 {
             mergedYears[year, default: (0, 0)].neighbourhood = count
         }
-        let summary = PublicHealthSummary(
+        async let erFacility = fetchNearestER(from: coordinate)
+        async let walkInData = fetchNearestWalkIn(from: coordinate)
+
+        var summary = PublicHealthSummary(
             yearlyEvents: mergedYears.keys.sorted().map { year in
                 let counts = mergedYears[year] ?? (0, 0)
                 return PublicHealthYear(year: year, neighbourhood: counts.neighbourhood, citywideAverage: counts.citywideAverage)
@@ -1619,12 +1920,146 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             },
             substancesByYear: substancesByYear.mapValues { $0.sorted { $0.count > $1.count } }
         )
+        var nearestER = await erFacility
+        if let waitTime = await fetchWinnipegEmergencyWaitTime(for: nearestER?.name) {
+            nearestER?.currentWaitMinutes = waitTime.waitMinutes
+            nearestER?.avgWaitMinutes = waitTime.waitMinutes
+            nearestER?.waitingPatients = waitTime.waitingPatients
+            nearestER?.treatingPatients = waitTime.treatingPatients
+            nearestER?.waitTimeUpdatedAt = waitTime.updatedAt
+            nearestER?.waitTimeAttribution = "Emergency wait times from Winnipeg Regional Health Authority (wrha.mb.ca)."
+        }
+        if let province = nearestER?.province,
+           let erstat = await fetchEmergencyRoomClosures(province: province) {
+            let statuses = erstat.closures.map(\.emergencyRoomStatus)
+            let nearestERName = nearestER?.name
+            nearestER?.liveStatus = matchEmergencyRoomStatus(for: nearestERName, statuses: statuses)
+            summary.emergencyRoomClosures = statuses
+            summary.emergencyRoomAttribution = erstat.attribution
+        }
+        summary.nearestER = nearestER
+        let wid = await walkInData
+        summary.nearestWalkIn = wid.facility
+        summary.walkInClinicsNearby = wid.count
         if summary.yearlyEvents.isEmpty && summary.ageGroups.isEmpty && summary.substances.isEmpty { return nil }
         return summary
     }
 
+    private func fetchNearestER(from coordinate: CLLocationCoordinate2D?) async -> HealthFacilityAccess? {
+        guard let coordinate else { return nil }
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = "emergency room"
+        request.region = MKCoordinateRegion(center: coordinate, latitudinalMeters: 30000, longitudinalMeters: 30000)
+        guard let results = try? await MKLocalSearch(request: request).start(),
+              let nearest = results.mapItems.first else { return nil }
+        let name = nearest.name ?? "Emergency Room"
+        let number = nearest.placemark.subThoroughfare ?? ""
+        let street = nearest.placemark.thoroughfare ?? ""
+        let address: String? = street.isEmpty ? nil : "\(number) \(street)".trimmingCharacters(in: .whitespaces)
+        let city = nearest.placemark.locality
+        let province = nearest.placemark.administrativeArea
+        let dirRequest = MKDirections.Request()
+        dirRequest.source = MKMapItem(placemark: MKPlacemark(coordinate: coordinate))
+        dirRequest.destination = nearest
+        dirRequest.transportType = .automobile
+        var driveMinutes: Double?
+        if let eta = try? await MKDirections(request: dirRequest).calculateETA() {
+            driveMinutes = eta.expectedTravelTime / 60
+        }
+        return HealthFacilityAccess(name: name, address: address, city: city, province: province, driveMinutes: driveMinutes)
+    }
+
+    private func fetchWinnipegEmergencyWaitTime(for facilityName: String?) async -> WRHAEmergencyWaitTime? {
+        do {
+            let waitTimes = try await WRHAWaitTimesClient().emergencyWaitTimes()
+            return matchWinnipegEmergencyWaitTime(for: facilityName, waitTimes: waitTimes)
+        } catch {
+            return nil
+        }
+    }
+
+    private func matchWinnipegEmergencyWaitTime(for facilityName: String?, waitTimes: [WRHAEmergencyWaitTime]) -> WRHAEmergencyWaitTime? {
+        guard let facilityName else { return nil }
+        let normalizedTarget = normalizedFacilityName(facilityName)
+
+        if normalizedTarget.contains("health sciences") || normalizedTarget == "hsc" {
+            return waitTimes.first { $0.facilityName.localizedCaseInsensitiveContains("Adult") }
+        }
+        if normalizedTarget.contains("boniface") {
+            return waitTimes.first { $0.facilityName.localizedCaseInsensitiveContains("Boniface") }
+        }
+        if normalizedTarget.contains("grace") {
+            return waitTimes.first { $0.facilityName.localizedCaseInsensitiveContains("Grace") }
+        }
+
+        return waitTimes.first { waitTime in
+            let normalizedWaitName = normalizedFacilityName(waitTime.facilityName)
+            return normalizedTarget == normalizedWaitName
+                || normalizedTarget.contains(normalizedWaitName)
+                || normalizedWaitName.contains(normalizedTarget)
+        }
+    }
+
+    private func fetchEmergencyRoomClosures(province: String?) async -> ERstatClosuresResponse? {
+        do {
+            return try await ERstatClient().closures(province: province)
+        } catch {
+            return nil
+        }
+    }
+
+    private func matchEmergencyRoomStatus(for facilityName: String?, statuses: [EmergencyRoomStatus]) -> EmergencyRoomStatus? {
+        guard let facilityName else { return nil }
+        let normalizedTarget = normalizedFacilityName(facilityName)
+        return statuses.first { status in
+            let normalizedStatusName = normalizedFacilityName(status.name)
+            return normalizedTarget == normalizedStatusName
+                || normalizedTarget.contains(normalizedStatusName)
+                || normalizedStatusName.contains(normalizedTarget)
+        }
+    }
+
+    private func normalizedFacilityName(_ value: String) -> String {
+        value
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: .current)
+            .lowercased()
+            .replacingOccurrences(of: "hospital", with: "")
+            .replacingOccurrences(of: "health centre", with: "")
+            .replacingOccurrences(of: "health center", with: "")
+            .replacingOccurrences(of: "emergency", with: "")
+            .replacingOccurrences(of: "department", with: "")
+            .components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func fetchNearestWalkIn(from coordinate: CLLocationCoordinate2D?) async -> (facility: HealthFacilityAccess?, count: Int?) {
+        guard let coordinate else { return (nil, nil) }
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = "walk-in clinic"
+        request.region = MKCoordinateRegion(center: coordinate, latitudinalMeters: 3000, longitudinalMeters: 3000)
+        guard let results = try? await MKLocalSearch(request: request).start() else { return (nil, nil) }
+        let items = results.mapItems
+        let count = items.isEmpty ? nil : items.count
+        guard let nearest = items.first else { return (nil, count) }
+        let name = nearest.name ?? "Walk-in Clinic"
+        let number = nearest.placemark.subThoroughfare ?? ""
+        let street = nearest.placemark.thoroughfare ?? ""
+        let address: String? = street.isEmpty ? nil : "\(number) \(street)".trimmingCharacters(in: .whitespaces)
+        let dirRequest = MKDirections.Request()
+        dirRequest.source = MKMapItem(placemark: MKPlacemark(coordinate: coordinate))
+        dirRequest.destination = nearest
+        dirRequest.transportType = .automobile
+        var driveMinutes: Double?
+        if let eta = try? await MKDirections(request: dirRequest).calculateETA() {
+            driveMinutes = eta.expectedTravelTime / 60
+        }
+        return (HealthFacilityAccess(name: name, address: address, city: nearest.placemark.locality, province: nearest.placemark.administrativeArea, driveMinutes: driveMinutes), count)
+    }
+
     private func parseCoordinate(_ row: [String: Any]) -> CLLocationCoordinate2D? {
-        for key in ["geometry", "the_geom", "location", "point", "location_point"] {
+        for key in ["geometry", "the_geom", "location", "point", "location_point", "location_1"] {
             if let point = row[key] as? [String: Any] {
                 if let coordinates = point["coordinates"] as? [Double], coordinates.count >= 2 {
                     return CLLocationCoordinate2D(latitude: coordinates[1], longitude: coordinates[0])
@@ -1710,5 +2145,26 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
 
     private func currency(_ value: Double) -> String {
         value.formatted(.currency(code: "CAD").precision(.fractionLength(0)))
+    }
+}
+
+private extension String {
+    /// The City of Winnipeg's School Zone Signage feed stores French civic names with their
+    /// accented letters already destroyed into the Unicode replacement character (U+FFFD) at
+    /// the source — e.g. "École Rivière-Rouge" arrives as "�cole Rivi�re-Rouge". The original
+    /// letter is unrecoverable from the bytes, so repair the patterns that actually occur in
+    /// these names and fall back to the most common French vowel for anything left over.
+    var repairedFrenchCivicName: String {
+        guard contains("\u{FFFD}") else { return self }
+        var result = self
+        // A word-initial replacement is, for Winnipeg schools, always "École".
+        if result.hasPrefix("\u{FFFD}cole") {
+            result = "É" + result.dropFirst()
+        }
+        // "Rivière"/"Frontière" etc. — the destroyed letter before "re" is "è".
+        result = result.replacingOccurrences(of: "\u{FFFD}re", with: "ère")
+        // Any remaining replacement character is a lowercase "é" in these names.
+        result = result.replacingOccurrences(of: "\u{FFFD}", with: "é")
+        return result
     }
 }

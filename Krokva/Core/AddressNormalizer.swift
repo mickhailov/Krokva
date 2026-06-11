@@ -1,6 +1,6 @@
 import Foundation
 
-struct NormalizedAddress: Hashable {
+struct NormalizedAddress: Hashable, Codable {
     var raw: String
     var civicNumber: Int?
     var streetName: String
@@ -39,13 +39,14 @@ struct WinnipegAddressNormalizer: AddressNormalizer {
 
     func streetVariants(for address: NormalizedAddress) -> [String] {
         let base = address.streetName
+        let suffixPattern = #"(?i)\b(avenue|ave|av|street|st|road|rd|drive|dr|boulevard|blvd|crescent|cres|place|pl|way|lane|ln|court|crt|ct|trail|trl|close|bay|bv|terrace|terr|circle|cir|grove|grv|heights|hts|run|bend|glen|mews)\b"#
         let upperNoSuffix = base
-            .replacingOccurrences(of: #"(?i)\b(avenue|ave|av)\b"#, with: "", options: .regularExpression)
-            .replacingOccurrences(of: #"(?i)\b(street|st)\b"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: suffixPattern, with: "", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .uppercased()
-        let av = base.replacingOccurrences(of: "Avenue", with: "Av")
-        let ave = base.replacingOccurrences(of: "Avenue", with: "Ave")
-        return Array(Set([base, av, ave, upperNoSuffix])).filter { !$0.isEmpty }
+        let av = base.replacingOccurrences(of: "Avenue", with: "Av", options: .caseInsensitive)
+        let ave = base.replacingOccurrences(of: "Avenue", with: "Ave", options: .caseInsensitive)
+        let lane = base.replacingOccurrences(of: #"(?i)\bLn\b"#, with: "Lane", options: .regularExpression)
+        return Array(Set([base, av, ave, lane, upperNoSuffix])).filter { !$0.isEmpty }
     }
 }

@@ -8,7 +8,7 @@ struct KrokvaApp: App {
             SplashGateView {
                 RootTabView()
             }
-            .modelContainer(for: [RecentSearch.self, CityVote.self, CachedDataset.self])
+            .modelContainer(for: [RecentSearch.self, CityVote.self, CachedDataset.self, SavedAddress.self, SavedReport.self])
             .preferredColorScheme(.light)
         }
     }

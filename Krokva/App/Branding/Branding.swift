@@ -7,31 +7,32 @@ import SwiftUI
 // new semantic tokens added for the locked direction.
 
 extension Color {
-    // Brand
-    static let krokvaNavy       = Color(hex: 0x0F2540)
-    static let krokvaNavyLight  = Color(hex: 0x1E3556)
-    static let krokvaGold       = Color(hex: 0xB8860B)
-    static let krokvaGoldSoft   = Color(hex: 0xE9D9A8)   // highlight wash, +N% chips, "you" bar
-    static let krokvaGoldDeep   = Color(hex: 0x5C4500)   // text on gold-soft
+    // Brand — remapped to the Editorial palette so every legacy card
+    // (charts, facts, lists) adopts the new direction in one place.
+    static let krokvaNavy       = Color(hex: 0x4E5874)   // slate — primary chart/icon
+    static let krokvaNavyLight  = Color(hex: 0x2F7BFF)   // blue — accent line / avg
+    static let krokvaGold       = Color(hex: 0xB89455)   // ochre — highlight
+    static let krokvaGoldSoft   = Color(hex: 0xE5D6B0)   // ochre wash, +N% chips
+    static let krokvaGoldDeep   = Color(hex: 0x937539)   // text on ochre
 
     // Semantic
-    static let krokvaGreen      = Color(hex: 0x1E7A45)   // live / synced / ok
-    static let krokvaAccent     = Color(hex: 0xA8362A)   // warn / vacant / over
-    static let krokvaBlue       = Color(hex: 0x4A87EB)   // info, secondary stats
+    static let krokvaGreen      = Color(hex: 0x6B8166)   // sage — live / ok
+    static let krokvaAccent     = Color(hex: 0xB07262)   // clay — warn / vacant
+    static let krokvaBlue       = Color(hex: 0x2F7BFF)   // info, secondary stats
 
-    // Surfaces (light theme — Civic Modernist)
-    static let krokvaPaper      = Color(hex: 0xF6F4EE)   // app background, "paper"
-    static let krokvaSurface    = Color(hex: 0xFFFFFF)   // cards
-    static let krokvaSurfaceAlt = Color(hex: 0xFAF8F1)   // chart wells, insets
+    // Surfaces (Editorial — cream paper)
+    static let krokvaPaper      = Color(hex: 0xEDE7D6)   // app background, "paper"
+    static let krokvaSurface    = Color(hex: 0xF4ECD5)   // cream cards / capsules
+    static let krokvaSurfaceAlt = Color(hex: 0xE2DBC6)   // chart wells, insets
 
     // Ink
-    static let krokvaInk        = Color(hex: 0x0F1B2D)   // primary text
-    static let krokvaInk2       = Color(hex: 0x3D4859)   // secondary text
-    static let krokvaInk3       = Color(hex: 0x7A8497)   // tertiary / captions
+    static let krokvaInk        = Color(hex: 0x1B1E25)   // primary text
+    static let krokvaInk2       = Color(hex: 0x2A2E37)   // secondary text
+    static let krokvaInk3       = Color(hex: 0x6E727C)   // tertiary / captions
 
     // Lines
-    static let krokvaLine       = Color(hex: 0xE6E0D2)   // hairline border
-    static let krokvaLineSoft   = Color(hex: 0xEEEAE0)   // softest divider
+    static let krokvaLine       = Color(hex: 0xD8D0BD)   // hairline border
+    static let krokvaLineSoft   = Color(hex: 0xE2DBC6)   // softest divider
 
     // Convenience hex init
     init(hex: UInt32, opacity: Double = 1.0) {
@@ -81,8 +82,8 @@ enum KrokvaTypography {
 extension View {
     func eyebrow(color: Color = .krokvaInk3) -> some View {
         self
-            .font(KrokvaTypography.eyebrow)
-            .tracking(1.3)              // ~0.14em on 9.5pt
+            .font(.system(size: 10, weight: .heavy))
+            .tracking(0.8)
             .textCase(.uppercase)
             .foregroundStyle(color)
     }
@@ -101,23 +102,39 @@ struct KrokvaCard<Content: View>: View {
         VStack(alignment: .leading, spacing: 0) {
             content
         }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .fill(Color.krokvaSurface)
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.krokvaLine, lineWidth: 1)
-        )
+        .padding(18)
+        .background {
+            ZStack {
+                Color.white.opacity(0.55)
+                Rectangle().fill(.ultraThinMaterial).opacity(0.5)
+            }
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color.white.opacity(0.34), lineWidth: 1)
+        }
+        .overlay {
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(
+                    LinearGradient(
+                        colors: [Color.white.opacity(0.46), Color.white.opacity(0)],
+                        startPoint: .top, endPoint: .center
+                    ),
+                    lineWidth: 1
+                )
+                .blendMode(.plusLighter)
+                .allowsHitTesting(false)
+        }
         .overlay(alignment: .topLeading) {
             if accent {
-                Rectangle()
+                Capsule()
                     .fill(Color.krokvaGold)
-                    .frame(width: 28, height: 2)
-                    .offset(x: 14, y: 0)
+                    .frame(width: 28, height: 3)
+                    .offset(x: 18, y: 0)
             }
         }
+        .shadow(color: Color.krokvaInk.opacity(0.10), radius: 18, x: 0, y: 14)
     }
 }
 
@@ -156,6 +173,64 @@ struct BrandMarkView: View {
             }
         }
         .accessibilityLabel("Krokva rafter mark")
+    }
+}
+
+// MARK: - Animated brand mark
+//
+// Drop-in replacement anywhere a logo with continuous orbital arcs + pulse is needed.
+// `size` is the diameter of the arc orbit ring; the rafter mark sits at 0.6× inside it.
+
+struct AnimatedBrandMark: View {
+    var size: CGFloat = 96
+    var markLineWidth: CGFloat = 4
+    var markColor: Color = .cleanLabel
+    var arcColor: Color = .cleanSky
+
+    @State private var rotate = false
+    @State private var pulse = false
+    @State private var appear = false
+
+    var body: some View {
+        ZStack {
+            // Soft radial fill behind mark
+            Circle()
+                .fill(arcColor.opacity(0.055))
+                .frame(width: size * 1.28, height: size * 1.28)
+                .scaleEffect(pulse ? 1.07 : 0.93)
+
+            // Thin outer ring
+            Circle()
+                .stroke(arcColor.opacity(pulse ? 0.05 : 0.15), lineWidth: 1)
+                .frame(width: size * 1.12, height: size * 1.12)
+                .scaleEffect(pulse ? 1.07 : 0.93)
+
+            // Primary arc — 24 % of circle
+            Circle()
+                .trim(from: 0, to: 0.24)
+                .stroke(arcColor.opacity(0.55), style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                .frame(width: size, height: size)
+                .rotationEffect(.degrees(rotate ? 360 : 0))
+
+            // Trailing accent arc
+            Circle()
+                .trim(from: 0.57, to: 0.68)
+                .stroke(arcColor.opacity(0.28), style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
+                .frame(width: size, height: size)
+                .rotationEffect(.degrees(rotate ? 360 : 0))
+
+            // Rafter mark — springs in on appear
+            BrandMarkView(color: markColor, lineWidth: markLineWidth, ridgeDot: true)
+                .frame(width: size * 0.6, height: size * 0.6)
+                .scaleEffect(pulse ? 1.035 : 0.965)
+                .opacity(appear ? 1 : 0)
+                .scaleEffect(appear ? 1 : 0.62)
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.58, dampingFraction: 0.68)) { appear = true }
+            withAnimation(.linear(duration: 8).repeatForever(autoreverses: false)) { rotate = true }
+            withAnimation(.easeInOut(duration: 3.1).repeatForever(autoreverses: true)) { pulse = true }
+        }
     }
 }
 

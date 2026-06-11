@@ -5,3 +5,6 @@ DerivedData/
 *.xcuserdata/
 *.xcuserstate
 .DS_Store
+
+# Xcode build output
+build/

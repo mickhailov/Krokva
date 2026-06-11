@@ -10,15 +10,15 @@ final class PermitHistoryViewModel {
 
     private let service: PermitHistoryService = WinnipegPermitHistoryService()
 
-    func load(dossier: AddressDossier, modelContext: ModelContext, forceRefresh: Bool = false) async {
+    func load(report: AddressReport, modelContext: ModelContext, forceRefresh: Bool = false) async {
         isLoading = true
         defer { isLoading = false }
-        result = await service.history(for: dossier, modelContext: modelContext, forceRefresh: forceRefresh)
+        result = await service.history(for: report, modelContext: modelContext, forceRefresh: forceRefresh)
     }
 }
 
 struct PropertyPermitHistoryCard: View {
-    let dossier: AddressDossier
+    let report: AddressReport
     let refreshToken: UUID
 
     @Environment(\.modelContext) private var modelContext
@@ -26,62 +26,113 @@ struct PropertyPermitHistoryCard: View {
     @State private var isExpanded = false
 
     var body: some View {
-        DossierCard(title: "Property Permit History", systemImage: "doc.text.magnifyingglass") {
-            VStack(alignment: .leading, spacing: 14) {
-                Text("Official permit records since 2000")
-                    .font(.caption)
-                    .foregroundStyle(Color.krokvaInk3)
-
-                if viewModel.isLoading && viewModel.result == nil {
-                    PermitHistorySkeletonView()
-                } else if let result = viewModel.result {
-                    Text(result.summary)
-                        .font(.subheadline)
-                        .foregroundStyle(Color.krokvaInk)
-
-                    PermitCategoryBadges(categories: result.categories)
-                    PermitAnalyticsView(analytics: result.analytics)
-
-                    Button {
-                        withAnimation(.spring(response: 0.35, dampingFraction: 0.82)) {
-                            isExpanded.toggle()
-                        }
-                    } label: {
-                        HStack {
-                            Text(isExpanded ? "Hide permit timeline" : "Show permit timeline")
-                            Spacer()
-                            Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
-                        }
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 11)
-                        .background(Color.krokvaNavy, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-                    }
-                    .buttonStyle(.plain)
-
-                    if isExpanded {
-                        PermitTimelineView(groups: result.groupedByYear)
-                    }
-
-                    Text("Permit records indicate officially permitted work only. Absence of permits does not mean no renovations were completed. Permit information is provided for informational purposes only.")
-                        .font(.caption)
-                        .foregroundStyle(Color.krokvaInk3)
-
-                    Text(result.attribution)
-                        .font(.caption2)
-                        .foregroundStyle(Color.krokvaInk3.opacity(0.72))
-                } else {
-                    EmptyCardState(message: "Permit history is unavailable for this address.")
+        CleanCard(padding: 0) {
+            VStack(spacing: 0) {
+                headerButton
+                if isExpanded {
+                    Divider()
+                    fullContent
+                        .padding(18)
                 }
             }
         }
-        .task(id: dossier.id) {
-            await viewModel.load(dossier: dossier, modelContext: modelContext)
+        .task(id: report.id) {
+            await viewModel.load(report: report, modelContext: modelContext)
         }
         .onChange(of: refreshToken) {
             Task {
-                await viewModel.load(dossier: dossier, modelContext: modelContext, forceRefresh: true)
+                await viewModel.load(report: report, modelContext: modelContext, forceRefresh: true)
+            }
+        }
+    }
+
+    // MARK: - Header
+
+    private var headerButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                isExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "doc.text.magnifyingglass")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 30, height: 30)
+                    .background(Color.cleanAmber, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Permit history")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.cleanLabel)
+                    if !isExpanded {
+                        smallSummaryText
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                if viewModel.isLoading && !isExpanded {
+                    ProgressView().scaleEffect(0.75)
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.cleanLabel3)
+                        .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                }
+            }
+            .padding(18)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
+    private var smallSummaryText: some View {
+        if viewModel.isLoading {
+            Text("Loading…")
+                .font(.system(size: 13))
+                .foregroundStyle(Color.cleanLabel3)
+        } else if let analytics = viewModel.result?.analytics {
+            Text("\(analytics.permitCount) permits · Major reno: \(analytics.majorRenovationDetected ? "Yes" : "No")")
+                .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                .foregroundStyle(Color.cleanSky)
+        } else {
+            Text("No permit records")
+                .font(.system(size: 13))
+                .foregroundStyle(Color.cleanLabel3)
+        }
+    }
+
+    // MARK: - Full content
+
+    @ViewBuilder
+    private var fullContent: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Official permit records since 2000")
+                .font(.caption)
+                .foregroundStyle(Color.cleanLabel3)
+
+            if viewModel.isLoading && viewModel.result == nil {
+                PermitHistorySkeletonView()
+            } else if let result = viewModel.result {
+                Text(result.summary)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.cleanLabel)
+
+                PermitCategoryBadges(categories: result.categories)
+                PermitAnalyticsView(analytics: result.analytics)
+                PermitTimelineView(groups: result.groupedByYear)
+
+                Text("Permit records indicate officially permitted work only. Absence of permits does not mean no renovations were completed.")
+                    .font(.caption)
+                    .foregroundStyle(Color.cleanLabel3)
+
+                Text(result.attribution)
+                    .font(.caption2)
+                    .foregroundStyle(Color.cleanLabel3.opacity(0.72))
+            } else {
+                EmptyCardState(message: "Permit history is unavailable for this address.")
             }
         }
     }
@@ -101,7 +152,7 @@ private struct PermitCategoryBadges: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 7)
                         .foregroundStyle(.white)
-                        .background(Color.krokvaGold.opacity(0.78), in: Capsule())
+                        .background(Color.cleanAmber.opacity(0.78), in: Capsule())
                 }
             }
         }
@@ -138,7 +189,7 @@ struct PermitTimelineView: View {
                     VStack(alignment: .leading, spacing: 10) {
                         Text(String(group.year))
                             .font(.headline)
-                            .foregroundStyle(Color.krokvaGold)
+                            .foregroundStyle(Color.cleanAmber)
                         ForEach(group.permits) { permit in
                             PermitTimelineRow(permit: permit)
                         }
@@ -156,11 +207,11 @@ private struct PermitTimelineRow: View {
         VStack(alignment: .leading, spacing: 5) {
             Text(permit.workDone ?? permit.description ?? "\(permit.category.rawValue) permit issued")
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Color.krokvaInk)
+                .foregroundStyle(Color.cleanLabel)
             if permit.isHomeownerFiled {
                 Label("Filed by homeowner", systemImage: "person.fill")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.krokvaInk2)
+                    .foregroundStyle(Color.cleanLabel2)
             }
             VStack(alignment: .leading, spacing: 3) {
                 KeyValueRow(key: "Permit Type", value: permit.permitType)
@@ -191,7 +242,7 @@ private struct PermitTimelineRow: View {
         .padding(.leading, 12)
         .overlay(alignment: .leading) {
             Rectangle()
-                .fill(Color.krokvaLine)
+                .fill(Color.cleanSep)
                 .frame(width: 2)
         }
     }
@@ -200,11 +251,11 @@ private struct PermitTimelineRow: View {
 private struct PermitHistorySkeletonView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            RoundedRectangle(cornerRadius: 6).fill(Color.krokvaInk3.opacity(0.18)).frame(height: 16)
-            RoundedRectangle(cornerRadius: 6).fill(Color.krokvaInk3.opacity(0.14)).frame(height: 16).padding(.trailing, 70)
+            RoundedRectangle(cornerRadius: 6).fill(Color.cleanLabel3.opacity(0.18)).frame(height: 16)
+            RoundedRectangle(cornerRadius: 6).fill(Color.cleanLabel3.opacity(0.14)).frame(height: 16).padding(.trailing, 70)
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
                 ForEach(0..<4, id: \.self) { _ in
-                    RoundedRectangle(cornerRadius: 12).fill(Color.krokvaInk3.opacity(0.12)).frame(height: 64)
+                    RoundedRectangle(cornerRadius: 12).fill(Color.cleanLabel3.opacity(0.12)).frame(height: 64)
                 }
             }
         }

@@ -2,12 +2,14 @@ import MapKit
 import SwiftUI
 
 struct CityMapView: View {
-    let dossier: AddressDossier?
+    let report: AddressReport?
 
-    @State private var position = MapCameraPosition.region(
-        MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: 49.8951, longitude: -97.1384),
-            span: MKCoordinateSpan(latitudeDelta: 0.25, longitudeDelta: 0.25)
+    @State private var position = MapCameraPosition.camera(
+        MapCamera(
+            centerCoordinate: CLLocationCoordinate2D(latitude: 49.8951, longitude: -97.1384),
+            distance: 2000,
+            heading: 0,
+            pitch: 60
         )
     )
     @State private var showProperty = true
@@ -16,17 +18,17 @@ struct CityMapView: View {
     @State private var selectedMarker: CivicMapMarker?
 
     private var permitMarkers: [BuildingPermit] {
-        (dossier?.permits ?? []).filter { $0.coordinate != nil }
+        (report?.permits ?? []).filter { $0.coordinate != nil }
     }
 
     private var vacantMarkers: [VacantOrder] {
-        (dossier?.vacantOrders ?? []).filter { $0.coordinate != nil }
+        (report?.vacantOrders ?? []).filter { $0.coordinate != nil }
     }
 
     private var visibleMarkers: [CivicMapMarker] {
-        guard let dossier else { return [] }
+        guard let report else { return [] }
         return CivicMapMarker.markers(
-            for: dossier,
+            for: report,
             includeProperty: showProperty,
             includePermits: showPermits,
             includeVacantOrders: showVacantOrders
@@ -59,28 +61,28 @@ struct CityMapView: View {
             .navigationTitle("Map")
             .navigationBarTitleDisplayMode(.inline)
         }
-        .onChange(of: dossier?.id) {
-            if let coordinate = dossier?.property?.coordinate {
-                position = .region(MKCoordinateRegion(center: coordinate, span: MKCoordinateSpan(latitudeDelta: 0.012, longitudeDelta: 0.012)))
+        .onChange(of: report?.id) {
+            if let coordinate = report?.property?.coordinate {
+                position = .camera(MapCamera(centerCoordinate: coordinate, distance: 2000, heading: 0, pitch: 60))
             }
         }
     }
 
     private var controlBar: some View {
         VStack(spacing: 10) {
-            if let dossier {
+            if let report {
                 HStack(spacing: 12) {
                     Image(systemName: "mappin.and.ellipse")
                         .font(.title3)
-                        .foregroundStyle(Color.krokvaAccent)
+                        .foregroundStyle(Color.cleanSky)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(dossier.address.displayAddress)
+                        Text(report.address.displayAddress)
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Color.krokvaInk)
+                            .foregroundStyle(Color.cleanLabel)
                             .lineLimit(1)
-                        Text(dossier.property?.neighbourhood ?? dossier.cityName)
+                        Text(report.property?.neighbourhood ?? report.cityName)
                             .font(.caption)
-                            .foregroundStyle(Color.krokvaInk3)
+                            .foregroundStyle(Color.cleanLabel2.opacity(0.68))
                     }
                     Spacer(minLength: 0)
                 }
@@ -88,29 +90,26 @@ struct CityMapView: View {
                 HStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
                         .font(.title3)
-                        .foregroundStyle(Color.krokvaInk3)
-                    Text("Open a dossier from Search to drop a pin")
+                        .foregroundStyle(Color.cleanLabel2.opacity(0.68))
+                    Text("Open a report from Search to drop a pin")
                         .font(.subheadline)
-                        .foregroundStyle(Color.krokvaInk2)
+                        .foregroundStyle(Color.cleanLabel2)
                     Spacer(minLength: 0)
                 }
             }
 
             HStack(spacing: 8) {
-                MapToggleChip(title: "Address", systemImage: "house.fill", tint: .krokvaAccent, isOn: $showProperty)
-                MapToggleChip(title: "Permits \(permitMarkers.count)", systemImage: "hammer.fill", tint: .krokvaGold, isOn: $showPermits)
+                MapToggleChip(title: "Address", systemImage: "house.fill", tint: .cleanSky, isOn: $showProperty)
+                MapToggleChip(title: "Permits \(permitMarkers.count)", systemImage: "hammer.fill", tint: .cleanAmber, isOn: $showPermits)
                     .disabled(permitMarkers.isEmpty)
-                MapToggleChip(title: "Vacant \(vacantMarkers.count)", systemImage: "exclamationmark.triangle.fill", tint: .orange, isOn: $showVacantOrders)
+                MapToggleChip(title: "Vacant \(vacantMarkers.count)", systemImage: "exclamationmark.triangle.fill", tint: .cleanRed, isOn: $showVacantOrders)
                     .disabled(vacantMarkers.isEmpty)
             }
         }
         .padding(14)
-        .background(Color.krokvaSurface.opacity(0.96), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14, style: .continuous)
-                .stroke(Color.krokvaLine, lineWidth: 1)
-        )
-        .shadow(color: .black.opacity(0.12), radius: 14, y: 4)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(color: .black.opacity(0.06), radius: 8, x: 0, y: 1)
+        .shadow(color: Color.cleanLabel.opacity(0.12), radius: 22, y: 10)
     }
 }
 
@@ -131,10 +130,8 @@ private struct MapToggleChip: View {
             .font(.caption.weight(.semibold))
             .padding(.horizontal, 10)
             .padding(.vertical, 7)
-            .foregroundStyle(isOn ? .white : tint)
-            .background(
-                Capsule().fill(isOn ? tint : tint.opacity(0.12))
-            )
+            .foregroundStyle(isOn ? Color.white : tint)
+            .background(Capsule().fill(isOn ? Color.cleanSky : tint.opacity(0.16)))
         }
         .buttonStyle(.plain)
     }

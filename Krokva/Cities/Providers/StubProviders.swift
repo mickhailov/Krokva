@@ -18,7 +18,7 @@ class ComingSoonProvider: CityDataProvider {
         self.datasets = datasets
     }
 
-    func fetchDossier(for address: NormalizedAddress) async -> AddressDossier {
+    func fetchReport(for address: NormalizedAddress) async -> AddressReport {
         .comingSoon(address: address, provider: self)
     }
 }

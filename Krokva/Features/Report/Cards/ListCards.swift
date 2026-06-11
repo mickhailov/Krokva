@@ -1,0 +1,1502 @@
+import SwiftUI
+
+// MARK: - PermitsCard
+
+struct PermitsCard: View {
+    let permits: [BuildingPermit]
+    @State private var isExpanded = false
+
+    var body: some View {
+        CleanCard(padding: 0) {
+            VStack(spacing: 0) {
+                headerButton
+                if isExpanded {
+                    Divider()
+                    fullContent
+                        .padding(18)
+                }
+            }
+        }
+    }
+
+    private var headerButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                isExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "hammer")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 30, height: 30)
+                    .background(Color.cleanAmber, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Building permits")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.cleanLabel)
+                    if !isExpanded {
+                        Text(smallSummary)
+                            .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                            .foregroundStyle(Color.cleanLabel2)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.cleanLabel3)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+            }
+            .padding(18)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var smallSummary: String {
+        guard !permits.isEmpty else { return "No permits in 200m" }
+        return "\(permits.count) \(permits.count == 1 ? "permit" : "permits") in 200m"
+    }
+
+    @ViewBuilder
+    private var fullContent: some View {
+        if permits.isEmpty {
+            Text("No recent street-level permits were returned.")
+                .font(KrokvaTypography.bodySecondary)
+                .foregroundStyle(Color.cleanLabel2)
+        } else {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(permits.enumerated()), id: \.offset) { index, permit in
+                    HStack(alignment: .top, spacing: 12) {
+                        Text(permit.issuedDate?.formatted(date: .abbreviated, time: .omitted) ?? "Date TBD")
+                            .font(KrokvaTypography.monoSmall)
+                            .foregroundStyle(Color.cleanLabel3)
+                            .frame(width: 50)
+
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(permit.address)
+                                .font(.system(size: 12.5, weight: permit.isAdjacentStructural ? .semibold : .regular))
+                                .foregroundStyle(permit.isAdjacentStructural ? Color.cleanAmber : Color.cleanLabel)
+                            Text([permit.type, permit.subType, permit.workType].compactMap { $0 }.joined(separator: " · "))
+                                .font(KrokvaTypography.caption)
+                                .foregroundStyle(Color.cleanLabel3)
+                        }
+
+                        Spacer(minLength: 0)
+
+                        if let status = permit.status {
+                            let color = permitStatusColor(status)
+                            Text(status)
+                                .font(KrokvaTypography.monoSmall)
+                                .foregroundStyle(color)
+                                .padding(.horizontal, 7)
+                                .padding(.vertical, 3)
+                                .background(color.opacity(0.10), in: Capsule())
+                                .overlay(Capsule().strokeBorder(color.opacity(0.35), lineWidth: 0.5))
+                        }
+                    }
+                    .padding(.vertical, 9)
+
+                    if index < permits.count - 1 {
+                        Divider().foregroundStyle(Color.cleanSep)
+                    }
+                }
+            }
+        }
+    }
+
+    private func permitStatusColor(_ status: String) -> Color {
+        let lower = status.lowercased()
+        if lower == "issued" || lower == "active" || lower == "open" { return .cleanAmber }
+        if lower.contains("complet") || lower.contains("closed") || lower.contains("final") { return .cleanGreen }
+        if lower.contains("cancel") || lower.contains("void") || lower.contains("expir") || lower.contains("refus") { return .cleanRed }
+        return .cleanLabel3
+    }
+}
+
+// MARK: - VacantOrdersCard
+
+struct VacantOrdersCard: View {
+    let orders: [VacantOrder]
+    @State private var isExpanded = false
+
+    var body: some View {
+        CleanCard(padding: 0) {
+            VStack(spacing: 0) {
+                headerButton
+                if isExpanded {
+                    Divider()
+                    fullContent
+                        .padding(18)
+                }
+            }
+        }
+    }
+
+    private var headerButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                isExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 30, height: 30)
+                    .background(Color.cleanRed, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Vacant building orders")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.cleanLabel)
+                    if !isExpanded {
+                        Text(smallSummary)
+                            .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                            .foregroundStyle(Color.cleanLabel2)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.cleanLabel3)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+            }
+            .padding(18)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var smallSummary: String {
+        guard !orders.isEmpty else { return "No vacant building orders" }
+        return "\(orders.count) vacant \(orders.count == 1 ? "building" : "buildings") in 300m"
+    }
+
+    @ViewBuilder
+    private var fullContent: some View {
+        if orders.isEmpty {
+            Text("No active vacant building orders were returned on this street.")
+                .font(KrokvaTypography.bodySecondary)
+                .foregroundStyle(Color.cleanLabel2)
+        } else {
+            VStack(alignment: .leading, spacing: 0) {
+                ForEach(Array(orders.enumerated()), id: \.offset) { index, order in
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(order.address)
+                            .font(.system(size: 12.5, weight: .semibold))
+                            .foregroundStyle(Color.cleanLabel)
+                        Text(order.orderType)
+                            .font(KrokvaTypography.caption)
+                            .foregroundStyle(Color.cleanLabel3)
+                        HStack(spacing: 6) {
+                            Text(order.issuedDate?.formatted(date: .abbreviated, time: .omitted) ?? "Date TBD")
+                            Text("·")
+                            Text(order.distanceDescription ?? "—")
+                        }
+                        .font(KrokvaTypography.monoSmall)
+                        .foregroundStyle(Color.cleanLabel3)
+                    }
+                    .padding(.vertical, 9)
+
+                    if index < orders.count - 1 {
+                        Divider().foregroundStyle(Color.cleanSep)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// MARK: - TransitAccessCard
+
+struct TransitAccessCard: View {
+    let summary: TransitAccessSummary?
+    @State private var isExpanded = false
+
+    var body: some View {
+        CleanCard(padding: 0) {
+            VStack(spacing: 0) {
+                headerButton
+                if isExpanded {
+                    Divider()
+                    fullContent
+                        .padding(18)
+                }
+            }
+        }
+    }
+
+    private var headerButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                isExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "bus")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 30, height: 30)
+                    .background(Color.cleanSky, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Transit access")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.cleanLabel)
+                    if !isExpanded {
+                        Text(smallSummary)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.cleanLabel2)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.cleanLabel3)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+            }
+            .padding(18)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var smallSummary: String {
+        guard let s = summary else { return "Unavailable" }
+        var parts: [String] = []
+        if let stop = s.nearestStop { parts.append("\(stop.distanceDescription) to bus stop") }
+        if !s.routes.isEmpty { parts.append("\(s.routes.count) \(s.routes.count == 1 ? "route" : "routes")") }
+        return parts.isEmpty ? "Transit data unavailable" : parts.joined(separator: " · ")
+    }
+
+    @ViewBuilder
+    private var fullContent: some View {
+        if let summary {
+            VStack(alignment: .leading, spacing: 14) {
+                Grid(horizontalSpacing: 12, verticalSpacing: 0) {
+                    GridRow {
+                        infoTile("Nearest stop", summary.nearestStop?.distanceDescription ?? "—")
+                        infoTile("Routes", "\(summary.routes.count)")
+                    }
+                    GridRow {
+                        infoTile("On time", percent(summary.onTimePercentage))
+                        infoTile("Pass-ups", "\(summary.passUpsLastYear)")
+                    }
+                }
+
+                if !summary.routes.isEmpty {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(summary.routes.prefix(5)) { route in
+                            HStack {
+                                Text(route.routeNumber)
+                                    .font(KrokvaTypography.monoBold)
+                                    .foregroundStyle(Color.cleanAmber)
+                                    .frame(width: 42, alignment: .leading)
+                                Text(route.routeName)
+                                    .font(KrokvaTypography.bodySecondary)
+                                    .foregroundStyle(Color.cleanLabel2)
+                                Spacer(minLength: 0)
+                            }
+                        }
+                    }
+                }
+
+                if let boardings = summary.averageDailyBoardings {
+                    Text("\(Int(boardings.rounded()).formatted()) estimated weekday boardings across nearby sampled stops.")
+                        .font(KrokvaTypography.caption)
+                        .foregroundStyle(Color.cleanLabel3)
+                }
+            }
+        } else {
+            Text("Nearby transit performance data is unavailable.")
+                .font(KrokvaTypography.bodySecondary)
+                .foregroundStyle(Color.cleanLabel2)
+        }
+    }
+}
+
+// MARK: - DevelopmentContextCard
+
+struct DevelopmentContextCard: View {
+    let summary: DevelopmentContextSummary?
+    @State private var isExpanded = false
+
+    var body: some View {
+        CleanCard(padding: 0) {
+            VStack(spacing: 0) {
+                headerButton
+                if isExpanded {
+                    Divider()
+                    fullContent
+                        .padding(18)
+                }
+            }
+        }
+    }
+
+    private var headerButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                isExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "building.2.crop.circle")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 30, height: 30)
+                    .background(Color.cleanIndigo, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Development context")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.cleanLabel)
+                    if !isExpanded {
+                        Text(smallSummary)
+                            .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                            .foregroundStyle(Color.cleanLabel2)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.cleanLabel3)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+            }
+            .padding(18)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var smallSummary: String {
+        guard let intake = summary?.intake.first else { return "Unavailable" }
+        return "\(intake.approved) approved · \(intake.notApproved) not approved"
+    }
+
+    @ViewBuilder
+    private var fullContent: some View {
+        if let summary {
+            VStack(alignment: .leading, spacing: 14) {
+                if !summary.recentPermits.isEmpty {
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(summary.recentPermits.prefix(3)) { permit in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(permit.address)
+                                    .font(.system(size: 12.5, weight: .semibold))
+                                    .foregroundStyle(Color.cleanLabel)
+                                Text([permit.type, permit.subType, permit.workType].compactMap { $0 }.joined(separator: " · "))
+                                    .font(KrokvaTypography.caption)
+                                    .foregroundStyle(Color.cleanLabel3)
+                                Text(permit.issuedDate?.formatted(date: .abbreviated, time: .omitted) ?? "Date TBD")
+                                    .font(KrokvaTypography.monoSmall)
+                                    .foregroundStyle(Color.cleanLabel3)
+                            }
+                            .padding(.vertical, 7)
+                        }
+                    }
+                }
+
+                if let metric = summary.reviewProcessing.first {
+                    KeyValueRow(key: "Review processing", value: "\(days(metric.averageBusinessDays)) avg")
+                }
+                if let intake = summary.intake.first {
+                    KeyValueRow(key: "Latest intake", value: "\(intake.approved) approved / \(intake.notApproved) not approved")
+                }
+            }
+        } else {
+            Text("Development permit context is unavailable.")
+                .font(KrokvaTypography.bodySecondary)
+                .foregroundStyle(Color.cleanLabel2)
+        }
+    }
+}
+
+// MARK: - BylawInvestigationsCard
+
+struct BylawInvestigationsCard: View {
+    let summary: BylawInvestigationSummary?
+
+    var body: some View {
+        ReportCard(title: "By-law investigations", systemImage: "doc.text.magnifyingglass", badge: "NEIGHBOURHOOD") {
+            if let summary {
+                if !summary.yearly.isEmpty {
+                    HStack(spacing: 10) {
+                        ForEach(summary.yearly.suffix(4)) { item in
+                            StatTile(label: "\(item.year)", value: item.count.formatted())
+                        }
+                    }
+                }
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(summary.complaintTypes.prefix(5)) { item in
+                        HStack {
+                            Text(item.incidentType)
+                                .font(KrokvaTypography.bodySecondary)
+                                .foregroundStyle(Color.cleanLabel2)
+                            Spacer()
+                            Text(item.count.formatted())
+                                .font(KrokvaTypography.monoBold)
+                                .foregroundStyle(Color.cleanLabel)
+                        }
+                    }
+                }
+                Text("Shown as neighbourhood activity for \(summary.neighbourhood), not an address-level score.")
+                    .font(KrokvaTypography.caption)
+                    .foregroundStyle(Color.cleanLabel3)
+            } else {
+                Text("Neighbourhood by-law investigation data is unavailable.")
+                    .font(KrokvaTypography.bodySecondary)
+                    .foregroundStyle(Color.cleanLabel2)
+            }
+        }
+    }
+}
+
+// MARK: - CivicAmenitiesCard
+
+struct CivicAmenitiesCard: View {
+    let parks: ParksSummary?
+    let river: RiverGaugeSummary?
+    let library: LibraryAmenity?
+    @State private var isExpanded = false
+
+    var body: some View {
+        CleanCard(padding: 0) {
+            VStack(spacing: 0) {
+                headerButton
+                if isExpanded {
+                    Divider()
+                    fullContent
+                        .padding(18)
+                }
+            }
+        }
+    }
+
+    // MARK: Header
+
+    private var headerButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                isExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "map")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 30, height: 30)
+                    .background(Color.cleanGreen, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Civic amenities")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.cleanLabel)
+                    if !isExpanded {
+                        Text(smallSummary)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.cleanLabel2)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.cleanLabel3)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+            }
+            .padding(18)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var smallSummary: String {
+        var parts: [String] = []
+        if let count = parks?.nearbyParks.count, count > 0 {
+            parts.append("\(count) \(count == 1 ? "park" : "parks")")
+        }
+        if library != nil { parts.append("1 library") }
+        return parts.isEmpty ? "Tap to view" : parts.joined(separator: " · ")
+    }
+
+    // MARK: Full content
+
+    @ViewBuilder
+    private var fullContent: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            if let parks, !parks.nearbyParks.isEmpty {
+                Text("Parks nearby").eyebrow(color: .cleanLabel3)
+                ParksInlineContent(summary: parks)
+            }
+
+            if let library {
+                let hasPrior = parks?.nearbyParks.isEmpty == false
+                if hasPrior { Divider().foregroundStyle(Color.cleanSep) }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Library").eyebrow(color: .cleanLabel3)
+                    Text(library.name)
+                        .font(.system(size: 13.5, weight: .semibold))
+                        .foregroundStyle(Color.cleanLabel)
+                    Text("\(library.address) · \(library.distanceDescription)")
+                        .font(KrokvaTypography.caption)
+                        .foregroundStyle(Color.cleanLabel3)
+                    Text([
+                        library.wifi ? "Wi-Fi" : nil,
+                        library.accessibility ? "Accessible" : nil,
+                        library.parkingLot ? "Parking" : nil,
+                        library.roomRentals ? "Rooms" : nil
+                    ].compactMap { $0 }.joined(separator: " · "))
+                        .font(KrokvaTypography.caption)
+                        .foregroundStyle(Color.cleanLabel2)
+                }
+            }
+
+            if let river {
+                let hasPrior = (parks?.nearbyParks.isEmpty == false) || library != nil
+                if hasPrior { Divider().foregroundStyle(Color.cleanSep) }
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("River gauge").eyebrow(color: .cleanLabel3)
+                    Text("\(river.riverName) River · \(river.location)")
+                        .font(.system(size: 13.5, weight: .semibold))
+                        .foregroundStyle(Color.cleanLabel)
+                    Text("Nearest gauge · \(river.distanceDescription)")
+                        .font(KrokvaTypography.caption)
+                        .foregroundStyle(Color.cleanLabel3)
+                    HStack {
+                        infoTile("James", river.jamesFeet.map { String(format: "%.2f ft", $0) } ?? "—")
+                        infoTile("Geodetic", river.geodeticMetric.map { String(format: "%.2f m", $0) } ?? "—")
+                    }
+                }
+            }
+
+            if parks == nil && library == nil && river == nil {
+                Text("Civic amenity data is unavailable.")
+                    .font(KrokvaTypography.bodySecondary)
+                    .foregroundStyle(Color.cleanLabel2)
+            }
+        }
+    }
+}
+
+// MARK: - PlanningContextCard
+
+struct PlanningContextCard: View {
+    let summary: PlanningContextSummary?
+    @State private var isExpanded = false
+
+    var body: some View {
+        CleanCard(padding: 0) {
+            VStack(spacing: 0) {
+                headerButton
+                if isExpanded {
+                    Divider()
+                    fullContent
+                        .padding(18)
+                }
+            }
+        }
+    }
+
+    private var headerButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                isExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "building.columns")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 30, height: 30)
+                    .background(Color.cleanIndigo, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Planning notices")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.cleanLabel)
+                    if !isExpanded {
+                        Text(smallSummary)
+                            .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                            .foregroundStyle(Color.cleanLabel2)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.cleanLabel3)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+            }
+            .padding(18)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var smallSummary: String {
+        guard let summary else { return "Unavailable" }
+        var parts: [String] = []
+        if let code = summary.zoningCode { parts.append(code) }
+        let count = summary.publicNotices.count
+        if count > 0 {
+            parts.append("\(count) \(count == 1 ? "notice" : "notices")")
+        } else if parts.isEmpty {
+            return "No notices"
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    @ViewBuilder
+    private var fullContent: some View {
+        if let summary {
+            VStack(alignment: .leading, spacing: 14) {
+                if summary.zoningCode != nil || summary.zoningDescription != nil {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(summary.zoningCode ?? "Zoning")
+                            .font(KrokvaTypography.monoBold)
+                            .foregroundStyle(Color.cleanLabel)
+                        if let description = summary.zoningDescription {
+                            Text(description)
+                                .font(KrokvaTypography.caption)
+                                .foregroundStyle(Color.cleanLabel3)
+                        }
+                    }
+                }
+
+                if !summary.publicNotices.isEmpty {
+                    if summary.zoningCode != nil || summary.zoningDescription != nil {
+                        Divider().foregroundStyle(Color.cleanSep)
+                    }
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(summary.publicNotices.prefix(4).enumerated()), id: \.element.id) { index, notice in
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack(alignment: .firstTextBaseline) {
+                                    Text(notice.noticeType.capitalized)
+                                        .font(.system(size: 12.5, weight: .semibold))
+                                        .foregroundStyle(Color.cleanLabel)
+                                    Spacer(minLength: 8)
+                                    Text(notice.distanceDescription ?? "Nearby")
+                                        .font(KrokvaTypography.monoSmall)
+                                        .foregroundStyle(Color.cleanLabel3)
+                                }
+                                Text(notice.address.capitalized)
+                                    .font(KrokvaTypography.caption)
+                                    .foregroundStyle(Color.cleanLabel3)
+                                if let description = notice.description, !description.isEmpty {
+                                    Text(description)
+                                        .font(KrokvaTypography.bodySecondary)
+                                        .foregroundStyle(Color.cleanLabel2)
+                                        .lineLimit(3)
+                                }
+                                HStack(spacing: 8) {
+                                    if let date = notice.meetingDate {
+                                        Text("Meeting \(date.formatted(date: .abbreviated, time: .omitted))")
+                                            .font(KrokvaTypography.monoSmall)
+                                            .foregroundStyle(Color.cleanLabel3)
+                                    }
+                                    if let decision = notice.decision, !decision.isEmpty {
+                                        let dcolor = planningDecisionColor(decision)
+                                        Text(decision.capitalized)
+                                            .font(KrokvaTypography.monoSmall)
+                                            .foregroundStyle(dcolor)
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(dcolor.opacity(0.10), in: Capsule())
+                                    }
+                                }
+                            }
+                            .padding(.vertical, 8)
+
+                            if index < min(summary.publicNotices.count, 4) - 1 {
+                                Divider().foregroundStyle(Color.cleanSep)
+                            }
+                        }
+                    }
+                } else if summary.zoningCode == nil && summary.zoningDescription == nil {
+                    Text("No nearby planning notices or zoning context were returned.")
+                        .font(KrokvaTypography.bodySecondary)
+                        .foregroundStyle(Color.cleanLabel2)
+                }
+            }
+        } else {
+            Text("Planning notice data is unavailable.")
+                .font(KrokvaTypography.bodySecondary)
+                .foregroundStyle(Color.cleanLabel2)
+        }
+    }
+
+    private func planningDecisionColor(_ decision: String) -> Color {
+        let lower = decision.lowercased()
+        if lower.contains("approv") || lower.contains("grant") { return .cleanGreen }
+        if lower.contains("refus") || lower.contains("deni") || lower.contains("reject") { return .cleanRed }
+        return .cleanLabel3
+    }
+}
+
+// MARK: - StreetAccessCard (merged with Infrastructure)
+
+struct StreetAccessCard: View {
+    let street: StreetAccessSummary?
+    let infrastructure: InfrastructureSummary?
+    @State private var isExpanded = false
+
+    var body: some View {
+        CleanCard(padding: 0) {
+            VStack(spacing: 0) {
+                headerButton
+                if isExpanded {
+                    Divider()
+                    fullContent
+                        .padding(18)
+                }
+            }
+        }
+    }
+
+    // MARK: Header
+
+    private var headerButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                isExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "figure.walk.motion")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 30, height: 30)
+                    .background(Color.cleanGreen, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Street access")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.cleanLabel)
+                    if !isExpanded {
+                        Text(smallSummary)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.cleanLabel2)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.cleanLabel3)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+            }
+            .padding(18)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var smallSummary: String {
+        var parts: [String] = []
+        if let roadType = street?.roadType { parts.append(roadType) }
+        else if let surface = street?.pavementSurface { parts.append(surface) }
+        if let trees = infrastructure?.publicTrees { parts.append("\(trees) trees") }
+        if parts.isEmpty { return "Tap to view" }
+        return parts.joined(separator: " · ")
+    }
+
+    // MARK: Full content
+
+    @ViewBuilder
+    private var fullContent: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            // Street access section
+            if let street {
+                Grid(horizontalSpacing: 12, verticalSpacing: 0) {
+                    GridRow {
+                        infoTile("Pavement", street.pavementCondition ?? "—")
+                        infoTile("Surface", street.pavementSurface ?? "—")
+                    }
+                    GridRow {
+                        infoTile("Bike links", street.cyclingRoutesNearby.formatted())
+                        infoTile("School zone", street.schoolSpeedLimit?.speedLimit ?? "—")
+                    }
+                }
+
+                if street.pavementCondition == nil && street.pavementSurface == nil {
+                    Text("No pavement survey on record — Winnipeg surveys pavement condition on major and collector roads, not most residential streets.")
+                        .font(KrokvaTypography.caption)
+                        .foregroundStyle(Color.cleanLabel3)
+                }
+
+                if let schoolZone = street.schoolSpeedLimit {
+                    Text([schoolZone.school, schoolZone.effectiveDays, schoolZone.effectiveTime].compactMap { $0 }.joined(separator: " · "))
+                        .font(KrokvaTypography.caption)
+                        .foregroundStyle(Color.cleanLabel3)
+                }
+
+                let items = street.activeDisruptions + street.activeLaneClosures
+                if !items.isEmpty {
+                    Divider().foregroundStyle(Color.cleanSep)
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(items.prefix(5).enumerated()), id: \.element.id) { index, item in
+                            VStack(alignment: .leading, spacing: 3) {
+                                HStack(alignment: .firstTextBaseline) {
+                                    Text(item.title)
+                                        .font(.system(size: 12.5, weight: .semibold))
+                                        .foregroundStyle(Color.cleanLabel)
+                                    Spacer(minLength: 8)
+                                    Text(item.status ?? item.distanceDescription ?? "Active")
+                                        .font(KrokvaTypography.monoSmall)
+                                        .foregroundStyle(Color.cleanLabel3)
+                                }
+                                if let detail = item.detail {
+                                    Text(detail)
+                                        .font(KrokvaTypography.caption)
+                                        .foregroundStyle(Color.cleanLabel3)
+                                        .lineLimit(2)
+                                }
+                                Text([item.startDate?.formatted(date: .abbreviated, time: .omitted), item.endDate?.formatted(date: .abbreviated, time: .omitted)].compactMap { $0 }.joined(separator: " to "))
+                                    .font(KrokvaTypography.monoSmall)
+                                    .foregroundStyle(Color.cleanLabel3)
+                            }
+                            .padding(.vertical, 8)
+
+                            if index < min(items.count, 5) - 1 {
+                                Divider().foregroundStyle(Color.cleanSep)
+                            }
+                        }
+                    }
+                }
+            } else {
+                Text("No pavement survey, bike route, or active disruption on record for this street. Winnipeg surveys pavement condition on major and collector roads, so quieter residential streets are often not included.")
+                    .font(KrokvaTypography.bodySecondary)
+                    .foregroundStyle(Color.cleanLabel2)
+            }
+
+            // Infrastructure section
+            if let infra = infrastructure {
+                Divider().foregroundStyle(Color.cleanSep)
+                Text("Infrastructure").eyebrow(color: .cleanLabel3)
+                Grid(horizontalSpacing: 12, verticalSpacing: 0) {
+                    GridRow {
+                        infoTile("Posted speed", infra.speedLimit ?? "—")
+                        infoTile("Potholes repaired", "\(infra.potholes)")
+                    }
+                    GridRow {
+                        infoTile("Public trees", "\(infra.publicTrees)")
+                        infoTile("DED-tagged", "\(infra.taggedTrees)")
+                    }
+                }
+                if infra.potholes == 0 {
+                    Text("No pothole repairs logged on this street — common for newer neighbourhoods.")
+                        .font(KrokvaTypography.caption)
+                        .foregroundStyle(Color.cleanLabel3)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - CivicContextCard
+
+struct CivicContextCard: View {
+    let summary: AddressCivicContext?
+    @State private var isExpanded = false
+
+    var body: some View {
+        CleanCard(padding: 0) {
+            VStack(spacing: 0) {
+                headerButton
+                if isExpanded {
+                    Divider()
+                    fullContent
+                        .padding(18)
+                }
+            }
+        }
+    }
+
+    private var headerButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                isExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "square.grid.2x2")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 30, height: 30)
+                    .background(Color.cleanSky, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Civic boundaries")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.cleanLabel)
+                    if !isExpanded {
+                        Text(smallSummary)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.cleanLabel2)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.cleanLabel3)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+            }
+            .padding(18)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var smallSummary: String {
+        guard let summary else { return "Unavailable" }
+        var parts: [String] = []
+        if let ward = summary.ward { parts.append(ward) }
+        if let neighbourhood = summary.neighbourhood { parts.append(neighbourhood) }
+        if let plow = summary.plowZone { parts.append("Plow \(plow)") }
+        return parts.isEmpty ? "Tap to view" : parts.joined(separator: " · ")
+    }
+
+    @ViewBuilder
+    private var fullContent: some View {
+        if let summary {
+            VStack(alignment: .leading, spacing: 14) {
+                Grid(horizontalSpacing: 12, verticalSpacing: 0) {
+                    GridRow {
+                        infoTile("Ward", summary.ward ?? "—")
+                        infoTile("Plow zone", summary.plowZone ?? "—")
+                    }
+                    GridRow {
+                        infoTile("Neighbourhood", summary.neighbourhood ?? "—")
+                        infoTile("Postal code", summary.postalCode ?? "—")
+                    }
+                }
+
+                if let addressID = summary.addressID {
+                    Text("Address ID \(addressID)")
+                        .font(KrokvaTypography.monoSmall)
+                        .foregroundStyle(Color.cleanLabel3)
+                }
+            }
+        } else {
+            Text("Address-level civic boundary data is unavailable.")
+                .font(KrokvaTypography.bodySecondary)
+                .foregroundStyle(Color.cleanLabel2)
+        }
+    }
+}
+
+// MARK: - SchoolDivisionsCard
+
+struct SchoolDivisionsCard: View {
+    let context: AddressCivicContext?
+    let schools: [SchoolAmenity]
+    let schoolZone: SchoolSpeedLimit?
+    @State private var isExpanded = false
+
+    var body: some View {
+        CleanCard(padding: 0) {
+            VStack(spacing: 0) {
+                headerButton
+                if isExpanded {
+                    Divider()
+                    fullContent
+                        .padding(18)
+                }
+            }
+        }
+    }
+
+    private var headerButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                isExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "graduationcap")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 30, height: 30)
+                    .background(Color.cleanIndigo, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("School divisions")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.cleanLabel)
+                    if !isExpanded {
+                        Text(smallSummary)
+                            .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                            .foregroundStyle(Color.cleanLabel2)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.cleanLabel3)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+            }
+            .padding(18)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var smallSummary: String {
+        guard let context else { return "School boundary unavailable" }
+        var parts: [String] = []
+        if let division = context.schoolDivision { parts.append(division) }
+        if let code = context.schoolDivisionCode { parts.append("#\(code)") }
+        if let ward = context.schoolDivisionWard { parts.append("Ward \(ward)") }
+        if let speed = schoolZone?.speedLimit { parts.append("Zone \(speed)") }
+        if !schools.isEmpty { parts.append("\(schools.count) nearby") }
+        return parts.isEmpty ? "School boundary unavailable" : parts.joined(separator: " · ")
+    }
+
+    @ViewBuilder
+    private var fullContent: some View {
+        if let context {
+            VStack(alignment: .leading, spacing: 14) {
+                Grid(horizontalSpacing: 12, verticalSpacing: 0) {
+                    GridRow {
+                        infoTile("Division", context.schoolDivision ?? "—")
+                        infoTile("Division no.", context.schoolDivisionCode.map { "#\($0)" } ?? "—")
+                    }
+                    GridRow {
+                        infoTile("School ward", context.schoolDivisionWard ?? "—")
+                        infoTile("Boundary", context.schoolDivisionBoundaryName ?? context.schoolDivision ?? "—")
+                    }
+                }
+
+                if let schoolZone {
+                    Divider().foregroundStyle(Color.cleanSep)
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("School zone").eyebrow(color: .cleanLabel3)
+                        Grid(horizontalSpacing: 12, verticalSpacing: 0) {
+                            GridRow {
+                                infoTile("Speed", schoolZone.speedLimit)
+                                infoTile("School", schoolZone.school)
+                            }
+                            GridRow {
+                                infoTile("Days", schoolZone.effectiveDays ?? "—")
+                                infoTile("Hours", schoolZone.effectiveTime ?? "—")
+                            }
+                        }
+                    }
+                }
+
+                if let website = context.schoolDivisionWebsite,
+                   let url = URL(string: website) {
+                    Link(destination: url) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "safari")
+                                .font(.system(size: 12, weight: .semibold))
+                            Text(website)
+                                .font(KrokvaTypography.caption)
+                                .lineLimit(1)
+                            Spacer(minLength: 0)
+                            Image(systemName: "arrow.up.right")
+                                .font(.system(size: 10, weight: .bold))
+                        }
+                        .foregroundStyle(Color.cleanSky)
+                    }
+                }
+
+                if !schools.isEmpty {
+                    Divider().foregroundStyle(Color.cleanSep)
+
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Nearby schools").eyebrow(color: .cleanLabel3)
+                            .padding(.bottom, 4)
+
+                        ForEach(Array(schools.prefix(5).enumerated()), id: \.element.id) { index, school in
+                            VStack(alignment: .leading, spacing: 3) {
+                                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                                    Text(school.name)
+                                        .font(.system(size: 12.5, weight: .semibold))
+                                        .foregroundStyle(Color.cleanLabel)
+                                    Spacer(minLength: 0)
+                                    Text(school.distanceDescription)
+                                        .font(KrokvaTypography.monoSmall)
+                                        .foregroundStyle(Color.cleanLabel3)
+                                }
+                                Text(school.address)
+                                    .font(KrokvaTypography.caption)
+                                    .foregroundStyle(Color.cleanLabel3)
+                                Text([school.schoolType, school.grades].compactMap { $0 }.joined(separator: " · "))
+                                    .font(KrokvaTypography.caption)
+                                    .foregroundStyle(Color.cleanLabel3)
+                            }
+                            .padding(.vertical, 8)
+
+                            if index < min(schools.count, 5) - 1 {
+                                Divider().foregroundStyle(Color.cleanSep)
+                            }
+                        }
+                    }
+                } else {
+                    Text("School division comes from address boundary data. Nearby school locations are not available for this report yet.")
+                        .font(KrokvaTypography.caption)
+                        .foregroundStyle(Color.cleanLabel3)
+                }
+            }
+        } else {
+            Text("School division data is unavailable for this address.")
+                .font(KrokvaTypography.bodySecondary)
+                .foregroundStyle(Color.cleanLabel2)
+        }
+    }
+}
+
+// MARK: - RecreationCard
+
+struct RecreationCard: View {
+    let summary: RecreationSummary?
+    @State private var isExpanded = false
+
+    var body: some View {
+        CleanCard(padding: 0) {
+            VStack(spacing: 0) {
+                headerButton
+                if isExpanded {
+                    Divider()
+                    fullContent
+                        .padding(18)
+                }
+            }
+        }
+    }
+
+    private var headerButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                isExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "figure.pool.swim")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 30, height: 30)
+                    .background(Color.cleanGreen, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Recreation nearby")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.cleanLabel)
+                    if !isExpanded {
+                        Text(smallSummary)
+                            .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                            .foregroundStyle(Color.cleanLabel2)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.cleanLabel3)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+            }
+            .padding(18)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var smallSummary: String {
+        guard let summary else { return "Unavailable" }
+        var parts: [String] = []
+        if let nearest = summary.nearestComplex {
+            parts.append(nearest.distanceDescription.map { "\($0) to \(nearest.name)" } ?? nearest.name)
+        }
+        if !summary.activities.isEmpty {
+            parts.append("\(summary.activities.count) activities")
+        }
+        return parts.isEmpty ? "No nearby recreation data" : parts.joined(separator: " · ")
+    }
+
+    @ViewBuilder
+    private var fullContent: some View {
+        if let summary {
+            VStack(alignment: .leading, spacing: 14) {
+                if !summary.complexes.isEmpty {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Complexes").eyebrow(color: .cleanLabel3).padding(.bottom, 6)
+                        ForEach(Array(summary.complexes.prefix(4).enumerated()), id: \.element.id) { index, complex in
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack(alignment: .firstTextBaseline) {
+                                    Text(complex.name)
+                                        .font(.system(size: 12.5, weight: .semibold))
+                                        .foregroundStyle(Color.cleanLabel)
+                                    Spacer(minLength: 8)
+                                    Text(complex.distanceDescription ?? "Nearby")
+                                        .font(KrokvaTypography.monoSmall)
+                                        .foregroundStyle(Color.cleanLabel3)
+                                }
+                                Text([complex.address, complex.amenities.prefix(4).joined(separator: " · ")].compactMap { value in
+                                    value?.isEmpty == false ? value : nil
+                                }.joined(separator: " · "))
+                                    .font(KrokvaTypography.caption)
+                                    .foregroundStyle(Color.cleanLabel3)
+                            }
+                            .padding(.vertical, 8)
+
+                            if index < min(summary.complexes.count, 4) - 1 {
+                                Divider().foregroundStyle(Color.cleanSep)
+                            }
+                        }
+                    }
+                }
+
+                if !summary.activities.isEmpty {
+                    if !summary.complexes.isEmpty { Divider().foregroundStyle(Color.cleanSep) }
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Programs").eyebrow(color: .cleanLabel3).padding(.bottom, 6)
+                        ForEach(Array(summary.activities.prefix(5).enumerated()), id: \.element.id) { index, activity in
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(activity.name)
+                                    .font(.system(size: 12.5, weight: .semibold))
+                                    .foregroundStyle(Color.cleanLabel)
+                                Text([activity.placeName, activity.category, activity.activityType].compactMap { $0 }.joined(separator: " · "))
+                                    .font(KrokvaTypography.caption)
+                                    .foregroundStyle(Color.cleanLabel3)
+                                HStack(spacing: 6) {
+                                    Text(activity.startDate?.formatted(date: .abbreviated, time: .omitted) ?? "Date TBD")
+                                    if let openSpaces = activity.openSpaces {
+                                        Text("·")
+                                        Text("\(openSpaces) open")
+                                    }
+                                    if let status = activity.status {
+                                        Text("·")
+                                        Text(status)
+                                    }
+                                }
+                                .font(KrokvaTypography.monoSmall)
+                                .foregroundStyle(Color.cleanLabel3)
+                            }
+                            .padding(.vertical, 8)
+
+                            if index < min(summary.activities.count, 5) - 1 {
+                                Divider().foregroundStyle(Color.cleanSep)
+                            }
+                        }
+                    }
+                }
+            }
+        } else {
+            Text("Nearby recreation complex and program data is unavailable.")
+                .font(KrokvaTypography.bodySecondary)
+                .foregroundStyle(Color.cleanLabel2)
+        }
+    }
+}
+
+// MARK: - ShortTermRentalsCard
+
+struct ShortTermRentalsCard: View {
+    let summary: ShortTermRentalSummary?
+    @State private var isExpanded = false
+
+    var body: some View {
+        CleanCard(padding: 0) {
+            VStack(spacing: 0) {
+                headerButton
+                if isExpanded {
+                    Divider()
+                    fullContent
+                        .padding(18)
+                }
+            }
+        }
+    }
+
+    private var headerButton: some View {
+        Button {
+            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
+                isExpanded.toggle()
+            }
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "bed.double")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 30, height: 30)
+                    .background(Color.cleanAmber, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Short-term rentals")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(Color.cleanLabel)
+                    if !isExpanded {
+                        Text(smallSummary)
+                            .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                            .foregroundStyle(Color.cleanLabel2)
+                    }
+                }
+
+                Spacer(minLength: 0)
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.cleanLabel3)
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+            }
+            .padding(18)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var smallSummary: String {
+        guard let summary else { return "No matched rental records" }
+        return "\(summary.total) matched · \(summary.nonPrimaryCount) non-primary"
+    }
+
+    @ViewBuilder
+    private var fullContent: some View {
+        if let summary {
+            VStack(alignment: .leading, spacing: 14) {
+                Grid(horizontalSpacing: 12, verticalSpacing: 0) {
+                    GridRow {
+                        infoTile("Total matched", summary.total.formatted())
+                        infoTile("Primary", summary.primaryCount.formatted())
+                    }
+                    GridRow {
+                        infoTile("Non-primary", summary.nonPrimaryCount.formatted())
+                        infoTile("Recent rows", summary.recent.count.formatted())
+                    }
+                }
+
+                if !summary.recent.isEmpty {
+                    Divider().foregroundStyle(Color.cleanSep)
+                    VStack(alignment: .leading, spacing: 0) {
+                        ForEach(Array(summary.recent.prefix(5).enumerated()), id: \.element.id) { index, rental in
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(rental.address)
+                                    .font(.system(size: 12.5, weight: .semibold))
+                                    .foregroundStyle(Color.cleanLabel)
+                                Text([rental.primaryStatus, rental.ward].compactMap { $0 }.joined(separator: " · "))
+                                    .font(KrokvaTypography.caption)
+                                    .foregroundStyle(Color.cleanLabel3)
+                                Text(rental.issuedDate?.formatted(date: .abbreviated, time: .omitted) ?? "Issue date unavailable")
+                                    .font(KrokvaTypography.monoSmall)
+                                    .foregroundStyle(Color.cleanLabel3)
+                            }
+                            .padding(.vertical, 8)
+
+                            if index < min(summary.recent.count, 5) - 1 {
+                                Divider().foregroundStyle(Color.cleanSep)
+                            }
+                        }
+                    }
+                }
+
+                Text("Matched by street text from the public registry; this is context, not a zoning or compliance determination.")
+                    .font(KrokvaTypography.caption)
+                    .foregroundStyle(Color.cleanLabel3)
+            }
+        } else {
+            Text("No short-term rental records matched nearby street names.")
+                .font(KrokvaTypography.bodySecondary)
+                .foregroundStyle(Color.cleanLabel2)
+        }
+    }
+}
+
+// MARK: - SourcesCard
+
+struct SourcesCard: View {
+    let report: AddressReport
+
+    var body: some View {
+        ReportCard(title: "Sources & licence", systemImage: "link") {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Records shown here come from public City of Winnipeg Open Data datasets and Winnipeg Police Service public crime map data.")
+                    .font(KrokvaTypography.caption)
+                    .foregroundStyle(Color.cleanLabel3)
+
+                if !report.sources.isEmpty {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(report.sources.prefix(4), id: \.id) { source in
+                            HStack(spacing: 8) {
+                                Text(source.name)
+                                    .font(KrokvaTypography.bodySecondary)
+                                    .foregroundStyle(Color.cleanLabel2)
+                                Spacer(minLength: 0)
+                                Text(source.datasetID)
+                                    .font(KrokvaTypography.monoSmall)
+                                    .foregroundStyle(Color.cleanAmber)
+                            }
+                        }
+                    }
+                }
+
+                Text("City datasets are licensed under the Open Government Licence - Winnipeg. WPS crime map data is public, aggregated by neighbourhood/month, and shown as context, not as an address-level safety score.")
+                    .font(.system(size: 10, weight: .regular))
+                    .foregroundStyle(Color.cleanLabel3)
+
+                HStack(spacing: 6) {
+                    BrandMarkView(lineWidth: 1.5).frame(width: 12, height: 12)
+                        .foregroundStyle(Color.cleanSky)
+                    Text("Krokva. Civic data for Canadian addresses.")
+                        .font(.system(size: 10, weight: .regular))
+                        .foregroundStyle(Color.cleanLabel3)
+                }
+            }
+        }
+    }
+}
+
+// MARK: - Formatting helpers
+
+func money(_ value: Double?) -> String {
+    guard let value else { return "—" }
+    return value.formatted(.currency(code: "CAD").precision(.fractionLength(0)))
+}
+
+func area(_ value: Double?) -> String {
+    guard let value else { return "—" }
+    return "\(Int(value).formatted()) sf"
+}
+
+func percent(_ value: Double?) -> String {
+    guard let value else { return "—" }
+    return "\(Int(value.rounded()))%"
+}
+
+func days(_ value: Double) -> String {
+    String(format: "%.1f days", value)
+}
+
+@ViewBuilder
+private func infoTile(_ label: String, _ value: String) -> some View {
+    VStack(alignment: .leading, spacing: 3) {
+        Text(label).eyebrow(color: .cleanLabel3)
+        Text(value)
+            .font(KrokvaTypography.monoBold)
+            .foregroundStyle(Color.cleanLabel)
+            .lineLimit(2)
+            .minimumScaleFactor(0.75)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+    .padding(.vertical, 8)
+}

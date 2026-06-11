@@ -32,8 +32,15 @@ struct CityDatasets {
     var laneClosures: String? = nil
     var pavementCondition: String? = nil
     var schoolSpeedLimits: String? = nil
+    var schools: String? = nil
     var cyclingNetwork: String? = nil
     var policeCrimeMaps: String? = nil
+    var addresses: String? = nil
+    var schoolDivisions: String? = nil
+    var recreationComplexes: String? = nil
+    var leisureActivities: String? = nil
+    var snowRouteAddresses: String? = nil
+    var plowZones: String? = nil
 }
 
 struct FieldMappings {
@@ -42,7 +49,7 @@ struct FieldMappings {
     var generic: [String: [String: String]] = [:]
 }
 
-enum ProviderImplementationState: Equatable {
+enum ProviderImplementationState: Equatable, Codable {
     case live
     case comingSoon
 }
@@ -57,5 +64,5 @@ protocol CityDataProvider {
     var boundingBox: MKMapRect { get }
     var implementationState: ProviderImplementationState { get }
 
-    func fetchDossier(for address: NormalizedAddress) async -> AddressDossier
+    func fetchReport(for address: NormalizedAddress) async -> AddressReport
 }

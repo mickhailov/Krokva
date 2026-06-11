@@ -9,11 +9,11 @@ final class SearchViewModel {
     var completions: [MKLocalSearchCompletion] = []
     var detectedProvider: (any CityDataProvider)?
     var isLoading = false
-    var loadingStage: DossierLoadingStage = .normalizing
+    var loadingStage: ReportLoadingStage = .normalizing
     var errorMessage: String?
 
     private let completer = AddressCompleter()
-    private let service = DossierService()
+    private let service = ReportService()
     private let stageDelay: UInt64 = 3_000_000_000
 
     init() {
@@ -21,8 +21,8 @@ final class SearchViewModel {
             self?.completions = completions
         }
         completer.searchRegion = MKCoordinateRegion(
-            center: CLLocationCoordinate2D(latitude: 56.1304, longitude: -106.3468),
-            span: MKCoordinateSpan(latitudeDelta: 45, longitudeDelta: 75)
+            center: CLLocationCoordinate2D(latitude: 49.8954, longitude: -97.1385),
+            span: MKCoordinateSpan(latitudeDelta: 0.35, longitudeDelta: 0.55)
         )
     }
 
@@ -36,7 +36,12 @@ final class SearchViewModel {
         updateQuery("196 Arnold Avenue, Winnipeg")
     }
 
-    func fetchDossier() async -> AddressDossier? {
+    func cancelLoading() {
+        isLoading = false
+        loadingStage = .normalizing
+    }
+
+    func fetchReport() async -> AddressReport? {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
         isLoading = true
@@ -44,22 +49,25 @@ final class SearchViewModel {
         errorMessage = nil
         defer { isLoading = false }
 
-        async let dossier = service.dossier(for: trimmed)
+        async let report = service.report(for: trimmed)
         await playFixedLoadingSequence()
+        guard !Task.isCancelled else { return nil }
         await setLoadingStage(.assembling)
         try? await Task.sleep(nanoseconds: stageDelay)
-        return await dossier
+        guard !Task.isCancelled else { return nil }
+        return await report
     }
 
     private func playFixedLoadingSequence() async {
-        let preFinalStages = DossierLoadingStage.allCases.filter { $0 != .assembling }
+        let preFinalStages = ReportLoadingStage.allCases.filter { $0 != .assembling }
         for stage in preFinalStages {
+            if Task.isCancelled { return }
             await setLoadingStage(stage)
             try? await Task.sleep(nanoseconds: stageDelay)
         }
     }
 
-    private func setLoadingStage(_ stage: DossierLoadingStage) async {
+    private func setLoadingStage(_ stage: ReportLoadingStage) async {
         await MainActor.run {
             withAnimation(.easeInOut(duration: 0.28)) {
                 loadingStage = stage
@@ -89,6 +97,7 @@ final class AddressCompleter: NSObject, MKLocalSearchCompleterDelegate {
     }
 
     func completerDidUpdateResults(_ completer: MKLocalSearchCompleter) {
-        onUpdate(Array(completer.results.prefix(5)))
+        let winnipeg = completer.results.filter { $0.subtitle.localizedCaseInsensitiveContains("Winnipeg") }
+        onUpdate(Array(winnipeg.prefix(5)))
     }
 }

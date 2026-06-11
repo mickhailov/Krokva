@@ -3,7 +3,7 @@ import SwiftData
 
 @MainActor
 protocol PermitHistoryService {
-    func history(for dossier: AddressDossier, modelContext: ModelContext, forceRefresh: Bool) async -> PermitHistoryResult
+    func history(for report: AddressReport, modelContext: ModelContext, forceRefresh: Bool) async -> PermitHistoryResult
 }
 
 @MainActor
@@ -26,20 +26,20 @@ struct WinnipegPermitHistoryService: PermitHistoryService {
         return decoder
     }
 
-    func history(for dossier: AddressDossier, modelContext: ModelContext, forceRefresh: Bool = false) async -> PermitHistoryResult {
+    func history(for report: AddressReport, modelContext: ModelContext, forceRefresh: Bool = false) async -> PermitHistoryResult {
         // Bump the schema version whenever PropertyPermitRecord gains fields so stale
         // payloads (which decode with the new fields nil) are bypassed automatically.
-        let cacheKey = "permit-history:v2:\(dossier.providerID):\(dossier.address.displayAddress.lowercased())"
+        let cacheKey = "permit-history:v2:\(report.providerID):\(report.address.displayAddress.lowercased())"
         if !forceRefresh, let cached = readCache(key: cacheKey, modelContext: modelContext) {
             return result(from: cached)
         }
 
-        guard dossier.providerID == "winnipeg" else {
+        guard report.providerID == "winnipeg" else {
             return result(from: [])
         }
 
-        async let building = fetchBuildingPermits(for: dossier)
-        async let trade = fetchTradePermits(for: dossier)
+        async let building = fetchBuildingPermits(for: report)
+        async let trade = fetchTradePermits(for: report)
         let permits = await (building + trade)
             .sorted { ($0.issueDate ?? .distantPast) > ($1.issueDate ?? .distantPast) }
         writeCache(permits, key: cacheKey, modelContext: modelContext)
@@ -83,25 +83,25 @@ struct WinnipegPermitHistoryService: PermitHistoryService {
         }
     }
 
-    private func fetchBuildingPermits(for dossier: AddressDossier) async -> [PropertyPermitRecord] {
+    private func fetchBuildingPermits(for report: AddressReport) async -> [PropertyPermitRecord] {
         let rows = (try? await provider.fetch(buildingPermitsDataset, queryItems: [
-            URLQueryItem(name: "$where", value: "\(addressWhereClause(for: dossier, streetField: "street_name")) AND issue_date >= '2000-01-01T00:00:00'"),
+            URLQueryItem(name: "$where", value: "\(addressWhereClause(for: report, streetField: "street_name")) AND issue_date >= '2000-01-01T00:00:00'"),
             URLQueryItem(name: "$order", value: "issue_date DESC"),
             URLQueryItem(name: "$limit", value: "100")
         ])) ?? []
         return rows.map { row in
-            makeRecord(row: row, source: "Detailed Building Permit Data", defaultAddress: dossier.address.displayAddress)
+            makeRecord(row: row, source: "Detailed Building Permit Data", defaultAddress: report.address.displayAddress)
         }
     }
 
-    private func fetchTradePermits(for dossier: AddressDossier) async -> [PropertyPermitRecord] {
+    private func fetchTradePermits(for report: AddressReport) async -> [PropertyPermitRecord] {
         let rows = (try? await provider.fetch(tradePermitsDataset, queryItems: [
-            URLQueryItem(name: "$where", value: "\(addressWhereClause(for: dossier, streetField: "street_name")) AND issue_date >= '2000-01-01T00:00:00'"),
+            URLQueryItem(name: "$where", value: "\(addressWhereClause(for: report, streetField: "street_name")) AND issue_date >= '2000-01-01T00:00:00'"),
             URLQueryItem(name: "$order", value: "issue_date DESC"),
             URLQueryItem(name: "$limit", value: "160")
         ])) ?? []
         return rows.map { row in
-            makeRecord(row: row, source: "Trade Permits", defaultAddress: dossier.address.displayAddress)
+            makeRecord(row: row, source: "Trade Permits", defaultAddress: report.address.displayAddress)
         }
     }
 
@@ -145,9 +145,9 @@ struct WinnipegPermitHistoryService: PermitHistoryService {
         )
     }
 
-    private func addressWhereClause(for dossier: AddressDossier, streetField: String) -> String {
-        let number = dossier.address.civicNumber.map(String.init) ?? dossier.property?.fullAddress.split(separator: " ").first.map(String.init) ?? ""
-        let street = streetCore(dossier.address.streetName)
+    private func addressWhereClause(for report: AddressReport, streetField: String) -> String {
+        let number = report.address.civicNumber.map(String.init) ?? report.property?.fullAddress.split(separator: " ").first.map(String.init) ?? ""
+        let street = streetCore(report.address.streetName)
         let clauses = [
             number.isEmpty ? nil : "street_number='\(number)'",
             street.isEmpty ? nil : "upper(\(streetField))='\(escaped(street))'"

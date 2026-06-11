@@ -30,14 +30,14 @@ enum CivicMapMarkerKind: String {
 
     var tint: Color {
         switch self {
-        case .address: .krokvaAccent
-        case .permit: .krokvaGold
+        case .address: .cleanRed
+        case .permit: .cleanAmber
         case .vacantOrder: .orange
         case .park: .green
-        case .development: .krokvaNavy
+        case .development: .cleanSky
         case .library: .purple
         case .river: .blue
-        case .planningNotice: .krokvaGold
+        case .planningNotice: .cleanAmber
         case .disruption: .orange
         case .laneClosure: .red
         }
@@ -74,7 +74,7 @@ struct CivicMapMarker: Identifiable {
     let details: [CivicMapDetailRow]
 
     static func markers(
-        for dossier: AddressDossier,
+        for report: AddressReport,
         includeProperty: Bool = true,
         includePermits: Bool = true,
         includeVacantOrders: Bool = true,
@@ -86,25 +86,25 @@ struct CivicMapMarker: Identifiable {
     ) -> [CivicMapMarker] {
         var markers: [CivicMapMarker] = []
 
-        if includeProperty, let coordinate = dossier.property?.coordinate {
+        if includeProperty, let coordinate = report.property?.coordinate {
             markers.append(
                 CivicMapMarker(
-                    id: "address-\(dossier.id)",
+                    id: "address-\(report.id)",
                     kind: .address,
-                    title: dossier.address.displayAddress,
-                    subtitle: dossier.property?.neighbourhood ?? dossier.cityName,
+                    title: report.address.displayAddress,
+                    subtitle: report.property?.neighbourhood ?? report.cityName,
                     coordinate: coordinate,
                     details: [
-                        CivicMapDetailRow(key: "Neighbourhood", value: dossier.property?.neighbourhood ?? "-"),
-                        CivicMapDetailRow(key: "Assessed value", value: money(dossier.property?.totalAssessedValue)),
-                        CivicMapDetailRow(key: "Year built", value: dossier.property?.yearBuilt.map(String.init) ?? "-")
+                        CivicMapDetailRow(key: "Neighbourhood", value: report.property?.neighbourhood ?? "-"),
+                        CivicMapDetailRow(key: "Assessed value", value: money(report.property?.totalAssessedValue)),
+                        CivicMapDetailRow(key: "Year built", value: report.property?.yearBuilt.map(String.init) ?? "-")
                     ]
                 )
             )
         }
 
         if includePermits {
-            markers.append(contentsOf: dossier.permits.compactMap { permit in
+            markers.append(contentsOf: report.permits.compactMap { permit in
                 guard let coordinate = permit.coordinate else { return nil }
                 return CivicMapMarker(
                     id: "permit-\(permit.id)",
@@ -124,7 +124,7 @@ struct CivicMapMarker: Identifiable {
         }
 
         if includeVacantOrders {
-            markers.append(contentsOf: dossier.vacantOrders.compactMap { order in
+            markers.append(contentsOf: report.vacantOrders.compactMap { order in
                 guard let coordinate = order.coordinate else { return nil }
                 return CivicMapMarker(
                     id: "vacant-\(order.id)",
@@ -141,7 +141,7 @@ struct CivicMapMarker: Identifiable {
             })
         }
 
-        if includeParks, let parks = dossier.parks {
+        if includeParks, let parks = report.parks {
             let nearbyParks = parks.nearbyParks.isEmpty ? parks.nearestPark.map { [$0] } ?? [] : parks.nearbyParks
             markers.append(contentsOf: nearbyParks.enumerated().compactMap { index, park in
                 guard let coordinate = park.coordinate else { return nil }
@@ -164,7 +164,7 @@ struct CivicMapMarker: Identifiable {
         }
 
         if includeDevelopment {
-            markers.append(contentsOf: dossier.development?.recentPermits.compactMap { permit in
+            markers.append(contentsOf: report.development?.recentPermits.compactMap { permit in
                 guard let coordinate = permit.coordinate else { return nil }
                 return CivicMapMarker(
                     id: "development-\(permit.id)",
@@ -185,7 +185,7 @@ struct CivicMapMarker: Identifiable {
         }
 
         if includeCivicAmenities {
-            if let library = dossier.library,
+            if let library = report.library,
                let coordinate = library.coordinate {
                 markers.append(
                     CivicMapMarker(
@@ -206,7 +206,7 @@ struct CivicMapMarker: Identifiable {
                 )
             }
 
-            if let river = dossier.river,
+            if let river = report.river,
                let coordinate = river.coordinate {
                 markers.append(
                     CivicMapMarker(
@@ -228,7 +228,7 @@ struct CivicMapMarker: Identifiable {
         }
 
         if includePlanning {
-            markers.append(contentsOf: dossier.planning?.publicNotices.compactMap { notice in
+            markers.append(contentsOf: report.planning?.publicNotices.compactMap { notice in
                 guard let coordinate = notice.coordinate else { return nil }
                 return CivicMapMarker(
                     id: "notice-\(notice.id)",
@@ -247,7 +247,7 @@ struct CivicMapMarker: Identifiable {
         }
 
         if includeStreetAccess {
-            markers.append(contentsOf: dossier.streetAccess?.activeDisruptions.compactMap { item in
+            markers.append(contentsOf: report.streetAccess?.activeDisruptions.compactMap { item in
                 guard let coordinate = item.coordinate else { return nil }
                 return CivicMapMarker(
                     id: "disruption-\(item.id)",
@@ -264,7 +264,7 @@ struct CivicMapMarker: Identifiable {
                 )
             } ?? [])
 
-            markers.append(contentsOf: dossier.streetAccess?.activeLaneClosures.compactMap { item in
+            markers.append(contentsOf: report.streetAccess?.activeLaneClosures.compactMap { item in
                 guard let coordinate = item.coordinate else { return nil }
                 return CivicMapMarker(
                     id: "closure-\(item.id)",
@@ -324,10 +324,10 @@ struct CivicMapMarkerDetailView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(marker.title)
                                 .font(.headline)
-                                .foregroundStyle(Color.krokvaInk)
+                                .foregroundStyle(Color.cleanLabel)
                             Text(marker.subtitle)
                                 .font(.subheadline)
-                                .foregroundStyle(Color.krokvaInk3)
+                                .foregroundStyle(Color.cleanLabel3)
                         }
                     }
                     .padding(.vertical, 4)
