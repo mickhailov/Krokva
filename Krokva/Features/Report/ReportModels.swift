@@ -155,12 +155,20 @@ struct AddressReport: Identifiable, Codable {
         AddressReport(address: address, providerID: provider.cityID, cityName: provider.displayName, providerState: .comingSoon, sources: [])
     }
 
+    /// The foundational lookups (assessment + civic context) errored and produced nothing,
+    /// so the empty report is a database failure rather than a genuine "address not on file".
+    var dataSourceUnavailable: Bool {
+        providerState == .live && property == nil && civicContext == nil
+            && (moduleFailed(.property) || moduleFailed(.civicContext))
+    }
+
     /// An address that resolves no assessment and no civic match means the city's open
     /// data has nothing for it — typically a typo or an address outside coverage. Such a
     /// report has nothing worth navigating to, so callers should keep the user on the
-    /// search screen instead of pushing an empty report.
+    /// search screen instead of pushing an empty report. A database failure (see
+    /// `dataSourceUnavailable`) is excluded — that is an error, not a missing address.
     var addressNotFound: Bool {
-        providerState == .live && property == nil && civicContext == nil
+        providerState == .live && property == nil && civicContext == nil && !dataSourceUnavailable
     }
 }
 

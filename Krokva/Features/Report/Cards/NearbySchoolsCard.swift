@@ -7,6 +7,7 @@ struct NearbySchoolsCard: View {
     let property: PropertyAssessment?
     let schoolZone: SchoolSpeedLimit?
     let civicContext: AddressCivicContext?
+    var sourceFailed = false
 
     @State private var isExpanded = false
 
@@ -98,7 +99,7 @@ struct NearbySchoolsCard: View {
                     }
                 }
             } else {
-                Text("No nearby schools found in city data.")
+                Text(sourceFailed ? "Database error loading nearby schools." : "No nearby schools found in city data.")
                     .font(KrokvaTypography.bodySecondary)
                     .foregroundStyle(Color.cleanLabel2)
             }

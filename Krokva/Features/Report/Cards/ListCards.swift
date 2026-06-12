@@ -4,6 +4,7 @@ import SwiftUI
 
 struct PermitsCard: View {
     let permits: [BuildingPermit]
+    var sourceFailed = false
     @State private var isExpanded = false
 
     var body: some View {
@@ -57,14 +58,15 @@ struct PermitsCard: View {
     }
 
     private var smallSummary: String {
-        guard !permits.isEmpty else { return "No permits in 200m" }
-        return "\(permits.count) \(permits.count == 1 ? "permit" : "permits") in 200m"
+        if sourceFailed, permits.isEmpty { return "Database error" }
+        guard !permits.isEmpty else { return "No permits in 500m" }
+        return "\(permits.count) \(permits.count == 1 ? "permit" : "permits") in 500m"
     }
 
     @ViewBuilder
     private var fullContent: some View {
         if permits.isEmpty {
-            Text("No recent street-level permits were returned.")
+            Text(sourceFailed ? "Database error loading nearby building permits." : "No recent street-level permits were returned.")
                 .font(KrokvaTypography.bodySecondary)
                 .foregroundStyle(Color.cleanLabel2)
         } else {
@@ -121,6 +123,7 @@ struct PermitsCard: View {
 
 struct VacantOrdersCard: View {
     let orders: [VacantOrder]
+    var sourceFailed = false
     @State private var isExpanded = false
 
     var body: some View {
@@ -174,14 +177,15 @@ struct VacantOrdersCard: View {
     }
 
     private var smallSummary: String {
+        if sourceFailed, orders.isEmpty { return "Database error" }
         guard !orders.isEmpty else { return "No vacant building orders" }
-        return "\(orders.count) vacant \(orders.count == 1 ? "building" : "buildings") in 300m"
+        return "\(orders.count) vacant \(orders.count == 1 ? "building" : "buildings") in 500m"
     }
 
     @ViewBuilder
     private var fullContent: some View {
         if orders.isEmpty {
-            Text("No active vacant building orders were returned on this street.")
+            Text(sourceFailed ? "Database error loading vacant building orders." : "No active vacant building orders were returned on this street.")
                 .font(KrokvaTypography.bodySecondary)
                 .foregroundStyle(Color.cleanLabel2)
         } else {
@@ -217,6 +221,7 @@ struct VacantOrdersCard: View {
 
 struct TransitAccessCard: View {
     let summary: TransitAccessSummary?
+    var sourceFailed = false
     @State private var isExpanded = false
 
     var body: some View {
@@ -270,7 +275,7 @@ struct TransitAccessCard: View {
     }
 
     private var smallSummary: String {
-        guard let s = summary else { return "Unavailable" }
+        guard let s = summary else { return sourceFailed ? "Database error" : "Unavailable" }
         var parts: [String] = []
         if let stop = s.nearestStop { parts.append("\(stop.distanceDescription) to bus stop") }
         if !s.routes.isEmpty { parts.append("\(s.routes.count) \(s.routes.count == 1 ? "route" : "routes")") }
@@ -322,7 +327,7 @@ struct TransitAccessCard: View {
                 }
             }
         } else {
-            Text("Nearby transit performance data is unavailable.")
+            Text(sourceFailed ? "Database error loading nearby transit data." : "Nearby transit performance data is unavailable.")
                 .font(KrokvaTypography.bodySecondary)
                 .foregroundStyle(Color.cleanLabel2)
         }
@@ -333,6 +338,7 @@ struct TransitAccessCard: View {
 
 struct DevelopmentContextCard: View {
     let summary: DevelopmentContextSummary?
+    var sourceFailed = false
     @State private var isExpanded = false
 
     var body: some View {
@@ -386,7 +392,7 @@ struct DevelopmentContextCard: View {
     }
 
     private var smallSummary: String {
-        guard let intake = summary?.intake.first else { return "Unavailable" }
+        guard let intake = summary?.intake.first else { return sourceFailed ? "Database error" : "Unavailable" }
         return "\(intake.approved) approved · \(intake.notApproved) not approved"
     }
 
@@ -421,7 +427,7 @@ struct DevelopmentContextCard: View {
                 }
             }
         } else {
-            Text("Development permit context is unavailable.")
+            Text(sourceFailed ? "Database error loading development permit context." : "Development permit context is unavailable.")
                 .font(KrokvaTypography.bodySecondary)
                 .foregroundStyle(Color.cleanLabel2)
         }
@@ -432,6 +438,7 @@ struct DevelopmentContextCard: View {
 
 struct BylawInvestigationsCard: View {
     let summary: BylawInvestigationSummary?
+    var sourceFailed = false
 
     var body: some View {
         ReportCard(title: "By-law investigations", systemImage: "doc.text.magnifyingglass", badge: "NEIGHBOURHOOD") {
@@ -460,7 +467,7 @@ struct BylawInvestigationsCard: View {
                     .font(KrokvaTypography.caption)
                     .foregroundStyle(Color.cleanLabel3)
             } else {
-                Text("Neighbourhood by-law investigation data is unavailable.")
+                Text(sourceFailed ? "Database error loading by-law investigation data." : "Neighbourhood by-law investigation data is unavailable.")
                     .font(KrokvaTypography.bodySecondary)
                     .foregroundStyle(Color.cleanLabel2)
             }
@@ -475,6 +482,7 @@ struct CivicAmenitiesCard: View {
     let river: RiverGaugeSummary?
     let library: LibraryAmenity?
     var aquatics: AquaticsAmenitiesSummary?
+    var sourceFailed = false
     @State private var isExpanded = false
 
     private var hasAquatics: Bool {
@@ -602,7 +610,7 @@ struct CivicAmenitiesCard: View {
             }
 
             if parks == nil && library == nil && river == nil && !hasAquatics {
-                Text("Civic amenity data is unavailable.")
+                Text(sourceFailed ? "Database error loading civic amenities." : "Civic amenity data is unavailable.")
                     .font(KrokvaTypography.bodySecondary)
                     .foregroundStyle(Color.cleanLabel2)
             }
@@ -676,6 +684,7 @@ struct CivicAmenitiesCard: View {
 
 struct PlanningContextCard: View {
     let summary: PlanningContextSummary?
+    var sourceFailed = false
     @State private var isExpanded = false
 
     var body: some View {
@@ -729,7 +738,7 @@ struct PlanningContextCard: View {
     }
 
     private var smallSummary: String {
-        guard let summary else { return "Unavailable" }
+        guard let summary else { return sourceFailed ? "Database error" : "Unavailable" }
         var parts: [String] = []
         if let code = summary.zoningCode { parts.append(code) }
         let count = summary.publicNotices.count
@@ -814,7 +823,7 @@ struct PlanningContextCard: View {
                 }
             }
         } else {
-            Text("Planning notice data is unavailable.")
+            Text(sourceFailed ? "Database error loading planning notices." : "Planning notice data is unavailable.")
                 .font(KrokvaTypography.bodySecondary)
                 .foregroundStyle(Color.cleanLabel2)
         }
@@ -833,6 +842,7 @@ struct PlanningContextCard: View {
 struct StreetAccessCard: View {
     let street: StreetAccessSummary?
     let infrastructure: InfrastructureSummary?
+    var sourceFailed = false
     @State private var isExpanded = false
 
     var body: some View {
@@ -959,6 +969,10 @@ struct StreetAccessCard: View {
                         }
                     }
                 }
+            } else if sourceFailed {
+                Text("Database error loading street access data.")
+                    .font(KrokvaTypography.bodySecondary)
+                    .foregroundStyle(Color.cleanLabel2)
             } else {
                 Text("No pavement survey, bike route, or active disruption on record for this street. Winnipeg surveys pavement condition on major and collector roads, so quieter residential streets are often not included.")
                     .font(KrokvaTypography.bodySecondary)
@@ -993,6 +1007,7 @@ struct StreetAccessCard: View {
 
 struct CivicContextCard: View {
     let summary: AddressCivicContext?
+    var sourceFailed = false
     @State private var isExpanded = false
 
     var body: some View {
@@ -1046,7 +1061,7 @@ struct CivicContextCard: View {
     }
 
     private var smallSummary: String {
-        guard let summary else { return "Unavailable" }
+        guard let summary else { return sourceFailed ? "Database error" : "Unavailable" }
         var parts: [String] = []
         if let ward = summary.ward { parts.append(ward) }
         if let neighbourhood = summary.neighbourhood { parts.append(neighbourhood) }
@@ -1076,7 +1091,7 @@ struct CivicContextCard: View {
                 }
             }
         } else {
-            Text("Address-level civic boundary data is unavailable.")
+            Text(sourceFailed ? "Database error loading civic boundary data." : "Address-level civic boundary data is unavailable.")
                 .font(KrokvaTypography.bodySecondary)
                 .foregroundStyle(Color.cleanLabel2)
         }
@@ -1087,6 +1102,7 @@ struct CivicContextCard: View {
 
 struct RecreationCard: View {
     let summary: RecreationSummary?
+    var sourceFailed = false
     @State private var isExpanded = false
 
     var body: some View {
@@ -1140,7 +1156,7 @@ struct RecreationCard: View {
     }
 
     private var smallSummary: String {
-        guard let summary else { return "Unavailable" }
+        guard let summary else { return sourceFailed ? "Database error" : "Unavailable" }
         var parts: [String] = []
         if let nearest = summary.nearestComplex {
             parts.append(nearest.distanceDescription.map { "\($0) to \(nearest.name)" } ?? nearest.name)
@@ -1220,7 +1236,7 @@ struct RecreationCard: View {
                 }
             }
         } else {
-            Text("Nearby recreation complex and program data is unavailable.")
+            Text(sourceFailed ? "Database error loading nearby recreation data." : "Nearby recreation complex and program data is unavailable.")
                 .font(KrokvaTypography.bodySecondary)
                 .foregroundStyle(Color.cleanLabel2)
         }
@@ -1231,6 +1247,7 @@ struct RecreationCard: View {
 
 struct ShortTermRentalsCard: View {
     let summary: ShortTermRentalSummary?
+    var sourceFailed = false
     @State private var isExpanded = false
 
     var body: some View {
@@ -1284,7 +1301,7 @@ struct ShortTermRentalsCard: View {
     }
 
     private var smallSummary: String {
-        guard let summary else { return "No matched rental records" }
+        guard let summary else { return sourceFailed ? "Database error" : "No matched rental records" }
         return "\(summary.total) matched · \(summary.nonPrimaryCount) non-primary"
     }
 
@@ -1332,7 +1349,7 @@ struct ShortTermRentalsCard: View {
                     .foregroundStyle(Color.cleanLabel3)
             }
         } else {
-            Text("No short-term rental records matched nearby street names.")
+            Text(sourceFailed ? "Database error loading short-term rental records." : "No short-term rental records matched nearby street names.")
                 .font(KrokvaTypography.bodySecondary)
                 .foregroundStyle(Color.cleanLabel2)
         }

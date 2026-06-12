@@ -17,9 +17,15 @@ private func percent(_ value: Double?) -> String? {
 
 struct WasteCollectionCard: View {
     let summary: WasteCollectionSummary?
+    var sourceFailed = false
 
     var body: some View {
-        guard let summary else { return AnyView(EmptyView()) }
+        guard let summary else {
+            return AnyView(sourceFailed
+                ? AnyView(ModuleErrorCard(title: "Collection & Winter", systemImage: "trash", iconColor: .cleanGreen,
+                                          message: "Database error loading the waste & winter schedule."))
+                : AnyView(EmptyView()))
+        }
         return AnyView(
             ReportCard(title: "Collection & Winter", systemImage: "trash", iconColor: .cleanGreen,
                        subtitle: summary.matchedAddress) {
@@ -196,9 +202,15 @@ struct DemographicsCard: View {
 
 struct LocalGovernmentCard: View {
     let summary: LocalGovernmentSummary?
+    var sourceFailed = false
 
     var body: some View {
-        guard let summary else { return AnyView(EmptyView()) }
+        guard let summary else {
+            return AnyView(sourceFailed
+                ? AnyView(ModuleErrorCard(title: "Local government", systemImage: "building.columns", iconColor: .cleanSky,
+                                          message: "Database error loading ward and councillor info."))
+                : AnyView(EmptyView()))
+        }
         return AnyView(
             ReportCard(title: "Local government", systemImage: "building.columns", iconColor: .cleanSky) {
                 VStack(alignment: .leading, spacing: 10) {
@@ -262,11 +274,15 @@ struct LocalGovernmentCard: View {
 
 struct LocalBusinessCard: View {
     let summary: LocalBusinessSummary?
+    var sourceFailed = false
     private let colors: [Color] = [.cleanSky, .cleanIndigo, Color(hex: 0x10B981), .cleanAmber, Color(hex: 0x38BDF8), Color(hex: 0x818CF8)]
 
     var body: some View {
         guard let summary, summary.totalNearby > 0 || !summary.patios.isEmpty else {
-            return AnyView(EmptyView())
+            return AnyView(sourceFailed
+                ? AnyView(ModuleErrorCard(title: "Local businesses", systemImage: "storefront", iconColor: .cleanIndigo,
+                                          message: "Database error loading nearby businesses."))
+                : AnyView(EmptyView()))
         }
         return AnyView(
             ReportCard(title: "Local businesses", systemImage: "storefront", iconColor: .cleanIndigo,
@@ -336,11 +352,12 @@ struct LocalBusinessCard: View {
 struct TrafficCard: View {
     let summary: TrafficSummary?
     var risk: NeighbourhoodRiskSummary?
+    var sourceFailed = false
     @State private var isExpanded = false
 
     private var hasTrafficCounts: Bool {
         guard let summary else { return false }
-        return summary.streetStudy != nil || summary.nearestPermanentStation != nil
+        return summary.streetStudy != nil
     }
     private var hasParkingSignals: Bool {
         guard let risk else { return false }
@@ -348,7 +365,12 @@ struct TrafficCard: View {
     }
 
     var body: some View {
-        guard hasTrafficCounts || hasParkingSignals else { return AnyView(EmptyView()) }
+        guard hasTrafficCounts || hasParkingSignals else {
+            return AnyView(sourceFailed
+                ? AnyView(ModuleErrorCard(title: "Traffic & parking", systemImage: "car", iconColor: .cleanAmber,
+                                          message: "Database error loading traffic & parking."))
+                : AnyView(EmptyView()))
+        }
         return AnyView(
             CleanCard(padding: 0) {
                 VStack(spacing: 0) {
@@ -402,9 +424,11 @@ struct TrafficCard: View {
 
     private var smallSummary: String {
         var parts: [String] = []
-        if let study = summary?.streetStudy ?? summary?.nearestPermanentStation,
-           let count = study.vehiclesCounted {
+        if let study = summary?.streetStudy, let count = study.vehiclesCounted {
             parts.append("\(count.formatted()) \(study.countSummaryUnit ?? "vehicles")")
+        }
+        if let date = summary?.streetStudy?.countDate {
+            parts.append(countedDateFormatter.string(from: date))
         }
         if let tows = risk?.towingNearby, tows > 0 {
             parts.append("\(tows) rush-hour tows")
@@ -417,10 +441,6 @@ struct TrafficCard: View {
         VStack(alignment: .leading, spacing: 14) {
             if let study = summary?.streetStudy {
                 studySection(eyebrow: "ON THIS STREET", study: study)
-            }
-            if let station = summary?.nearestPermanentStation {
-                if summary?.streetStudy != nil { Divider().foregroundStyle(Color.cleanSep) }
-                studySection(eyebrow: "NEAREST PERMANENT COUNTER", study: station)
             }
 
             if hasTrafficCounts {
@@ -467,7 +487,7 @@ struct TrafficCard: View {
                 KeyValueRow(key: "Direction", value: direction)
             }
             if let date = study.countDate {
-                KeyValueRow(key: "Last counted", value: countedDateFormatter.string(from: date))
+                KeyValueRow(key: "Last street measurement", value: countedDateFormatter.string(from: date))
             }
             if let distance = study.distanceDescription {
                 KeyValueRow(key: "Distance", value: distance)
@@ -487,10 +507,14 @@ struct TrafficCard: View {
 
 struct NeighbourhoodRiskCard: View {
     let summary: NeighbourhoodRiskSummary?
+    var sourceFailed = false
 
     var body: some View {
         guard let summary, summary.roomingHouse != nil || !summary.vacantFireTrend.isEmpty else {
-            return AnyView(EmptyView())
+            return AnyView(sourceFailed
+                ? AnyView(ModuleErrorCard(title: "Neighbourhood risk signals", systemImage: "exclamationmark.shield", iconColor: .cleanAmber,
+                                          message: "Database error loading neighbourhood risk signals."))
+                : AnyView(EmptyView()))
         }
         return AnyView(
             ReportCard(title: "Neighbourhood risk signals", systemImage: "exclamationmark.shield", iconColor: .cleanAmber) {
@@ -529,6 +553,7 @@ struct NeighbourhoodRiskCard: View {
 
 struct WaterQualityCard: View {
     let summary: WaterQualitySummary?
+    var sourceFailed = false
     @State private var isExpanded = false
 
     // Health Canada Guidelines for Canadian Drinking Water Quality (MAC / aesthetic objectives).
@@ -605,7 +630,12 @@ struct WaterQualityCard: View {
     }
 
     var body: some View {
-        guard let summary, !summary.parameters.isEmpty else { return AnyView(EmptyView()) }
+        guard let summary, !summary.parameters.isEmpty else {
+            return AnyView(sourceFailed
+                ? AnyView(ModuleErrorCard(title: "Drinking water quality", systemImage: "drop", iconColor: .cleanSky,
+                                          message: "Database error loading drinking water quality."))
+                : AnyView(EmptyView()))
+        }
         return AnyView(
             CleanCard(padding: 0) {
                 VStack(spacing: 0) {
@@ -783,9 +813,15 @@ struct WaterQualityCard: View {
 
 struct CapitalWorksCard: View {
     let summary: CapitalWorksSummary?
+    var sourceFailed = false
 
     var body: some View {
-        guard let summary, !summary.projects.isEmpty else { return AnyView(EmptyView()) }
+        guard let summary, !summary.projects.isEmpty else {
+            return AnyView(sourceFailed
+                ? AnyView(ModuleErrorCard(title: "Capital projects nearby", systemImage: "cone", iconColor: .cleanAmber,
+                                          message: "Database error loading nearby capital projects."))
+                : AnyView(EmptyView()))
+        }
         return AnyView(
             ReportCard(title: "Capital projects nearby", systemImage: "cone", iconColor: .cleanAmber,
                        subtitle: "Matched to your street") {
@@ -831,9 +867,15 @@ struct CapitalWorksCard: View {
 
 struct FacilityClosuresCard: View {
     let summary: FacilityClosureSummary?
+    var sourceFailed = false
 
     var body: some View {
-        guard let summary, !summary.closures.isEmpty else { return AnyView(EmptyView()) }
+        guard let summary, !summary.closures.isEmpty else {
+            return AnyView(sourceFailed
+                ? AnyView(ModuleErrorCard(title: "Health inspection closures", systemImage: "fork.knife", iconColor: .cleanRed,
+                                          message: "Database error loading health inspection closures."))
+                : AnyView(EmptyView()))
+        }
         return AnyView(
             ReportCard(title: "Health inspection closures", systemImage: "fork.knife", iconColor: .cleanRed,
                        subtitle: "Establishments on your street") {

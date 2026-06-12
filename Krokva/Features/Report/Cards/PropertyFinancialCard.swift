@@ -5,6 +5,7 @@ struct PropertyFinancialCard: View {
 
     @State private var isExpanded = false
     @State private var listingText = ""
+    @State private var isEditingListing = false
     @State private var downText = "20"
     @State private var rateText = "4.00"
     @State private var amortText = "25"
@@ -30,7 +31,13 @@ struct PropertyFinancialCard: View {
         min(max(Int(amortText.filter { $0.isNumber }) ?? 25, 1), 40)
     }
 
-    private var purchasePrice: Double { listingPrice ?? property?.totalAssessedValue ?? 0 }
+    private var suggestedListingPrice: Double? {
+        property?.totalAssessedValue.map { ($0 * 1.3).rounded() }
+    }
+
+    private var purchasePrice: Double {
+        listingPrice ?? suggestedListingPrice ?? property?.totalAssessedValue ?? 0
+    }
     private var downAmt: Double { purchasePrice * downPct / 100 }
     private var loanBase: Double { max(0, purchasePrice - downAmt) }
 
@@ -91,7 +98,9 @@ struct PropertyFinancialCard: View {
         }
         .onAppear {
             let saved = UserDefaults.standard.string(forKey: storageKey) ?? ""
-            if listingText.isEmpty { listingText = saved }
+            if listingText.isEmpty {
+                listingText = saved.isEmpty ? (plainDecimal(suggestedListingPrice) ?? "") : saved
+            }
         }
         .onChange(of: listingText) { _, new in
             UserDefaults.standard.set(new, forKey: storageKey)
@@ -149,7 +158,7 @@ struct PropertyFinancialCard: View {
         VStack(alignment: .leading, spacing: 8) {
             sectionEyebrow("PRICE")
             assessedValueRow
-            listingRow
+            suggestedListingRow
         }
     }
 
@@ -190,23 +199,58 @@ struct PropertyFinancialCard: View {
             )
     }
 
-    private var listingRow: some View {
-        HStack {
-            Text("Listing price")
-                .font(.system(size: 14))
-                .foregroundStyle(Color.cleanLabel2)
-            Spacer(minLength: 8)
-            HStack(spacing: 3) {
-                Text("$")
-                    .font(.system(size: 14, weight: .medium).monospacedDigit())
-                    .foregroundStyle(listingPrice != nil ? Color.cleanLabel : Color.cleanLabel3)
-                TextField(plainDecimal(property?.totalAssessedValue.map { $0 * 1.3 }) ?? "Optional", text: $listingText)
-                    .keyboardType(.numberPad)
-                    .focused($focusedField, equals: .listing)
-                    .multilineTextAlignment(.trailing)
-                    .font(.system(size: 14, weight: listingPrice != nil ? .semibold : .regular).monospacedDigit())
-                    .foregroundStyle(listingPrice != nil ? Color.cleanLabel : Color.cleanLabel3)
-                    .frame(minWidth: 80, maxWidth: 120)
+    private var suggestedListingRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .center) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Suggested listing price")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.cleanLabel2)
+                    Text("Used for all payment calculations")
+                        .font(.system(size: 10))
+                        .foregroundStyle(Color.cleanLabel3)
+                }
+                Spacer(minLength: 8)
+                if !isEditingListing {
+                    Text(money(purchasePrice > 0 ? purchasePrice : nil))
+                        .font(.system(size: 14, weight: .semibold).monospacedDigit())
+                        .foregroundStyle(Color.cleanLabel)
+                }
+                Button {
+                    withAnimation(.spring(response: 0.28, dampingFraction: 0.85)) {
+                        isEditingListing.toggle()
+                    }
+                    if isEditingListing { focusedField = .listing }
+                } label: {
+                    Image(systemName: isEditingListing ? "checkmark" : "pencil")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(isEditingListing ? .white : Color.cleanSky)
+                        .frame(width: 30, height: 30)
+                        .background(isEditingListing ? Color.cleanSky : Color.cleanSky.opacity(0.12), in: Circle())
+                }
+                .buttonStyle(.plain)
+            }
+
+            if isEditingListing {
+                HStack(spacing: 4) {
+                    Text("$")
+                        .font(.system(size: 14, weight: .medium).monospacedDigit())
+                        .foregroundStyle(Color.cleanLabel3)
+                    TextField(plainDecimal(suggestedListingPrice) ?? "Listing price", text: $listingText)
+                        .keyboardType(.numberPad)
+                        .focused($focusedField, equals: .listing)
+                        .multilineTextAlignment(.trailing)
+                        .font(.system(size: 15, weight: .semibold).monospacedDigit())
+                        .foregroundStyle(Color.cleanLabel)
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background(Color.cleanBg, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .stroke(focusedField == .listing ? Color.cleanSky : Color.cleanSep,
+                                lineWidth: focusedField == .listing ? 1 : 0.5)
+                )
             }
         }
     }

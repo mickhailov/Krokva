@@ -4,28 +4,47 @@ import SwiftData
 import SwiftUI
 
 struct ReportView: View {
-    let report: AddressReport
+    @State private var currentReport: AddressReport
     @State private var permitHistoryRefreshToken = UUID()
+    @State private var isRetrying = false
     @State private var showSaveSheet = false
     @Environment(\.modelContext) private var modelContext
     @Query private var savedReports: [SavedReport]
+
+    init(report: AddressReport) {
+        _currentReport = State(initialValue: report)
+    }
+
+    private var report: AddressReport { currentReport }
 
     // Rendering the full card stack for an address the city has no data on produces an
     // empty, misleading report, so we show a dedicated "no data" screen instead. The
     // detection lives on the model (`AddressReport.addressNotFound`).
     private var addressNotFound: Bool { report.addressNotFound }
 
+    private func retryReport() async {
+        guard !isRetrying else { return }
+        isRetrying = true
+        defer { isRetrying = false }
+        let refreshed = await ReportService().report(for: currentReport.address.raw)
+        currentReport = refreshed
+        permitHistoryRefreshToken = UUID()
+    }
+
     var body: some View {
         ZStack {
             Color.cleanBg.ignoresSafeArea()
 
-            if addressNotFound {
+            if report.dataSourceUnavailable {
+                DatabaseErrorReportView(report: report, onRetry: retryReport)
+            } else if addressNotFound {
                 NoDataReportView(report: report)
             } else {
                 reportScroll
             }
         }
-        .refreshable { permitHistoryRefreshToken = UUID() }
+        .environment(\.reportRetryAction, retryReport)
+        .refreshable { await retryReport() }
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.cleanBg, for: .navigationBar)
@@ -60,8 +79,15 @@ struct ReportView: View {
     }
 
     private var reportScroll: some View {
-        ScrollView {
-            LazyVStack(spacing: 14) {
+        VStack(spacing: 0) {
+            stickyAddressBar
+                .padding(.horizontal, 20)
+                .padding(.top, 10)
+                .padding(.bottom, 8)
+                .background(Color.cleanBg.opacity(0.92))
+
+            ScrollView {
+                LazyVStack(spacing: 14) {
                     if report.providerState == .comingSoon {
                         ComingSoonReportCard(report: report)
                     }
@@ -73,15 +99,16 @@ struct ReportView: View {
                     PropertyFinancialCard(property: report.property)
 
                     // 3. Property facts
-                    PropertyFactsCard(property: report.property)
-                    CivicContextCard(summary: report.civicContext)
-                    WasteCollectionCard(summary: report.waste)
-                    LocalGovernmentCard(summary: report.localGovernment)
+                    PropertyFactsCard(property: report.property, sourceFailed: report.moduleFailed(.property))
+                    CivicContextCard(summary: report.civicContext, sourceFailed: report.moduleFailed(.civicContext))
+                    WasteCollectionCard(summary: report.waste, sourceFailed: report.moduleFailed(.waste))
+                    LocalGovernmentCard(summary: report.localGovernment, sourceFailed: report.moduleFailed(.localGovernment))
                     NearbySchoolsCard(
                         schools: report.nearbySchools,
                         property: report.property,
                         schoolZone: report.streetAccess?.schoolSpeedLimit,
-                        civicContext: report.civicContext
+                        civicContext: report.civicContext,
+                        sourceFailed: report.moduleFailed(.schools)
                     )
 
                     // 4. Permit history
@@ -99,11 +126,17 @@ struct ReportView: View {
                             summary: health,
                             neighbourhood: report.property?.neighbourhood ?? report.cityName
                         )
+                    } else if report.moduleFailed(.publicHealth) {
+                        ModuleErrorCard(title: "Public Health", systemImage: "heart.text.square", iconColor: .cleanSky,
+                                        message: "Database error loading public health data.")
                     }
 
                     // 6. 311 activity
                     if let sr = report.serviceRequests {
                         Service311Card(summary: sr)
+                    } else if report.moduleFailed(.serviceRequests) {
+                        ModuleErrorCard(title: "311 Activity", systemImage: "phone.badge.waveform", iconColor: .cleanIndigo,
+                                        message: "Database error loading 311 activity.")
                     }
 
                     // 7. Emergency response
@@ -114,36 +147,39 @@ struct ReportView: View {
                     )
 
                     // 8. Police crime context
-                    PoliceCrimeCard(summary: report.policeCrime)
+                    PoliceCrimeCard(summary: report.policeCrime, sourceFailed: report.moduleFailed(.policeCrime))
 
                     // 10. Street access + Infrastructure
-                    StreetAccessCard(street: report.streetAccess, infrastructure: report.infrastructure)
-                    TrafficCard(summary: report.traffic, risk: report.neighbourhoodRisk)
-                    NeighbourhoodRiskCard(summary: report.neighbourhoodRisk)
-                    WaterQualityCard(summary: report.waterQuality)
-                    CapitalWorksCard(summary: report.capitalWorks)
+                    StreetAccessCard(street: report.streetAccess, infrastructure: report.infrastructure,
+                                     sourceFailed: report.moduleFailed(.streetAccess) || report.moduleFailed(.infrastructure))
+                    TrafficCard(summary: report.traffic, risk: report.neighbourhoodRisk,
+                                sourceFailed: report.moduleFailed(.traffic) || report.moduleFailed(.neighbourhoodRisk))
+                    NeighbourhoodRiskCard(summary: report.neighbourhoodRisk, sourceFailed: report.moduleFailed(.neighbourhoodRisk))
+                    WaterQualityCard(summary: report.waterQuality, sourceFailed: report.moduleFailed(.waterQuality))
+                    CapitalWorksCard(summary: report.capitalWorks, sourceFailed: report.moduleFailed(.capitalWorks))
 
                     // 11. Civic amenities (parks, library, river, pools)
-                    CivicAmenitiesCard(parks: report.parks, river: report.river, library: report.library, aquatics: report.aquatics)
-                    LocalBusinessCard(summary: report.localBusiness)
-                    FacilityClosuresCard(summary: report.facilityClosures)
-                    RecreationCard(summary: report.recreation)
+                    CivicAmenitiesCard(parks: report.parks, river: report.river, library: report.library, aquatics: report.aquatics,
+                                       sourceFailed: report.moduleFailed(.parks) || report.moduleFailed(.river) || report.moduleFailed(.library) || report.moduleFailed(.aquatics))
+                    LocalBusinessCard(summary: report.localBusiness, sourceFailed: report.moduleFailed(.localBusiness))
+                    FacilityClosuresCard(summary: report.facilityClosures, sourceFailed: report.moduleFailed(.facilityClosures))
+                    RecreationCard(summary: report.recreation, sourceFailed: report.moduleFailed(.recreation))
 
                     // 12. Transit access
-                    TransitAccessCard(summary: report.transit)
+                    TransitAccessCard(summary: report.transit, sourceFailed: report.moduleFailed(.transit))
 
                     // 13. Vacant build orders
-                    VacantOrdersCard(orders: report.vacantOrders)
+                    VacantOrdersCard(orders: report.vacantOrders, sourceFailed: report.moduleFailed(.vacantOrders))
 
                     // 14. Building permits
-                    PermitsCard(permits: report.permits)
-                    PermitActivityCard(activity: report.permitActivity)
+                    PermitsCard(permits: report.permits, sourceFailed: report.moduleFailed(.permits))
+                    PermitActivityCard(activity: report.permitActivity, sourceFailed: report.moduleFailed(.permitActivity))
 
                     // 15. Development context
-                    DevelopmentContextCard(summary: report.development)
-                    BylawInvestigationsCard(summary: report.bylaw)
-                    PlanningContextCard(summary: report.planning)
-                    ShortTermRentalsCard(summary: report.shortTermRentals)
+                    DevelopmentContextCard(summary: report.development, sourceFailed: report.moduleFailed(.development))
+                    BylawInvestigationsCard(summary: report.bylaw, sourceFailed: report.moduleFailed(.bylaw))
+                    PlanningContextCard(summary: report.planning, sourceFailed: report.moduleFailed(.planning))
+                    ShortTermRentalsCard(summary: report.shortTermRentals, sourceFailed: report.moduleFailed(.shortTermRentals))
 
                     // 16. Map
                     ReportMapCard(report: report)
@@ -153,6 +189,31 @@ struct ReportView: View {
                 .padding(20)
             }
         }
+    }
+
+    private var stickyAddressBar: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "mappin.circle.fill")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.cleanSky)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(reportAddress)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.cleanLabel)
+                    .lineLimit(1)
+                Text(report.cityName)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.cleanLabel3)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Color.cleanCard.opacity(0.94), in: Capsule())
+        .overlay(Capsule().stroke(Color.white.opacity(0.65), lineWidth: 1))
+        .shadow(color: Color.cleanLabel.opacity(0.07), radius: 10, x: 0, y: 4)
+    }
 
     private var reportAddress: String {
         report.property?.fullAddress ?? report.address.displayAddress
@@ -277,7 +338,7 @@ struct NoDataReportView: View {
                         .foregroundStyle(Color.cleanLabel)
                         .multilineTextAlignment(.center)
 
-                    Text("We couldn't find “\(typedAddress)” in \(report.cityName) open data. Check the spelling, or try a nearby civic number — coverage is limited to addresses on file with the city.")
+                    Text("We couldn't find \u{201C}\(typedAddress)\u{201D} in \(report.cityName) open data. Check the spelling, or try a nearby civic number — coverage is limited to addresses on file with the city.")
                         .font(.system(size: 14, weight: .medium))
                         .foregroundStyle(Color.cleanLabel2)
                         .multilineTextAlignment(.center)
@@ -308,6 +369,92 @@ struct NoDataReportView: View {
     }
 }
 
+/// Shown in place of the full report when the city's open-data backend errored on the
+/// foundational lookups, so the user sees a recoverable "database error" rather than a
+/// misleading "address not found".
+struct DatabaseErrorReportView: View {
+    let report: AddressReport
+    var onRetry: (() async -> Void)? = nil
+    @Environment(\.dismiss) private var dismiss
+    @State private var isRetrying = false
+
+    private var typedAddress: String {
+        let display = report.address.displayAddress
+        return display.isEmpty ? report.address.raw : display
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: 22) {
+                ZStack {
+                    Circle()
+                        .fill(Color.cleanRed.opacity(0.12))
+                        .frame(width: 92, height: 92)
+                    if isRetrying {
+                        ProgressView()
+                            .scaleEffect(1.4)
+                    } else {
+                        Image(systemName: "exclamationmark.icloud")
+                            .font(.system(size: 36, weight: .light))
+                            .foregroundStyle(Color.cleanRed)
+                    }
+                }
+                .padding(.top, 48)
+
+                VStack(spacing: 10) {
+                    Text(isRetrying ? "Retrying…" : "Database error")
+                        .font(.system(size: 22, weight: .bold))
+                        .foregroundStyle(Color.cleanLabel)
+                        .multilineTextAlignment(.center)
+
+                    Text("We couldn't reach \(report.cityName) open data to build a report for \u{201C}\(typedAddress)\u{201D}. This is usually temporary — check your connection and try again.")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Color.cleanLabel2)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                if let retry = onRetry {
+                    Button {
+                        guard !isRetrying else { return }
+                        isRetrying = true
+                        Task {
+                            await retry()
+                            isRetrying = false
+                        }
+                    } label: {
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 14, weight: .semibold))
+                            Text("Retry")
+                                .font(.system(size: 15, weight: .semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 22)
+                        .padding(.vertical, 14)
+                        .background(isRetrying ? Color.cleanLabel3 : Color.cleanSky, in: Capsule())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isRetrying)
+                }
+
+                Button {
+                    dismiss()
+                } label: {
+                    Text("Go back")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.cleanLabel2)
+                }
+                .buttonStyle(.plain)
+
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 32)
+            .frame(maxWidth: .infinity)
+        }
+    }
+}
+
 struct ComingSoonReportCard: View {
     let report: AddressReport
 
@@ -327,6 +474,7 @@ struct SavedReportsView: View {
     @State private var selectedReport: AddressReport?
     @State private var isShowingReport = false
     @State private var loadingAddress: String?
+    @State private var loadingStage: ReportLoadingStage = .normalizing
     @State private var refreshingAddress: String?
 
     var body: some View {
@@ -395,7 +543,7 @@ struct SavedReportsView: View {
                 LoadingScreenAnimation(
                     addressText: loadingAddress,
                     cityName: "Winnipeg, MB",
-                    stage: .nearbyRecords
+                    stage: loadingStage
                 )
                 .ignoresSafeArea()
                 .transition(.opacity.combined(with: .scale(scale: 0.98)))
@@ -620,9 +768,12 @@ struct SavedReportsView: View {
 
     private func fetchRecentAndOpen(_ recent: RecentSearch) async {
         guard loadingAddress == nil else { return }
+        loadingStage = .normalizing
         loadingAddress = recent.address
         defer { loadingAddress = nil }
-        let report = await ReportService().report(for: recent.address)
+        let report = await ReportService().report(for: recent.address) { stage in
+            await MainActor.run { loadingStage = stage }
+        }
         selectedReport = report
         isShowingReport = true
     }
@@ -638,9 +789,12 @@ struct SavedReportsView: View {
 
     private func fetchAndOpen(_ saved: SavedReport) async {
         guard loadingAddress == nil else { return }
+        loadingStage = .normalizing
         loadingAddress = saved.address
         defer { loadingAddress = nil }
-        let report = await ReportService().report(for: saved.address)
+        let report = await ReportService().report(for: saved.address) { stage in
+            await MainActor.run { loadingStage = stage }
+        }
         saved.update(from: report)
         try? modelContext.save()
         selectedReport = report

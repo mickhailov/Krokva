@@ -2,6 +2,7 @@ import SwiftUI
 
 struct PropertyFactsCard: View {
     let property: PropertyAssessment?
+    var sourceFailed = false
     @State private var isExpanded = false
 
     var body: some View {
@@ -14,7 +15,7 @@ struct PropertyFactsCard: View {
                         factsGrid(p)
                             .padding(18)
                     } else {
-                        Text("No assessment record was returned for this address.")
+                        Text(sourceFailed ? "Database error loading the assessment record." : "No assessment record was returned for this address.")
                             .font(KrokvaTypography.bodySecondary)
                             .foregroundStyle(Color.cleanLabel2)
                             .padding(18)
@@ -64,7 +65,7 @@ struct PropertyFactsCard: View {
     }
 
     private var smallSummary: String {
-        guard let p = property else { return "No assessment data" }
+        guard let p = property else { return sourceFailed ? "Database error" : "No assessment data" }
         var parts: [String] = []
         if let area = p.livingArea { parts.append("\(Int(area).formatted()) sf") }
         if let rooms = p.rooms, !rooms.isEmpty { parts.append(roomsDisplay(rooms)) }

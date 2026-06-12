@@ -564,11 +564,11 @@ struct PropertyCompareView: View {
             CompareRow(
                 label: "Traffic",
                 values: reports.map { report in
-                    guard let study = report?.traffic?.streetStudy ?? report?.traffic?.nearestPermanentStation,
+                    guard let study = report?.traffic?.streetStudy,
                           let count = study.vehiclesCounted else { return nil }
                     return "\(count.formatted()) \(study.countSummaryUnit ?? "")".trimmingCharacters(in: .whitespaces)
                 },
-                bestIndex: bestInt(reports.map { $0?.traffic?.streetStudy?.vehiclesCounted ?? $0?.traffic?.nearestPermanentStation?.vehiclesCounted }, higher: false)
+                bestIndex: bestInt(reports.map { $0?.traffic?.streetStudy?.vehiclesCounted }, higher: false)
             ),
             CompareRow(
                 label: "Tows",

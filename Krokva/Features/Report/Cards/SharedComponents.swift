@@ -549,6 +549,21 @@ struct KeyValueRow: View {
     }
 }
 
+// MARK: - Report retry environment
+
+struct ReportRetryActionKey: EnvironmentKey {
+    static let defaultValue: (() async -> Void)? = nil
+}
+
+extension EnvironmentValues {
+    var reportRetryAction: (() async -> Void)? {
+        get { self[ReportRetryActionKey.self] }
+        set { self[ReportRetryActionKey.self] = newValue }
+    }
+}
+
+// MARK: - Empty / error states
+
 struct EmptyCardState: View {
     let message: String
 
@@ -562,5 +577,73 @@ struct EmptyCardState: View {
             Spacer(minLength: 0)
         }
         .padding(.vertical, 4)
+    }
+}
+
+/// Body shown when a card’s data source failed to load (network/HTTP error), as opposed to
+/// loading successfully with no rows. Distinguished from `EmptyCardState` by tone + icon so
+/// a failure reads as recoverable rather than "nothing here". Shows a retry button when a
+/// `reportRetryAction` is set in the environment.
+struct DatabaseErrorState: View {
+    var message: String = "Database error — couldn’t load this data."
+
+    @Environment(\.reportRetryAction) private var retryAction
+    @State private var isRetrying = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 10) {
+                Image(systemName: "exclamationmark.icloud")
+                    .foregroundStyle(Color.cleanRed)
+                Text(message)
+                    .font(.subheadline)
+                    .foregroundStyle(Color.cleanLabel2)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+            }
+            if let retry = retryAction {
+                Button {
+                    guard !isRetrying else { return }
+                    isRetrying = true
+                    Task {
+                        await retry()
+                        isRetrying = false
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        if isRetrying {
+                            ProgressView().scaleEffect(0.75)
+                        } else {
+                            Image(systemName: "arrow.clockwise")
+                                .font(.system(size: 11, weight: .semibold))
+                        }
+                        Text(isRetrying ? "Retrying…" : "Retry")
+                            .font(.system(size: 13, weight: .semibold))
+                    }
+                    .foregroundStyle(Color.cleanSky)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 7)
+                    .background(Color.cleanSky.opacity(0.1), in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .disabled(isRetrying)
+            }
+        }
+        .padding(.vertical, 4)
+    }
+}
+
+/// A full card shell rendered in place of a card that would otherwise hide on empty, so a
+/// load failure surfaces as "Database error" instead of the card silently disappearing.
+struct ModuleErrorCard: View {
+    let title: String
+    var systemImage: String
+    var iconColor: Color = .cleanRed
+    var message: String = "Database error — couldn’t load this data."
+
+    var body: some View {
+        ReportCard(title: title, systemImage: systemImage, iconColor: iconColor) {
+            DatabaseErrorState(message: message)
+        }
     }
 }

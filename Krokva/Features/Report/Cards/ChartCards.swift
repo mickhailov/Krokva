@@ -7,11 +7,12 @@ private let comparisonCityAveragePosition: CGFloat = 0.50
 
 struct PermitActivityCard: View {
     let activity: [YearCount]
+    var sourceFailed = false
 
     var body: some View {
         ReportCard(title: "Neighbourhood permit activity", systemImage: "chart.xyaxis.line", iconColor: .cleanAmber) {
             if activity.isEmpty {
-                Text("Permit trend data is unavailable.")
+                Text(sourceFailed ? "Database error loading neighbourhood permit activity." : "Permit trend data is unavailable.")
                     .font(KrokvaTypography.bodySecondary)
                     .foregroundStyle(Color.cleanLabel2)
             } else {
@@ -433,6 +434,7 @@ struct EmergencyActivityCard: View {
 
 struct PoliceCrimeCard: View {
     let summary: PoliceCrimeSummary?
+    var sourceFailed = false
     @State private var isExpanded = false
     @State private var selectedYearValue: Int?
 
@@ -497,6 +499,7 @@ struct PoliceCrimeCard: View {
     }
 
     private var smallSummary: String {
+        if sourceFailed, summary == nil { return "Database error" }
         guard let latest = summary?.yearlyCounts.last, latest.citywideAverage > 0 else {
             return "Unavailable"
         }
@@ -603,7 +606,7 @@ struct PoliceCrimeCard: View {
                 }
             }
         } else {
-            Text("Police crime map context is unavailable.")
+            Text(sourceFailed ? "Database error loading police crime context." : "Police crime map context is unavailable.")
                 .font(KrokvaTypography.bodySecondary)
                 .foregroundStyle(Color.cleanLabel2)
         }
