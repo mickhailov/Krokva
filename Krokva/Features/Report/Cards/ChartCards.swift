@@ -107,8 +107,8 @@ struct EmergencyActivityCard: View {
     }
 
     private var smallSummary: String {
-        if sourceFailed { return "Database error" }
-        guard let s = summary else { return "Unavailable" }
+        guard let s = summary else { return sourceFailed ? "Database error" : "Unavailable" }
+        guard hasEmergencyData(s) else { return sourceFailed ? "Database error" : "Unavailable" }
         let medical = s.last12Months.first { $0.incidentType.localizedCaseInsensitiveContains("medical") }
         let fire = s.last12Months.first { $0.incidentType.localizedCaseInsensitiveContains("fire") }
         var parts: [String] = []
@@ -122,7 +122,7 @@ struct EmergencyActivityCard: View {
 
     @ViewBuilder
     private var fullContent: some View {
-        if let summary, (!summary.yearlyCalls.isEmpty || !summary.last12Months.isEmpty || !summary.recentIncidents.isEmpty) {
+        if let summary, hasEmergencyData(summary) {
             VStack(alignment: .leading, spacing: 14) {
                 HStack(spacing: 10) {
                     StatTile(label: "Last 12 months", value: summary.totalLastYear.formatted())
@@ -146,6 +146,10 @@ struct EmergencyActivityCard: View {
                 .font(KrokvaTypography.bodySecondary)
                 .foregroundStyle(Color.cleanLabel2)
         }
+    }
+
+    private func hasEmergencyData(_ summary: EmergencySummary) -> Bool {
+        !summary.yearlyCalls.isEmpty || !summary.last12Months.isEmpty || !summary.recentIncidents.isEmpty
     }
 
     @ViewBuilder

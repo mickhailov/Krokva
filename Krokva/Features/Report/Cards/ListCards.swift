@@ -179,7 +179,9 @@ struct VacantOrdersCard: View {
     private var smallSummary: String {
         if sourceFailed, orders.isEmpty { return "Database error" }
         guard !orders.isEmpty else { return "No vacant building orders" }
-        return "\(orders.count) vacant \(orders.count == 1 ? "building" : "buildings") in 500m"
+        let base = "\(orders.count) vacant \(orders.count == 1 ? "building" : "buildings") within 500 m"
+        guard let nearest = orders.first?.distanceDescription else { return base }
+        return "\(base) - nearest \(nearest)"
     }
 
     @ViewBuilder
@@ -192,16 +194,26 @@ struct VacantOrdersCard: View {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(orders.enumerated()), id: \.offset) { index, order in
                     VStack(alignment: .leading, spacing: 3) {
-                        Text(order.address)
-                            .font(.system(size: 12.5, weight: .semibold))
-                            .foregroundStyle(Color.cleanLabel)
+                        HStack(alignment: .firstTextBaseline, spacing: 8) {
+                            Text(order.address)
+                                .font(.system(size: 12.5, weight: .semibold))
+                                .foregroundStyle(Color.cleanLabel)
+                                .lineLimit(1)
+
+                            Spacer(minLength: 8)
+
+                            Text(order.distanceDescription ?? "Distance unavailable")
+                                .font(.system(size: 10.5, weight: .bold).monospacedDigit())
+                                .foregroundStyle(Color.cleanRed)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(Color.cleanRed.opacity(0.1), in: Capsule())
+                        }
                         Text(order.orderType)
                             .font(KrokvaTypography.caption)
                             .foregroundStyle(Color.cleanLabel3)
                         HStack(spacing: 6) {
                             Text(order.issuedDate?.formatted(date: .abbreviated, time: .omitted) ?? "Date TBD")
-                            Text("·")
-                            Text(order.distanceDescription ?? "—")
                         }
                         .font(KrokvaTypography.monoSmall)
                         .foregroundStyle(Color.cleanLabel3)
