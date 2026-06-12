@@ -54,14 +54,18 @@ struct LoadingScreenAnimation: View {
                         mapHero
                         stepTimeline
                         progressBar
-                        if onCancel != nil {
-                            cancelButton
-                        }
                         Spacer(minLength: 0)
-                            .frame(height: 32)
+                            .frame(height: 8)
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 16)
+                }
+                if onCancel != nil {
+                    cancelButton
+                        .padding(.horizontal, 20)
+                        .padding(.top, 12)
+                        .padding(.bottom, 8)
+                        .background(Color.cleanBg)
                 }
             }
         }
@@ -296,7 +300,6 @@ struct LoadingScreenAnimation: View {
             .overlay(Capsule().stroke(Color.cleanSep, lineWidth: 1))
         }
         .buttonStyle(.plain)
-        .padding(.top, 4)
     }
 
     // MARK: Animations

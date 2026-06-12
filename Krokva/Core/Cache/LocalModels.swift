@@ -56,11 +56,16 @@ final class SavedAddress {
 // Snapshot of key report fields for side-by-side comparison.
 @Model
 final class SavedReport {
+    // User-given label for fast access (defaults to the address).
+    var name: String = ""
     var address: String
     var cityID: String
     var cityName: String
     var neighbourhood: String
     var savedAt: Date
+
+    // Up to this many reports can be pinned for fast access.
+    static let maxSaved = 5
 
     // Assessment snapshot
     var assessedValue: Double?
@@ -89,8 +94,10 @@ final class SavedReport {
     // Full encoded report — loaded instantly without re-fetching
     var reportData: Data?
 
-    init(from report: AddressReport) {
-        address = report.property?.fullAddress ?? report.address.displayAddress
+    init(from report: AddressReport, name: String? = nil) {
+        let resolvedAddress = report.property?.fullAddress ?? report.address.displayAddress
+        address = resolvedAddress
+        self.name = (name?.trimmingCharacters(in: .whitespacesAndNewlines)).flatMap { $0.isEmpty ? nil : $0 } ?? resolvedAddress
         cityID = report.providerID
         cityName = report.cityName
         neighbourhood = report.property?.neighbourhood ?? ""
@@ -116,6 +123,12 @@ final class SavedReport {
         parkCount = report.parks?.nearbyParks.count
         transitOnTimePct = report.transit?.onTimePercentage
         reportData = try? JSONEncoder().encode(report)
+    }
+
+    // Falls back to the address for rows saved before names existed.
+    var displayName: String {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? address : trimmed
     }
 
     func decodedReport() -> AddressReport? {

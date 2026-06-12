@@ -46,7 +46,21 @@ struct AddressReport: Identifiable, Codable {
     var civicContext: AddressCivicContext?
     var recreation: RecreationSummary?
     var nearbySchools: [SchoolAmenity] = []
+    var waste: WasteCollectionSummary?
+    var demographics: DemographicsSummary?
+    var localGovernment: LocalGovernmentSummary?
+    var localBusiness: LocalBusinessSummary?
+    var aquatics: AquaticsAmenitiesSummary?
+    var traffic: TrafficSummary?
+    var neighbourhoodRisk: NeighbourhoodRiskSummary?
+    var waterQuality: WaterQualitySummary?
+    var capitalWorks: CapitalWorksSummary?
+    var facilityClosures: FacilityClosureSummary?
     var sources: [DatasetSource] = []
+    /// Modules whose data source threw a network/HTTP error during this build. A card uses
+    /// this to show "Database error" instead of silently hiding when its module is empty.
+    /// Optional so reports persisted before this field decode cleanly (missing key → nil).
+    var failedModules: Set<ReportModule>? = nil
 
     init(
         id: UUID = UUID(),
@@ -77,7 +91,18 @@ struct AddressReport: Identifiable, Codable {
         civicContext: AddressCivicContext? = nil,
         recreation: RecreationSummary? = nil,
         nearbySchools: [SchoolAmenity] = [],
-        sources: [DatasetSource] = []
+        waste: WasteCollectionSummary? = nil,
+        demographics: DemographicsSummary? = nil,
+        localGovernment: LocalGovernmentSummary? = nil,
+        localBusiness: LocalBusinessSummary? = nil,
+        aquatics: AquaticsAmenitiesSummary? = nil,
+        traffic: TrafficSummary? = nil,
+        neighbourhoodRisk: NeighbourhoodRiskSummary? = nil,
+        waterQuality: WaterQualitySummary? = nil,
+        capitalWorks: CapitalWorksSummary? = nil,
+        facilityClosures: FacilityClosureSummary? = nil,
+        sources: [DatasetSource] = [],
+        failedModules: Set<ReportModule>? = nil
     ) {
         self.id = id
         self.address = address
@@ -107,11 +132,35 @@ struct AddressReport: Identifiable, Codable {
         self.civicContext = civicContext
         self.recreation = recreation
         self.nearbySchools = nearbySchools
+        self.waste = waste
+        self.demographics = demographics
+        self.localGovernment = localGovernment
+        self.localBusiness = localBusiness
+        self.aquatics = aquatics
+        self.traffic = traffic
+        self.neighbourhoodRisk = neighbourhoodRisk
+        self.waterQuality = waterQuality
+        self.capitalWorks = capitalWorks
+        self.facilityClosures = facilityClosures
         self.sources = sources
+        self.failedModules = failedModules
+    }
+
+    /// Convenience for views: did this module's data source fail to load?
+    func moduleFailed(_ module: ReportModule) -> Bool {
+        failedModules?.contains(module) ?? false
     }
 
     static func comingSoon(address: NormalizedAddress, provider: any CityDataProvider) -> AddressReport {
         AddressReport(address: address, providerID: provider.cityID, cityName: provider.displayName, providerState: .comingSoon, sources: [])
+    }
+
+    /// An address that resolves no assessment and no civic match means the city's open
+    /// data has nothing for it — typically a typo or an address outside coverage. Such a
+    /// report has nothing worth navigating to, so callers should keep the user on the
+    /// search screen instead of pushing an empty report.
+    var addressNotFound: Bool {
+        providerState == .live && property == nil && civicContext == nil
     }
 }
 
@@ -199,6 +248,8 @@ struct YearCount: Identifiable, Codable {
     var id: Int { year }
     var year: Int
     var count: Int
+    /// City-wide average count per neighbourhood for this year (0 when not applicable).
+    var citywideAverage: Double = 0
 }
 
 struct VacantOrder: Identifiable, Codable {
@@ -565,6 +616,8 @@ struct IncidentBreakdown: Identifiable, Codable {
     var id: String { incidentType }
     var incidentType: String
     var count: Int
+    /// City-wide average count per neighbourhood for this same type (0 when not applicable).
+    var citywideAverage: Double = 0
 }
 
 struct HealthFacilityAccess: Codable {
@@ -763,4 +816,223 @@ struct DatasetSource: Identifiable, Codable {
     var name: String
     var datasetID: String
     var url: URL
+}
+
+// MARK: - Waste collection & winter operations
+
+struct WasteCollectionSummary: Codable {
+    var garbageDay: String?
+    var recycleDay: String?
+    var yardWasteDay: String?
+    var matchedAddress: String?
+    var plowZone: String?
+    var nextPlowWindow: String?
+    var activeSnowBan: SnowBanInfo?
+}
+
+struct SnowBanInfo: Codable {
+    var description: String
+    var start: Date?
+    var end: Date?
+}
+
+// MARK: - Neighbourhood demographics
+
+struct DemographicsSummary: Codable {
+    var boundaryName: String
+    var totalPopulation: Int?
+    var childrenPercent: Double?      // 0-14
+    var seniorsPercent: Double?       // 65+
+    var medianHouseholdIncome: Double?
+    var averageHouseholdSize: Double?
+    var immigrantPercent: Double?
+    var topNonOfficialLanguage: String?
+    var commuteModes: [IncidentBreakdown] = []   // car / public / walk / bicycle, as counts
+    var isHighPovertyArea: Bool?
+    var giniIndex: Double?
+}
+
+// MARK: - Local government
+
+struct LocalGovernmentSummary: Codable {
+    var wardName: String?
+    var councillor: String?
+    var councillorPhone: String?
+    var councillorWebsite: String?
+    var communityCommittee: String?
+}
+
+// MARK: - Local businesses
+
+struct LocalBusinessSummary: Codable {
+    var totalNearby: Int
+    var topCategories: [IncidentBreakdown]
+    var recent: [LocalBusinessRecord]
+    var patios: [LocalBusinessRecord]
+}
+
+struct LocalBusinessRecord: Identifiable, Codable {
+    let id: UUID
+    var name: String
+    var category: String?
+    var distanceDescription: String?
+    var coordinate: CLLocationCoordinate2D?
+
+    init(id: UUID = UUID(), name: String, category: String? = nil, distanceDescription: String? = nil, coordinate: CLLocationCoordinate2D? = nil) {
+        self.id = id
+        self.name = name
+        self.category = category
+        self.distanceDescription = distanceDescription
+        self.coordinate = coordinate
+    }
+}
+
+// MARK: - Aquatics & amenities
+
+struct AquaticsAmenitiesSummary: Codable {
+    var pools: [PoolAmenity]
+    var walkwaysNearby: Int
+    var nearestWifi: NamedAmenity?
+}
+
+struct PoolAmenity: Identifiable, Codable {
+    let id: UUID
+    var name: String
+    var kind: String          // Indoor / Outdoor / Wading / Spray pad
+    var address: String?
+    var isOpen: Bool?
+    var distanceDescription: String?
+    var features: [String]
+    var website: String?
+    var coordinate: CLLocationCoordinate2D?
+
+    init(id: UUID = UUID(), name: String, kind: String, address: String? = nil, isOpen: Bool? = nil, distanceDescription: String? = nil, features: [String] = [], website: String? = nil, coordinate: CLLocationCoordinate2D? = nil) {
+        self.id = id
+        self.name = name
+        self.kind = kind
+        self.address = address
+        self.isOpen = isOpen
+        self.distanceDescription = distanceDescription
+        self.features = features
+        self.website = website
+        self.coordinate = coordinate
+    }
+}
+
+struct NamedAmenity: Codable {
+    var name: String
+    var distanceDescription: String?
+    var coordinate: CLLocationCoordinate2D?
+}
+
+// MARK: - Traffic
+
+struct TrafficSummary: Codable {
+    var streetStudy: TrafficStudy?
+    var nearestPermanentStation: TrafficStudy?
+}
+
+struct TrafficStudy: Codable {
+    var locationDescription: String
+    var vehiclesCounted: Int?
+    var countDate: Date?
+    var direction: String?
+    var distanceDescription: String?
+    var countMetricLabel: String?
+    var countSummaryUnit: String?
+    var countNote: String?
+}
+
+// MARK: - Neighbourhood risk
+
+struct NeighbourhoodRiskSummary: Codable {
+    var roomingHouse: RoomingHouseActivity?
+    var vacantFireTrend: [YearCount]
+    var towingNearby: Int
+    var paidParkingNearby: Int
+    var nearestPaidParking: String?
+}
+
+struct RoomingHouseActivity: Codable {
+    var year: Int
+    var complaintDriven: Int?
+    var proactive: Int?
+    var inProgress: Int?
+    var completed: Int?
+}
+
+// MARK: - Water quality
+
+struct WaterQualitySummary: Codable {
+    var year: Int?
+    var area: String?
+    var parameters: [WaterQualityReading]
+}
+
+struct WaterQualityReading: Identifiable, Codable {
+    let id: UUID
+    var parameter: String
+    var average: Double?
+    var minimum: Double?
+    var maximum: Double?
+    var units: String?
+
+    init(id: UUID = UUID(), parameter: String, average: Double? = nil, minimum: Double? = nil, maximum: Double? = nil, units: String? = nil) {
+        self.id = id
+        self.parameter = parameter
+        self.average = average
+        self.minimum = minimum
+        self.maximum = maximum
+        self.units = units
+    }
+}
+
+// MARK: - Capital works
+
+struct CapitalWorksSummary: Codable {
+    var projects: [CapitalProject]
+}
+
+struct CapitalProject: Identifiable, Codable {
+    let id: UUID
+    var name: String
+    var detail: String?
+    var status: String?
+    var budget: Double?
+    var year: String?
+    var funded: Bool?
+
+    init(id: UUID = UUID(), name: String, detail: String? = nil, status: String? = nil, budget: Double? = nil, year: String? = nil, funded: Bool? = nil) {
+        self.id = id
+        self.name = name
+        self.detail = detail
+        self.status = status
+        self.budget = budget
+        self.year = year
+        self.funded = funded
+    }
+}
+
+// MARK: - Facility closures (health protection)
+
+struct FacilityClosureSummary: Codable {
+    var closures: [FacilityClosureRecord]
+}
+
+struct FacilityClosureRecord: Identifiable, Codable {
+    let id: UUID
+    var name: String
+    var establishmentType: String?
+    var reason: String?
+    var closureDate: Date?
+    var reopenDate: Date?
+
+    init(id: UUID = UUID(), name: String, establishmentType: String? = nil, reason: String? = nil, closureDate: Date? = nil, reopenDate: Date? = nil) {
+        self.id = id
+        self.name = name
+        self.establishmentType = establishmentType
+        self.reason = reason
+        self.closureDate = closureDate
+        self.reopenDate = reopenDate
+    }
 }

@@ -41,6 +41,45 @@ struct CityDatasets {
     var leisureActivities: String? = nil
     var snowRouteAddresses: String? = nil
     var plowZones: String? = nil
+    // Daily-living logistics
+    var wasteCollection: String? = nil
+    var snowParkingBans: String? = nil
+    var plowZoneSchedule: String? = nil
+    // Local commerce
+    var businessLicenses: String? = nil
+    var seasonalPatios: String? = nil
+    // Environment
+    var waterQuality: String? = nil
+    // Traffic
+    var midblockTrafficCounts: String? = nil
+    var permanentTrafficCounts: String? = nil
+    // Census demographics
+    var censusAge: String? = nil
+    var censusHouseholds: String? = nil
+    var censusLanguage: String? = nil
+    var censusTransportMode: String? = nil
+    var censusImmigration: String? = nil
+    var higherPovertyAreas: String? = nil
+    // Local government
+    var electoralWards: String? = nil
+    var communityCommittees: String? = nil
+    // Aquatics & amenities
+    var poolsIndoor: String? = nil
+    var poolsOutdoor: String? = nil
+    var poolsWading: String? = nil
+    var poolsSprayPad: String? = nil
+    var walkways: String? = nil
+    var publicWifi: String? = nil
+    // Neighbourhood risk
+    var vacantPropertyFires: String? = nil
+    var roomingHouseEnforcement: String? = nil
+    var rushHourTowing: String? = nil
+    var paidParking: String? = nil
+    // Capital works
+    var capitalProjects: String? = nil
+    var infrastructureFunding: String? = nil
+    // Health protection
+    var facilityClosures: String? = nil
 }
 
 struct FieldMappings {

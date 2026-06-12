@@ -8,6 +8,12 @@ private struct SchoolDivisionBoundaryInfo {
     var website: String?
 }
 
+private struct CensusBoundaryCandidate {
+    var boundaryType: String
+    var names: [String]
+    var displayName: String
+}
+
 final class WinnipegProvider: SocrataProvider, CityDataProvider {
     private static var policeCrimeCSVCache: String?
 
@@ -53,7 +59,36 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         recreationComplexes: "bmi4-vvs2",
         leisureActivities: "a2fq-ufu6",
         snowRouteAddresses: "g3p4-h83y",
-        plowZones: "39ur-higg"
+        plowZones: "39ur-higg",
+        wasteCollection: "6rcy-9uik",
+        snowParkingBans: "mfzv-893p",
+        plowZoneSchedule: "tix9-r5tc",
+        businessLicenses: "d5k3-sfzx",
+        seasonalPatios: "cd49-nk9h",
+        waterQuality: "a5ix-gnny",
+        midblockTrafficCounts: "buvf-b9wp",
+        permanentTrafficCounts: "46sc-6jrs",
+        censusAge: "hiqy-dd38",
+        censusHouseholds: "nmk5-uwfw",
+        censusLanguage: "wgmu-db32",
+        censusTransportMode: "ijxa-tybv",
+        censusImmigration: "g66p-wwve",
+        higherPovertyAreas: "ige9-5jxk",
+        electoralWards: "t4cg-yaxs",
+        communityCommittees: "dvqz-nw8j",
+        poolsIndoor: "rnpn-3qku",
+        poolsOutdoor: "dqfv-rh5e",
+        poolsWading: "npmi-43db",
+        poolsSprayPad: "uwfj-6mt2",
+        walkways: "jdeq-xf3y",
+        publicWifi: "rzm8-wh6x",
+        vacantPropertyFires: "tnm5-yaem",
+        roomingHouseEnforcement: "vk2f-xwp7",
+        rushHourTowing: "8phf-9kb6",
+        paidParking: "rmsh-97k4",
+        capitalProjects: "9xar-v8xm",
+        infrastructureFunding: "rwrz-d7hc",
+        facilityClosures: "fxcw-yyy2"
     )
     let fieldMappings = FieldMappings(
         assessment: [
@@ -81,6 +116,8 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
     }
 
     func fetchReport(for address: NormalizedAddress, progress: ReportService.ProgressHandler?) async -> AddressReport {
+        await dataSourceHealth.reset()
+
         await progress?(.assessment)
         async let property = fetchAssessment(address)
         async let infrastructure = fetchInfrastructure(address)
@@ -104,7 +141,9 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         async let planning = fetchPlanningContext(property: assessment)
         async let streetAccess = fetchStreetAccess(address: address, property: assessment)
         await progress?(.emergency)
-        async let emergency = fetchEmergency(neighbourhood: assessment?.neighbourhood)
+        async let emergency = ReportModuleContext.$current.withValue(.emergency) {
+            await fetchEmergency(neighbourhood: assessment?.neighbourhood)
+        }
         await progress?(.health)
         async let health = fetchPublicHealth(neighbourhood: assessment?.neighbourhood, coordinate: assessment?.coordinate)
         async let policeCrime = fetchPoliceCrime(neighbourhood: assessment?.neighbourhood)
@@ -112,6 +151,18 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         async let shortTermRentals = fetchShortTermRentals(address: address, streetCores: nearbyStreetCores)
         async let recreation = fetchRecreation(property: assessment)
         async let schools = fetchNearbySchools(property: assessment)
+        async let waste = fetchWasteCollection(address: address, property: assessment)
+        async let demographics = ReportModuleContext.$current.withValue(.demographics) {
+            await fetchDemographics(address: address, property: assessment)
+        }
+        async let localGovernment = fetchLocalGovernment(address: address, property: assessment)
+        async let localBusiness = fetchLocalBusiness(property: assessment)
+        async let aquatics = fetchAquatics(property: assessment)
+        async let traffic = fetchTraffic(address: address, property: assessment)
+        async let neighbourhoodRisk = fetchNeighbourhoodRisk(property: assessment)
+        async let waterQuality = fetchWaterQuality()
+        async let capitalWorks = fetchCapitalWorks(address: address)
+        async let facilityClosures = fetchFacilityClosures(address: address, property: assessment)
 
         await progress?(.infrastructure)
         let infrastructureSummary = await infrastructure
@@ -139,6 +190,16 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         let shortTermRentalSummary = await shortTermRentals
         let recreationSummary = await recreation
         let nearbySchoolsList = await schools
+        let wasteSummary = await waste
+        let demographicsSummary = await demographics
+        let localGovernmentSummary = await localGovernment
+        let localBusinessSummary = await localBusiness
+        let aquaticsSummary = await aquatics
+        let trafficSummary = await traffic
+        let neighbourhoodRiskSummary = await neighbourhoodRisk
+        let waterQualitySummary = await waterQuality
+        let capitalWorksSummary = await capitalWorks
+        let facilityClosureSummary = await facilityClosures
 
         await progress?(.assembling)
 
@@ -148,6 +209,8 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         if propertyForReport?.postalCode == nil {
             propertyForReport?.postalCode = civicContextSummary?.postalCode
         }
+
+        let failedModules = await dataSourceHealth.snapshot()
 
         return AddressReport(
             address: address,
@@ -177,7 +240,18 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             civicContext: civicContextSummary,
             recreation: recreationSummary,
             nearbySchools: nearbySchoolsList,
-            sources: sourceList()
+            waste: wasteSummary,
+            demographics: demographicsSummary,
+            localGovernment: localGovernmentSummary,
+            localBusiness: localBusinessSummary,
+            aquatics: aquaticsSummary,
+            traffic: trafficSummary,
+            neighbourhoodRisk: neighbourhoodRiskSummary,
+            waterQuality: waterQualitySummary,
+            capitalWorks: capitalWorksSummary,
+            facilityClosures: facilityClosureSummary,
+            sources: sourceList(),
+            failedModules: failedModules.isEmpty ? nil : failedModules
         )
     }
 
@@ -319,7 +393,36 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             ("Recreation Complex", datasets.recreationComplexes),
             ("LeisureONLINE Activities", datasets.leisureActivities),
             ("Snow Clearing Status & Winter Parking Bans", datasets.snowRouteAddresses),
-            ("Plow Zones", datasets.plowZones)
+            ("Plow Zones", datasets.plowZones),
+            ("Recycling, Garbage and Yard Waste Collection Days", datasets.wasteCollection),
+            ("Snow Parking Bans", datasets.snowParkingBans),
+            ("Plow Zone Schedule", datasets.plowZoneSchedule),
+            ("Business Licenses", datasets.businessLicenses),
+            ("Seasonal Patios", datasets.seasonalPatios),
+            ("Water Quality Test Results", datasets.waterQuality),
+            ("Midblock Traffic Counts", datasets.midblockTrafficCounts),
+            ("Permanent Count Station Traffic Counts", datasets.permanentTrafficCounts),
+            ("Census - Population By Age", datasets.censusAge),
+            ("Census - Households", datasets.censusHouseholds),
+            ("Census - Language", datasets.censusLanguage),
+            ("Census - Mode Of Transportation", datasets.censusTransportMode),
+            ("Census - Citizenship & Immigration", datasets.censusImmigration),
+            ("Higher Poverty Areas From the 2021 Census", datasets.higherPovertyAreas),
+            ("Electoral Wards", datasets.electoralWards),
+            ("Community Committee", datasets.communityCommittees),
+            ("Swimming Pool Indoor", datasets.poolsIndoor),
+            ("Swimming Pool Outdoor", datasets.poolsOutdoor),
+            ("Swimming Pool Wading", datasets.poolsWading),
+            ("Swimming Pool Spray Pad", datasets.poolsSprayPad),
+            ("Walkways", datasets.walkways),
+            ("Public Wifi Sites", datasets.publicWifi),
+            ("Vacant Property Fires", datasets.vacantPropertyFires),
+            ("Rooming House Enforcement Activity", datasets.roomingHouseEnforcement),
+            ("Rush Hour Vehicle Towing Data", datasets.rushHourTowing),
+            ("Block by Block On-Street Paid Parking", datasets.paidParking),
+            ("Capital Projects Current Status", datasets.capitalProjects),
+            ("Infrastructure Plan Funding", datasets.infrastructureFunding),
+            ("Province of Manitoba - Health Protection Reports - Winnipeg", datasets.facilityClosures)
         ]
         let citySources: [DatasetSource] = sourcePairs.compactMap { pair -> DatasetSource? in
             let (name, id) = pair
@@ -604,6 +707,32 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             URLQueryItem(name: "$where", value: "upper(street_name) like '\(token)%'")
         ])) ?? []
         return Int(rows.first?.double("cnt") ?? 0)
+    }
+
+    /// The assessment feed stores `neighbourhood_area` in UPPERCASE ("RIVERVIEW"), but most
+    /// other Winnipeg datasets (WFPS calls, police crime, 311) store the neighbourhood in
+    /// Title Case ("Riverview"). Matching with `upper(neighbourhood)=...` forces Socrata to
+    /// scan the whole table (a function on the column can't use the index) — on big datasets
+    /// like WFPS that took 30s+ and blew the request timeout, silently emptying the card.
+    /// Converting to the canonical Title Case lets the query hit the index (~1–3s instead).
+    /// We capitalise the first letter of each word only, leaving apostrophes intact so
+    /// "ST. JOHN'S" → "St. John's" (Swift's `.capitalized` would wrongly yield "John'S").
+    private func properCaseNeighbourhood(_ name: String) -> String {
+        let lower = name.lowercased()
+        var result = ""
+        var capitalizeNext = true
+        for ch in lower {
+            if ch == " " || ch == "-" || ch == "/" {
+                capitalizeNext = true
+                result.append(ch)
+            } else if capitalizeNext {
+                result.append(contentsOf: ch.uppercased())
+                capitalizeNext = false
+            } else {
+                result.append(ch)
+            }
+        }
+        return result
     }
 
     private func streetCore(_ name: String) -> String {
@@ -1049,8 +1178,15 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         }
 
         if rows.isEmpty, let civic = address.civicNumber {
-            let streetClauses = addressNormalizer.streetVariants(for: address)
-                .map { "upper(street_name)='\(escaped($0.uppercased()))'" }
+            // The Addresses dataset stores `street_name` WITHOUT the street type (e.g. "ARNOLD",
+            // not "ARNOLD AVE"), so the assessment's full_address ("196 ARNOLD AVENUE") never
+            // matches above. Match on the bare street core first, then fall back to the full
+            // street-name variants for the rare dataset that keeps the type.
+            var streetTokens = Set(addressNormalizer.streetVariants(for: address).map { $0.uppercased() })
+            let core = streetCore(address.streetName)
+            if !core.isEmpty { streetTokens.insert(core) }
+            let streetClauses = streetTokens
+                .map { "upper(street_name)='\(escaped($0))'" }
                 .joined(separator: " OR ")
             if !streetClauses.isEmpty {
                 rows = (try? await fetch(dataset, queryItems: [
@@ -1337,8 +1473,10 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
     }
 
     private func serviceNeighbourhoodClause(_ neighbourhood: String) -> String {
+        // Index-friendly Title-Case match instead of upper() — the 311 dataset is large and the
+        // full-scan version risks the request timeout (see properCaseNeighbourhood / fetchEmergency).
         let trimmed = neighbourhood.trimmingCharacters(in: .whitespacesAndNewlines)
-        return "upper(neighbourhood)='\(escaped(trimmed.uppercased()))'"
+        return "neighbourhood='\(escaped(properCaseNeighbourhood(trimmed)))'"
     }
 
     private func fetchPlanningContext(property: PropertyAssessment?) async -> PlanningContextSummary? {
@@ -1532,74 +1670,26 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
 
     private func fetchEmergency(neighbourhood: String?) async -> EmergencySummary? {
         guard let dataset = datasets.emergencyCalls, let neighbourhood else { return nil }
-        let neighUpper = escaped(neighbourhood.uppercased())
-        let neighClause = "upper(neighbourhood)='\(neighUpper)'"
+        // Match the index-friendly Title-Case spelling instead of wrapping the column in
+        // upper() — see properCaseNeighbourhood. The full-scan version timed out for WFPS.
+        let neighName = escaped(properCaseNeighbourhood(neighbourhood))
+        let neighClause = "neighbourhood='\(neighName)'"
         let timeField = "call_time"
         let sixYearClause = "\(neighClause) AND \(timeField) >= '\(yearOffset(-6))-01-01T00:00:00'"
-        let lastYearClause = "\(neighClause) AND \(timeField) > '\(yearOffset(-1))-01-01T00:00:00'"
+        let lastYearStart = yearOffset(-1)
+        let twoYearStart = yearOffset(-2)
 
-        async let yearlyRows = fetch(dataset, queryItems: [
-            URLQueryItem(name: "$select", value: "date_extract_y(\(timeField)) as year, count(*) as cnt"),
-            URLQueryItem(name: "$where", value: sixYearClause),
-            URLQueryItem(name: "$group", value: "year"),
-            URLQueryItem(name: "$order", value: "year")
-        ])
-        async let breakdownRows = fetch(dataset, queryItems: [
-            URLQueryItem(name: "$select", value: "incident_type, count(*) as cnt"),
-            URLQueryItem(name: "$where", value: lastYearClause),
-            URLQueryItem(name: "$group", value: "incident_type"),
-            URLQueryItem(name: "$order", value: "cnt DESC"),
-            URLQueryItem(name: "$limit", value: "12")
-        ])
-        async let breakdownByYearRows = fetch(dataset, queryItems: [
-            URLQueryItem(name: "$select", value: "date_extract_y(\(timeField)) as year, incident_type, count(*) as cnt"),
-            URLQueryItem(name: "$where", value: sixYearClause),
-            URLQueryItem(name: "$group", value: "year, incident_type"),
-            URLQueryItem(name: "$order", value: "year, cnt DESC")
-        ])
-        async let monthlyRows = fetch(dataset, queryItems: [
-            URLQueryItem(name: "$select", value: "date_extract_y(\(timeField)) as year, date_extract_m(\(timeField)) as month, count(*) as cnt"),
-            URLQueryItem(name: "$where", value: "\(neighClause) AND \(timeField) > '\(yearOffset(-2))-01-01T00:00:00'"),
-            URLQueryItem(name: "$group", value: "year, month"),
-            URLQueryItem(name: "$order", value: "year, month")
-        ])
-        async let wardRows = fetch(dataset, queryItems: [
-            URLQueryItem(name: "$select", value: "ward, count(*) as cnt"),
-            URLQueryItem(name: "$where", value: "\(lastYearClause) AND ward IS NOT NULL"),
-            URLQueryItem(name: "$group", value: "ward"),
-            URLQueryItem(name: "$order", value: "cnt DESC"),
-            URLQueryItem(name: "$limit", value: "8")
-        ])
-        async let motorVehicleRows = fetch(dataset, queryItems: [
-            URLQueryItem(name: "$select", value: "motor_vehicle_incident, count(*) as cnt"),
-            URLQueryItem(name: "$where", value: "\(lastYearClause) AND motor_vehicle_incident IS NOT NULL"),
-            URLQueryItem(name: "$group", value: "motor_vehicle_incident"),
-            URLQueryItem(name: "$order", value: "cnt DESC")
-        ])
-        async let recentRows = fetch(dataset, queryItems: [
+        // Socrata-side grouping on the WFPS dataset is slow enough to hit the app's
+        // 10-second request timeout for ordinary neighbourhoods like Lord Roberts.
+        // Pull the indexed neighbourhood slice once and aggregate locally instead.
+        let rows = (try? await fetch(dataset, queryItems: [
             URLQueryItem(name: "$select", value: "incident_number,incident_type,call_time,closed_time,motor_vehicle_incident,units,ward"),
-            URLQueryItem(name: "$where", value: lastYearClause),
+            URLQueryItem(name: "$where", value: sixYearClause),
             URLQueryItem(name: "$order", value: "\(timeField) DESC"),
-            URLQueryItem(name: "$limit", value: "500")
-        ])
+            URLQueryItem(name: "$limit", value: "50000")
+        ])) ?? []
 
-        let yearly = (try? await yearlyRows) ?? []
-        let breakdown = (try? await breakdownRows) ?? []
-        let byYear = (try? await breakdownByYearRows) ?? []
-        let monthly = (try? await monthlyRows) ?? []
-        let ward = (try? await wardRows) ?? []
-        let motorVehicle = (try? await motorVehicleRows) ?? []
-        let recent = (try? await recentRows) ?? []
-
-        var breakdownByYear: [Int: [IncidentBreakdown]] = [:]
-        for row in byYear {
-            guard let year = row.int("year"),
-                  let type = row.string("incident_type"),
-                  let count = row.int("cnt") else { continue }
-            breakdownByYear[year, default: []].append(IncidentBreakdown(incidentType: type, count: count))
-        }
-
-        let recentIncidents = recent.compactMap { row -> EmergencyIncidentRecord? in
+        let incidents = rows.compactMap { row -> EmergencyIncidentRecord? in
             guard let type = row.string("incident_type") else { return nil }
             return EmergencyIncidentRecord(
                 incidentNumber: row.string("incident_number"),
@@ -1611,13 +1701,47 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
                 ward: row.string("ward")
             )
         }
+
+        var yearlyCounts: [Int: Int] = [:]
+        var monthlyCounts: [String: (year: Int, month: Int, count: Int)] = [:]
+        var typeCounts: [String: Int] = [:]
+        var typeCountsByYear: [Int: [String: Int]] = [:]
+        var wardCounts: [String: Int] = [:]
+        var motorVehicleCounts: [String: Int] = [:]
+        let calendar = Calendar(identifier: .gregorian)
+
+        for incident in incidents {
+            guard let callTime = incident.callTime else { continue }
+            let year = calendar.component(.year, from: callTime)
+            let month = calendar.component(.month, from: callTime)
+            yearlyCounts[year, default: 0] += 1
+            typeCountsByYear[year, default: [:]][incident.incidentType, default: 0] += 1
+
+            if year >= twoYearStart {
+                let key = "\(year)-\(month)"
+                var current = monthlyCounts[key] ?? (year, month, 0)
+                current.count += 1
+                monthlyCounts[key] = current
+            }
+
+            guard year >= lastYearStart else { continue }
+            typeCounts[incident.incidentType, default: 0] += 1
+            if let ward = incident.ward, !ward.isEmpty {
+                wardCounts[ward, default: 0] += 1
+            }
+            if let flag = incident.motorVehicleIncident, !flag.isEmpty {
+                motorVehicleCounts[flag, default: 0] += 1
+            }
+        }
+
+        let recentIncidents = Array(incidents.prefix(8))
         let durations = recentIncidents.compactMap(\.durationMinutes).filter { $0 > 0 && $0 < 24 * 60 }
         let averageDuration = durations.isEmpty ? nil : Double(durations.reduce(0, +)) / Double(durations.count)
         let unitBreakdown = emergencyUnitBreakdown(from: recentIncidents)
-        let totalLastYear = breakdown.compactMap { $0.int("cnt") }.reduce(0, +)
-        let motorVehicleLastYear = motorVehicle
-            .filter { ($0.string("motor_vehicle_incident") ?? "").localizedCaseInsensitiveContains("yes") }
-            .compactMap { $0.int("cnt") }
+        let totalLastYear = typeCounts.values.reduce(0, +)
+        let motorVehicleLastYear = motorVehicleCounts
+            .filter { $0.key.localizedCaseInsensitiveContains("yes") }
+            .map(\.value)
             .reduce(0, +)
 
         return EmergencySummary(
@@ -1625,31 +1749,32 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             totalLastYear: totalLastYear,
             motorVehicleLastYear: motorVehicleLastYear,
             averageDurationMinutes: averageDuration,
-            yearlyCalls: yearly.compactMap { row in
-                guard let year = row.int("year"), let count = row.int("cnt") else { return nil }
-                return YearCount(year: year, count: count)
+            yearlyCalls: yearlyCounts
+                .map { YearCount(year: $0.key, count: $0.value) }
+                .sorted { $0.year < $1.year },
+            monthlyTrend: monthlyCounts.values
+                .map { EmergencyMonth(year: $0.year, month: $0.month, count: $0.count) }
+                .sorted { $0.year == $1.year ? $0.month < $1.month : $0.year < $1.year },
+            last12Months: typeCounts
+                .map { IncidentBreakdown(incidentType: $0.key, count: $0.value) }
+                .sorted { $0.count > $1.count }
+                .prefix(12)
+                .map { $0 },
+            breakdownByYear: typeCountsByYear.mapValues { counts in
+                counts
+                    .map { IncidentBreakdown(incidentType: $0.key, count: $0.value) }
+                    .sorted { $0.count > $1.count }
             },
-            monthlyTrend: monthly.compactMap { row in
-                guard let year = row.int("year"),
-                      let month = row.int("month"),
-                      let count = row.int("cnt") else { return nil }
-                return EmergencyMonth(year: year, month: month, count: count)
-            },
-            last12Months: breakdown.compactMap { row in
-                guard let type = row.string("incident_type"), let count = row.int("cnt") else { return nil }
-                return IncidentBreakdown(incidentType: type, count: count)
-            },
-            breakdownByYear: breakdownByYear.mapValues { $0.sorted { $0.count > $1.count } },
-            wardBreakdown: ward.compactMap { row in
-                guard let ward = row.string("ward"), let count = row.int("cnt") else { return nil }
-                return IncidentBreakdown(incidentType: ward, count: count)
-            },
-            motorVehicleBreakdown: motorVehicle.compactMap { row in
-                guard let flag = row.string("motor_vehicle_incident"), let count = row.int("cnt") else { return nil }
-                return IncidentBreakdown(incidentType: flag, count: count)
-            },
+            wardBreakdown: wardCounts
+                .map { IncidentBreakdown(incidentType: $0.key, count: $0.value) }
+                .sorted { $0.count > $1.count }
+                .prefix(8)
+                .map { $0 },
+            motorVehicleBreakdown: motorVehicleCounts
+                .map { IncidentBreakdown(incidentType: $0.key, count: $0.value) }
+                .sorted { $0.count > $1.count },
             unitBreakdown: unitBreakdown,
-            recentIncidents: Array(recentIncidents.prefix(8)),
+            recentIncidents: recentIncidents,
             citywideMedian: nil,
             neighbourhoodRank: nil,
             neighbourhoodCount: nil
@@ -1712,6 +1837,13 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             var crimeTypesByYear: [Int: [String: Int]] = [:]
             var offenceTypes: [String: Int] = [:]
             var offenceTypesByYear: [Int: [String: Int]] = [:]
+            // City-wide totals per type (across all neighbourhoods) used to derive a per-type average.
+            var cityCrimeTypes: [String: Int] = [:]
+            var cityCrimeTypesByYear: [Int: [String: Int]] = [:]
+            var cityOffenceTypes: [String: Int] = [:]
+            var cityOffenceTypesByYear: [Int: [String: Int]] = [:]
+            var cityNeighbourhoods: Set<String> = []
+            var cityNeighbourhoodsByYear: [Int: Set<String>] = [:]
             var latestMonth: PoliceCrimeMonth?
 
             for rawLine in csv.split(whereSeparator: \.isNewline).dropFirst() {
@@ -1724,21 +1856,32 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
                 guard !rowNeighbourhood.isEmpty, rowNeighbourhood.uppercased() != "NA" else { continue }
 
                 yearlyCityNeighbourhoods[year, default: [:]][rowNeighbourhood, default: 0] += count
+                cityNeighbourhoods.insert(rowNeighbourhood)
+                cityNeighbourhoodsByYear[year, default: []].insert(rowNeighbourhood)
                 let rowMonth = PoliceCrimeMonth(year: year, month: month)
                 if latestMonth == nil || year > latestMonth!.year || (year == latestMonth!.year && month > latestMonth!.month) {
                     latestMonth = rowMonth
                 }
 
+                let crimeType = columns[5].trimmingCharacters(in: .whitespacesAndNewlines)
+                let offenceType = columns[6].trimmingCharacters(in: .whitespacesAndNewlines)
+
+                if !crimeType.isEmpty {
+                    cityCrimeTypes[crimeType, default: 0] += count
+                    cityCrimeTypesByYear[year, default: [:]][crimeType, default: 0] += count
+                }
+                if !offenceType.isEmpty {
+                    cityOffenceTypes[offenceType, default: 0] += count
+                    cityOffenceTypesByYear[year, default: [:]][offenceType, default: 0] += count
+                }
+
                 guard neighbourhoodName(rowNeighbourhood, matches: neighbourhood) else { continue }
                 yearlyNeighbourhood[year, default: 0] += count
 
-                let crimeType = columns[5].trimmingCharacters(in: .whitespacesAndNewlines)
                 if !crimeType.isEmpty {
                     crimeTypes[crimeType, default: 0] += count
                     crimeTypesByYear[year, default: [:]][crimeType, default: 0] += count
                 }
-
-                let offenceType = columns[6].trimmingCharacters(in: .whitespacesAndNewlines)
                 if !offenceType.isEmpty {
                     offenceTypes[offenceType, default: 0] += count
                     offenceTypesByYear[year, default: [:]][offenceType, default: 0] += count
@@ -1756,14 +1899,29 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
                 )
             }
 
+            let allNeighbourhoodCount = cityNeighbourhoods.count
             let summary = PoliceCrimeSummary(
                 neighbourhood: neighbourhood,
                 latestMonth: latestMonth,
                 yearlyCounts: yearlyCounts,
-                crimeTypes: incidentBreakdowns(from: crimeTypes),
-                crimeTypesByYear: crimeTypesByYear.mapValues(incidentBreakdowns),
-                offenceTypes: incidentBreakdowns(from: offenceTypes),
-                offenceTypesByYear: offenceTypesByYear.mapValues(incidentBreakdowns)
+                crimeTypes: incidentBreakdowns(from: crimeTypes,
+                                               cityTotals: cityCrimeTypes,
+                                               neighbourhoodCount: allNeighbourhoodCount),
+                crimeTypesByYear: crimeTypesByYear.reduce(into: [:]) { result, entry in
+                    let (year, counts) = entry
+                    result[year] = incidentBreakdowns(from: counts,
+                                                      cityTotals: cityCrimeTypesByYear[year] ?? [:],
+                                                      neighbourhoodCount: cityNeighbourhoodsByYear[year]?.count ?? 0)
+                },
+                offenceTypes: incidentBreakdowns(from: offenceTypes,
+                                                 cityTotals: cityOffenceTypes,
+                                                 neighbourhoodCount: allNeighbourhoodCount),
+                offenceTypesByYear: offenceTypesByYear.reduce(into: [:]) { result, entry in
+                    let (year, counts) = entry
+                    result[year] = incidentBreakdowns(from: counts,
+                                                      cityTotals: cityOffenceTypesByYear[year] ?? [:],
+                                                      neighbourhoodCount: cityNeighbourhoodsByYear[year]?.count ?? 0)
+                }
             )
             if summary.yearlyCounts.isEmpty && summary.crimeTypes.isEmpty && summary.offenceTypes.isEmpty { return nil }
             return summary
@@ -1803,6 +1961,23 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
     private func incidentBreakdowns(from counts: [String: Int]) -> [IncidentBreakdown] {
         counts
             .map { IncidentBreakdown(incidentType: $0.key, count: $0.value) }
+            .sorted { lhs, rhs in
+                if lhs.count == rhs.count { return lhs.incidentType < rhs.incidentType }
+                return lhs.count > rhs.count
+            }
+    }
+
+    /// Builds breakdowns annotated with the city-wide average count per neighbourhood for each type.
+    private func incidentBreakdowns(from counts: [String: Int],
+                                    cityTotals: [String: Int],
+                                    neighbourhoodCount: Int) -> [IncidentBreakdown] {
+        counts
+            .map { type, count in
+                let average = neighbourhoodCount > 0
+                    ? Double(cityTotals[type] ?? 0) / Double(neighbourhoodCount)
+                    : 0
+                return IncidentBreakdown(incidentType: type, count: count, citywideAverage: average)
+            }
             .sorted { lhs, rhs in
                 if lhs.count == rhs.count { return lhs.incidentType < rhs.incidentType }
                 return lhs.count > rhs.count
@@ -1849,6 +2024,8 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         ])) ?? []
         let substances: [[String: Any]]
         let substancesByYearRows: [[String: Any]]
+        let citySubstances: [[String: Any]]
+        let citySubstanceNeighbourhoodCount: Int
         if let substanceDataset {
             let neighbourhoodClause = neighbourhood.map { "upper(neighbourhood)='\(escaped($0.uppercased()))' AND " } ?? ""
             substances = (try? await fetch(substanceDataset, queryItems: [
@@ -1864,9 +2041,21 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
                 URLQueryItem(name: "$group", value: "year, substance"),
                 URLQueryItem(name: "$order", value: "year, cnt DESC")
             ])) ?? []
+            citySubstances = (try? await fetch(substanceDataset, queryItems: [
+                URLQueryItem(name: "$select", value: "substance, count(*) as cnt"),
+                URLQueryItem(name: "$where", value: "dispatch_date >= '\(yearOffset(-6))-01-01T00:00:00' AND substance IS NOT NULL AND neighbourhood IS NOT NULL"),
+                URLQueryItem(name: "$group", value: "substance")
+            ])) ?? []
+            let citySubstanceNeighbourhoodRows = (try? await fetch(substanceDataset, queryItems: [
+                URLQueryItem(name: "$select", value: "count(distinct neighbourhood) as nbh"),
+                URLQueryItem(name: "$where", value: "dispatch_date >= '\(yearOffset(-6))-01-01T00:00:00' AND substance IS NOT NULL AND neighbourhood IS NOT NULL")
+            ])) ?? []
+            citySubstanceNeighbourhoodCount = citySubstanceNeighbourhoodRows.first.flatMap { $0.int("nbh") } ?? 0
         } else {
             substances = []
             substancesByYearRows = []
+            citySubstances = []
+            citySubstanceNeighbourhoodCount = 0
         }
         var citywideCountsByYear: [Int: [Int]] = [:]
         for row in citywideNeighbourhoodYears {
@@ -1901,6 +2090,16 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         for (year, count) in substanceTotalsByYear where mergedYears[year, default: (0, 0)].neighbourhood == 0 {
             mergedYears[year, default: (0, 0)].neighbourhood = count
         }
+        var citySubstanceTotals: [String: Int] = [:]
+        for row in citySubstances {
+            guard let substance = row.string("substance"), let count = row.int("cnt") else { continue }
+            citySubstanceTotals[substance] = count
+        }
+        func cityAvgForSubstance(_ substance: String) -> Double {
+            citySubstanceNeighbourhoodCount > 0
+                ? Double(citySubstanceTotals[substance] ?? 0) / Double(citySubstanceNeighbourhoodCount)
+                : 0
+        }
         async let erFacility = fetchNearestER(from: coordinate)
         async let walkInData = fetchNearestWalkIn(from: coordinate)
 
@@ -1916,7 +2115,7 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             ageGroupsByYear: ageGroupsByYear.mapValues { $0.sorted { $0.count > $1.count } },
             substances: substances.compactMap { row in
                 guard let substance = row.string("substance"), let count = row.int("cnt") else { return nil }
-                return IncidentBreakdown(incidentType: substance, count: count)
+                return IncidentBreakdown(incidentType: substance, count: count, citywideAverage: cityAvgForSubstance(substance))
             },
             substancesByYear: substancesByYear.mapValues { $0.sorted { $0.count > $1.count } }
         )
@@ -2056,6 +2255,760 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             driveMinutes = eta.expectedTravelTime / 60
         }
         return (HealthFacilityAccess(name: name, address: address, city: nearest.placemark.locality, province: nearest.placemark.administrativeArea, driveMinutes: driveMinutes), count)
+    }
+
+    // MARK: - Waste collection & winter operations
+
+    private func fetchWasteCollection(address: NormalizedAddress, property: PropertyAssessment?) async -> WasteCollectionSummary? {
+        async let dayRow = fetchWasteRow(address: address, property: property)
+        async let zone = fetchPlowZoneRaw(coordinate: property?.coordinate)
+        async let ban = fetchActiveSnowBan()
+
+        let row = await dayRow
+        let plowZone = await zone
+        let activeBan = await ban
+        let nextWindow = await fetchNextPlowWindow(zone: plowZone)
+
+        let garbage = row?.string("garbage_collection_day")
+        let recycle = row?.string("recycle_collection_day")
+        let yard = row?.string("yard_waste_collection_day")
+
+        if garbage == nil && recycle == nil && yard == nil && plowZone == nil && activeBan == nil {
+            return nil
+        }
+        return WasteCollectionSummary(
+            garbageDay: garbage?.capitalized,
+            recycleDay: recycle?.capitalized,
+            yardWasteDay: yard?.capitalized,
+            matchedAddress: row?.string("combined_address"),
+            plowZone: plowZone,
+            nextPlowWindow: nextWindow,
+            activeSnowBan: activeBan
+        )
+    }
+
+    private func fetchWasteRow(address: NormalizedAddress, property: PropertyAssessment?) async -> [String: Any]? {
+        guard let dataset = datasets.wasteCollection else { return nil }
+        if let full = property?.fullAddress, !full.isEmpty {
+            let rows = (try? await fetch(dataset, queryItems: [
+                URLQueryItem(name: "$where", value: "upper(combined_address)='\(escaped(full.uppercased()))'"),
+                URLQueryItem(name: "$limit", value: "1")
+            ])) ?? []
+            if let row = rows.first { return row }
+        }
+        guard let civic = address.civicNumber else { return nil }
+        let core = escaped(streetCore(address.streetName))
+        guard !core.isEmpty else { return nil }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$where", value: "upper(combined_address) like '\(civic) \(core)%'"),
+            URLQueryItem(name: "$limit", value: "1")
+        ])) ?? []
+        return rows.first
+    }
+
+    private func fetchPlowZoneRaw(coordinate: CLLocationCoordinate2D?) async -> String? {
+        guard let dataset = datasets.plowZones, let coordinate else { return nil }
+        let point = "POINT (\(coordinate.longitude) \(coordinate.latitude))"
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "plow_zone"),
+            URLQueryItem(name: "$where", value: "intersects(the_geom,'\(point)')"),
+            URLQueryItem(name: "$limit", value: "1")
+        ])) ?? []
+        return rows.first?.string("plow_zone")
+    }
+
+    private func fetchNextPlowWindow(zone: String?) async -> String? {
+        guard let dataset = datasets.plowZoneSchedule, let zone, !zone.isEmpty else { return nil }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "shift_number,shift_start,shift_end,plow_zone"),
+            URLQueryItem(name: "$where", value: "upper(plow_zone)='\(escaped(zone.uppercased()))' AND shift_end >= '\(isoNow())'"),
+            URLQueryItem(name: "$order", value: "shift_start ASC"),
+            URLQueryItem(name: "$limit", value: "1")
+        ])) ?? []
+        guard let row = rows.first,
+              let start = parseDate(row.string("shift_start")) else { return nil }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d, h a"
+        return formatter.string(from: start)
+    }
+
+    private func fetchActiveSnowBan() async -> SnowBanInfo? {
+        guard let dataset = datasets.snowParkingBans else { return nil }
+        let now = isoNow()
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "description,ban_start,ban_end"),
+            URLQueryItem(name: "$where", value: "ban_start <= '\(now)' AND (ban_end IS NULL OR ban_end >= '\(now)')"),
+            URLQueryItem(name: "$order", value: "ban_start DESC"),
+            URLQueryItem(name: "$limit", value: "1")
+        ])) ?? []
+        guard let row = rows.first,
+              let description = row.string("description") else { return nil }
+        return SnowBanInfo(
+            description: plainText(description) ?? description,
+            start: parseDate(row.string("ban_start")),
+            end: parseDate(row.string("ban_end"))
+        )
+    }
+
+    // MARK: - Demographics
+
+    private func fetchDemographics(address: NormalizedAddress, property: PropertyAssessment?) async -> DemographicsSummary? {
+        guard property != nil || address.civicNumber != nil else { return nil }
+        let civicRow = await fetchCivicAddressRow(address: address, property: property)
+        for candidate in censusBoundaryCandidates(property: property, civicRow: civicRow) {
+            if let summary = await fetchDemographics(candidate: candidate, coordinate: property?.coordinate) {
+                return summary
+            }
+        }
+        return nil
+    }
+
+    private func censusBoundaryCandidates(property: PropertyAssessment?, civicRow: [String: Any]?) -> [CensusBoundaryCandidate] {
+        var candidates: [CensusBoundaryCandidate] = []
+        var seen = Set<String>()
+
+        func append(type: String, names: [String], displayName: String) {
+            let normalizedNames = names
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .filter { !$0.isEmpty }
+            guard !normalizedNames.isEmpty else { return }
+            let key = "\(type)|\(normalizedNames.joined(separator: "|"))".uppercased()
+            guard seen.insert(key).inserted else { return }
+            candidates.append(CensusBoundaryCandidate(boundaryType: type, names: normalizedNames, displayName: displayName))
+        }
+
+        if let neighbourhood = property?.neighbourhood, !neighbourhood.isEmpty {
+            append(type: "Neighbourhood", names: [neighbourhood], displayName: neighbourhood.capitalized)
+        }
+        if let neighbourhood = civicRow?.string("neighbourhood"), !neighbourhood.isEmpty {
+            append(type: "Neighbourhood", names: [neighbourhood], displayName: neighbourhood.capitalized)
+        }
+        if let ward = civicRow?.string("ward"), !ward.isEmpty {
+            append(type: "Ward", names: [ward, "\(ward) Ward"], displayName: "\(ward) Ward")
+        }
+        append(type: "City", names: ["City of Winnipeg"], displayName: "City of Winnipeg")
+        return candidates
+    }
+
+    private func censusBoundaryClause(_ candidate: CensusBoundaryCandidate) -> String {
+        let names = candidate.names
+            .map { "upper(boundary_name)='\(escaped($0.uppercased()))'" }
+            .joined(separator: " OR ")
+        return "boundary_type='\(escaped(candidate.boundaryType))' AND (\(names))"
+    }
+
+    private func fetchDemographics(candidate: CensusBoundaryCandidate, coordinate: CLLocationCoordinate2D?) async -> DemographicsSummary? {
+        let nClause = censusBoundaryClause(candidate)
+
+        async let ageRows = fetchOptional(datasets.censusAge, [
+            URLQueryItem(name: "$where", value: nClause),
+            URLQueryItem(name: "$limit", value: "1")
+        ])
+        async let householdRows = fetchOptional(datasets.censusHouseholds, [
+            URLQueryItem(name: "$select", value: "income_median,size_average_person,census_year"),
+            URLQueryItem(name: "$where", value: nClause),
+            URLQueryItem(name: "$order", value: "census_year DESC"),
+            URLQueryItem(name: "$limit", value: "1")
+        ])
+        async let transportRows = fetchOptional(datasets.censusTransportMode, [
+            URLQueryItem(name: "$select", value: "car_total,passenger_total,public_total,walk_total,bicycle_total,census_year"),
+            URLQueryItem(name: "$where", value: nClause),
+            URLQueryItem(name: "$order", value: "census_year DESC"),
+            URLQueryItem(name: "$limit", value: "1")
+        ])
+        async let immigrationRows = fetchOptional(datasets.censusImmigration, [
+            URLQueryItem(name: "$select", value: "born_total_immigrants,generation_total_population"),
+            URLQueryItem(name: "$where", value: nClause),
+            URLQueryItem(name: "$limit", value: "1")
+        ])
+        async let languageRow = fetchTopNonOfficialLanguage(clause: nClause)
+        async let poverty = fetchPovertyInfo(coordinate: coordinate)
+
+        let age = (await ageRows).first
+        let household = (await householdRows).first
+        let transport = (await transportRows).first
+        let immigration = (await immigrationRows).first
+        let topLanguage = await languageRow
+        let povertyInfo = await poverty
+
+        var children: Double?
+        var seniors: Double?
+        var population: Int?
+        if let age {
+            let total = age.double("age_total")
+            population = age.int("age_total")
+            let kids = [age.double("age_0_4_total"), age.double("age_5_9_total"), age.double("age_10_14_total")].compactMap { $0 }.reduce(0, +)
+            let old = ["age_65_69_total", "age_70_74_total", "age_75_79_total", "age_80_84_total", "age_85_total"]
+                .compactMap { age.double($0) }.reduce(0, +)
+            if let total, total > 0 {
+                children = kids / total * 100
+                seniors = old / total * 100
+            }
+        }
+
+        var commuteModes: [IncidentBreakdown] = []
+        if let transport {
+            let pairs: [(String, String)] = [
+                ("Drive", "car_total"), ("Carpool", "passenger_total"),
+                ("Transit", "public_total"), ("Walk", "walk_total"), ("Bicycle", "bicycle_total")
+            ]
+            commuteModes = pairs.compactMap { label, key in
+                guard let count = transport.int(key), count > 0 else { return nil }
+                return IncidentBreakdown(incidentType: label, count: count)
+            }
+        }
+
+        var immigrantPercent: Double?
+        if let immigration,
+           let immigrants = immigration.double("born_total_immigrants"),
+           let base = immigration.double("generation_total_population"), base > 0 {
+            immigrantPercent = immigrants / base * 100
+        }
+
+        let hasData = population != nil || household?.double("income_median") != nil ||
+            !commuteModes.isEmpty || immigrantPercent != nil || topLanguage != nil || povertyInfo != nil
+        guard hasData else { return nil }
+
+        return DemographicsSummary(
+            boundaryName: candidate.displayName,
+            totalPopulation: population,
+            childrenPercent: children,
+            seniorsPercent: seniors,
+            medianHouseholdIncome: household?.double("income_median"),
+            averageHouseholdSize: household?.double("size_average_person"),
+            immigrantPercent: immigrantPercent,
+            topNonOfficialLanguage: topLanguage,
+            commuteModes: commuteModes,
+            isHighPovertyArea: povertyInfo?.high,
+            giniIndex: povertyInfo?.gini
+        )
+    }
+
+    private func fetchTopNonOfficialLanguage(clause: String) async -> String? {
+        guard let dataset = datasets.censusLanguage else { return nil }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$where", value: clause),
+            URLQueryItem(name: "$order", value: "census_year DESC"),
+            URLQueryItem(name: "$limit", value: "1")
+        ])) ?? []
+        guard let row = rows.first else { return nil }
+        var best: (name: String, count: Int)?
+        for (key, value) in row {
+            guard key.hasPrefix("language2_"), key != "language2_total" else { continue }
+            let count = Int((value as? String) ?? "") ?? (value as? Int) ?? 0
+            if count > (best?.count ?? 0) {
+                let name = key.replacingOccurrences(of: "language2_", with: "")
+                    .replacingOccurrences(of: "_", with: " ")
+                    .capitalized
+                best = (name, count)
+            }
+        }
+        return best?.name
+    }
+
+    private func fetchPovertyInfo(coordinate: CLLocationCoordinate2D?) async -> (high: Bool?, gini: Double?)? {
+        guard let dataset = datasets.higherPovertyAreas, let coordinate else { return nil }
+        let point = "POINT (\(coordinate.longitude) \(coordinate.latitude))"
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "is_high_poverty_area,gini_index"),
+            URLQueryItem(name: "$where", value: "intersects(location,'\(point)')"),
+            URLQueryItem(name: "$limit", value: "1")
+        ])) ?? []
+        guard let row = rows.first else { return nil }
+        return (row.bool("is_high_poverty_area"), row.double("gini_index"))
+    }
+
+    // MARK: - Local government
+
+    private func fetchLocalGovernment(address: NormalizedAddress, property: PropertyAssessment?) async -> LocalGovernmentSummary? {
+        let coordinateSummary = await fetchLocalGovernment(coordinate: property?.coordinate)
+        if coordinateSummary?.wardName != nil, coordinateSummary?.councillor != nil {
+            return coordinateSummary
+        }
+
+        let civicRow = await fetchCivicAddressRow(address: address, property: property)
+        let wardSummary = await fetchLocalGovernment(wardName: civicRow?.string("ward"))
+        return mergeLocalGovernment(primary: coordinateSummary, fallback: wardSummary)
+    }
+
+    private func fetchLocalGovernment(coordinate: CLLocationCoordinate2D?) async -> LocalGovernmentSummary? {
+        guard let coordinate else { return nil }
+        let point = "POINT (\(coordinate.longitude) \(coordinate.latitude))"
+        async let wardRows = fetchOptional(datasets.electoralWards, [
+            URLQueryItem(name: "$select", value: "councillor,name,phone,website"),
+            URLQueryItem(name: "$where", value: "intersects(the_geom,'\(point)')"),
+            URLQueryItem(name: "$limit", value: "1")
+        ])
+        async let committeeRows = fetchOptional(datasets.communityCommittees, [
+            URLQueryItem(name: "$select", value: "desc"),
+            URLQueryItem(name: "$where", value: "intersects(the_geom,'\(point)')"),
+            URLQueryItem(name: "$limit", value: "1")
+        ])
+
+        let ward = (await wardRows).first
+        let committee = (await committeeRows).first
+        guard ward != nil || committee != nil else { return nil }
+        return LocalGovernmentSummary(
+            wardName: ward?.string("name"),
+            councillor: ward?.string("councillor"),
+            councillorPhone: ward?.string("phone"),
+            councillorWebsite: ward?.string("website"),
+            communityCommittee: committee?.string("desc")
+        )
+    }
+
+    private func fetchLocalGovernment(wardName: String?) async -> LocalGovernmentSummary? {
+        guard let wardName = wardName?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !wardName.isEmpty else { return nil }
+        let rows = await fetchOptional(datasets.electoralWards, [
+            URLQueryItem(name: "$select", value: "councillor,name,phone,website"),
+            URLQueryItem(name: "$where", value: "upper(name)='\(escaped(wardName.uppercased()))'"),
+            URLQueryItem(name: "$limit", value: "1")
+        ])
+        guard let ward = rows.first else { return nil }
+        return LocalGovernmentSummary(
+            wardName: ward.string("name"),
+            councillor: ward.string("councillor"),
+            councillorPhone: ward.string("phone"),
+            councillorWebsite: ward.string("website")
+        )
+    }
+
+    private func mergeLocalGovernment(primary: LocalGovernmentSummary?, fallback: LocalGovernmentSummary?) -> LocalGovernmentSummary? {
+        guard primary != nil || fallback != nil else { return nil }
+        return LocalGovernmentSummary(
+            wardName: primary?.wardName ?? fallback?.wardName,
+            councillor: primary?.councillor ?? fallback?.councillor,
+            councillorPhone: primary?.councillorPhone ?? fallback?.councillorPhone,
+            councillorWebsite: primary?.councillorWebsite ?? fallback?.councillorWebsite,
+            communityCommittee: primary?.communityCommittee ?? fallback?.communityCommittee
+        )
+    }
+
+    // MARK: - Local businesses
+
+    private func fetchLocalBusiness(property: PropertyAssessment?) async -> LocalBusinessSummary? {
+        guard let subject = property?.coordinate else { return nil }
+        async let businessRows = fetchOptional(datasets.businessLicenses, [
+            URLQueryItem(name: "$select", value: "trade_name,folder_description,subdescription,status,location"),
+            URLQueryItem(name: "$where", value: "within_circle(location,\(subject.latitude),\(subject.longitude),500) AND upper(status) not like '%CLOSED%' AND upper(status) not like '%CANCEL%'"),
+            URLQueryItem(name: "$limit", value: "300")
+        ])
+        async let patioRows = fetchOptional(datasets.seasonalPatios, [
+            URLQueryItem(name: "$select", value: "name,address,operational_dates,location"),
+            URLQueryItem(name: "$where", value: "within_circle(location,\(subject.latitude),\(subject.longitude),900)"),
+            URLQueryItem(name: "$limit", value: "20")
+        ])
+
+        let businesses = await businessRows
+        let patioData = await patioRows
+        let subjectLocation = CLLocation(latitude: subject.latitude, longitude: subject.longitude)
+
+        var categoryCounts: [String: Int] = [:]
+        var records: [(LocalBusinessRecord, Double)] = []
+        for row in businesses {
+            guard let name = row.string("trade_name"), !name.isEmpty else { continue }
+            let category = cleanBusinessCategory(row.string("folder_description") ?? row.string("subdescription"))
+            if let category { categoryCounts[category, default: 0] += 1 }
+            let coordinate = parseCoordinate(row)
+            let distance = coordinate.map { CLLocation(latitude: $0.latitude, longitude: $0.longitude).distance(from: subjectLocation) } ?? .greatestFiniteMagnitude
+            records.append((LocalBusinessRecord(
+                name: name.capitalized,
+                category: category,
+                distanceDescription: coordinate == nil ? nil : distanceDescription(meters: distance),
+                coordinate: coordinate
+            ), distance))
+        }
+
+        let topCategories = categoryCounts
+            .map { IncidentBreakdown(incidentType: $0.key, count: $0.value) }
+            .sorted { $0.count > $1.count }
+            .prefix(6)
+        let recent = records.sorted { $0.1 < $1.1 }.prefix(8).map(\.0)
+
+        let patios: [LocalBusinessRecord] = patioData.compactMap { row in
+            guard let name = row.string("name") else { return nil }
+            let coordinate = parseCoordinate(row)
+            let distance = coordinate.map { CLLocation(latitude: $0.latitude, longitude: $0.longitude).distance(from: subjectLocation) }
+            return LocalBusinessRecord(
+                name: name,
+                category: row.string("operational_dates"),
+                distanceDescription: distance.map(distanceDescription(meters:)),
+                coordinate: coordinate
+            )
+        }
+
+        if records.isEmpty && patios.isEmpty { return nil }
+        return LocalBusinessSummary(
+            totalNearby: records.count,
+            topCategories: Array(topCategories),
+            recent: Array(recent),
+            patios: Array(patios.prefix(6))
+        )
+    }
+
+    private func cleanBusinessCategory(_ raw: String?) -> String? {
+        guard let raw, !raw.isEmpty else { return nil }
+        return raw
+            .replacingOccurrences(of: "License - ", with: "")
+            .replacingOccurrences(of: "Licence - ", with: "")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    // MARK: - Aquatics & amenities
+
+    private func fetchAquatics(property: PropertyAssessment?) async -> AquaticsAmenitiesSummary? {
+        guard let subject = property?.coordinate else { return nil }
+        async let indoor = fetchNearestPool(datasets.poolsIndoor, kind: "Indoor", subject: subject, featureKeys: [("Lap swim", "lap_swim"), ("Sauna", "sauna"), ("Whirlpool", "whirlpool"), ("Slide", "pool_slide"), ("Diving board", "diving_board")])
+        async let outdoor = fetchNearestPool(datasets.poolsOutdoor, kind: "Outdoor", subject: subject, featureKeys: [("Lap swim", "lap_swim"), ("Slide", "pool_slide"), ("Diving board", "diving_board"), ("Spray features", "spray_features")])
+        async let wading = fetchNearestPool(datasets.poolsWading, kind: "Wading", subject: subject, featureKeys: [("Sprayer", "sprayer"), ("Playground", "playground"), ("Slide", "pool_slide")])
+        async let spray = fetchNearestPool(datasets.poolsSprayPad, kind: "Spray pad", subject: subject, featureKeys: [("Playground", "playground"), ("Waterslide", "waterslide")])
+        async let walkways = fetchWalkwayCount(subject: subject)
+        async let wifi = fetchNearestWifi(subject: subject)
+
+        let pools = [await indoor, await outdoor, await wading, await spray]
+            .compactMap { $0 }
+            .sorted { ($0.1) < ($1.1) }
+            .map(\.0)
+        let walkwayCount = await walkways
+        let nearestWifi = await wifi
+
+        if pools.isEmpty && walkwayCount == 0 && nearestWifi == nil { return nil }
+        return AquaticsAmenitiesSummary(pools: pools, walkwaysNearby: walkwayCount, nearestWifi: nearestWifi)
+    }
+
+    private func fetchNearestPool(_ dataset: String?, kind: String, subject: CLLocationCoordinate2D, featureKeys: [(String, String)]) async -> (PoolAmenity, Double)? {
+        guard let dataset else { return nil }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$where", value: "within_circle(point,\(subject.latitude),\(subject.longitude),5000)"),
+            URLQueryItem(name: "$limit", value: "60")
+        ])) ?? []
+        let subjectLocation = CLLocation(latitude: subject.latitude, longitude: subject.longitude)
+        let nearest = rows.compactMap { row -> (PoolAmenity, Double)? in
+            guard let name = row.string("name"), let coordinate = parseCoordinate(row) else { return nil }
+            let distance = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude).distance(from: subjectLocation)
+            let features = featureKeys.compactMap { label, key in row.bool(key) ? label : nil }
+            return (PoolAmenity(
+                name: name,
+                kind: kind,
+                address: row.string("address"),
+                isOpen: row.bool("is_open"),
+                distanceDescription: distanceDescription(meters: distance),
+                features: features,
+                website: row.string("website"),
+                coordinate: coordinate
+            ), distance)
+        }.min { $0.1 < $1.1 }
+        return nearest
+    }
+
+    private func fetchWalkwayCount(subject: CLLocationCoordinate2D) async -> Int {
+        guard let dataset = datasets.walkways else { return 0 }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "count(*) as cnt"),
+            URLQueryItem(name: "$where", value: "within_circle(location,\(subject.latitude),\(subject.longitude),600)")
+        ])) ?? []
+        return rows.first?.int("cnt") ?? 0
+    }
+
+    private func fetchNearestWifi(subject: CLLocationCoordinate2D) async -> NamedAmenity? {
+        guard let dataset = datasets.publicWifi else { return nil }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "site_name_english,location"),
+            URLQueryItem(name: "$where", value: "within_circle(location,\(subject.latitude),\(subject.longitude),1500)"),
+            URLQueryItem(name: "$limit", value: "40")
+        ])) ?? []
+        let subjectLocation = CLLocation(latitude: subject.latitude, longitude: subject.longitude)
+        return rows.compactMap { row -> (NamedAmenity, Double)? in
+            guard let name = row.string("site_name_english"), let coordinate = parseCoordinate(row) else { return nil }
+            let distance = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude).distance(from: subjectLocation)
+            return (NamedAmenity(name: name, distanceDescription: distanceDescription(meters: distance), coordinate: coordinate), distance)
+        }.min { $0.1 < $1.1 }?.0
+    }
+
+    // MARK: - Traffic
+
+    private func fetchTraffic(address: NormalizedAddress, property: PropertyAssessment?) async -> TrafficSummary? {
+        async let street = fetchStreetTrafficStudy(address: address)
+        async let permanent = fetchNearestPermanentCount(property: property)
+        let streetStudy = await street
+        let permanentStation = await permanent
+        if streetStudy == nil && permanentStation == nil { return nil }
+        return TrafficSummary(streetStudy: streetStudy, nearestPermanentStation: permanentStation)
+    }
+
+    private func fetchStreetTrafficStudy(address: NormalizedAddress) async -> TrafficStudy? {
+        guard let dataset = datasets.midblockTrafficCounts else { return nil }
+        let core = escaped(streetCore(address.streetName))
+        guard !core.isEmpty else { return nil }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "count_date,location_description,count_15_minutes,count_direction"),
+            URLQueryItem(name: "$where", value: "upper(street) like '\(core)%'"),
+            URLQueryItem(name: "$order", value: "count_date DESC"),
+            URLQueryItem(name: "$limit", value: "400")
+        ])) ?? []
+        guard !rows.isEmpty else { return nil }
+        let latestDate = rows.first?.string("count_date")
+        let latestDay = latestDate.map(trafficCountDay)
+        let latestLocation = rows.first?.string("location_description")
+        let sameStudy = rows.filter { row in
+            guard row.string("count_date").map(trafficCountDay) == latestDay else { return false }
+            if let latestLocation {
+                return row.string("location_description") == latestLocation
+            }
+            return true
+        }
+        let intervalTotals = Dictionary(grouping: sameStudy, by: { $0.string("count_date") ?? "" })
+            .values
+            .map { intervalRows in intervalRows.compactMap { $0.int("count_15_minutes") }.reduce(0, +) }
+            .filter { $0 > 0 }
+        let hourlyAverage = intervalTotals.isEmpty
+            ? nil
+            : Int((Double(intervalTotals.reduce(0, +)) / Double(intervalTotals.count) * 4).rounded())
+        let directions = Set(sameStudy.compactMap { $0.string("count_direction") }.filter { !$0.isEmpty })
+        return TrafficStudy(
+            locationDescription: latestLocation ?? address.streetName,
+            vehiclesCounted: hourlyAverage,
+            countDate: parseDate(latestDate),
+            direction: directions.count > 1 ? "Both directions" : directions.first,
+            distanceDescription: nil,
+            countMetricLabel: "Avg. vehicles / hour",
+            countSummaryUnit: "vehicles/hr avg",
+            countNote: "Midblock traffic data is recorded in 15-minute intervals. This hourly figure is the average 15-minute count for the latest study day multiplied by four."
+        )
+    }
+
+    private func fetchNearestPermanentCount(property: PropertyAssessment?) async -> TrafficStudy? {
+        guard let dataset = datasets.permanentTrafficCounts,
+              let subject = property?.coordinate else { return nil }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "site,total,timestamp,latitude,longitude"),
+            URLQueryItem(name: "$where", value: "within_circle(location,\(subject.latitude),\(subject.longitude),4000)"),
+            URLQueryItem(name: "$order", value: "timestamp DESC"),
+            URLQueryItem(name: "$limit", value: "200")
+        ])) ?? []
+        let subjectLocation = CLLocation(latitude: subject.latitude, longitude: subject.longitude)
+        let nearest = rows.compactMap { row -> (TrafficStudy, Double)? in
+            guard let site = row.string("site"), let coordinate = parseCoordinate(row) else { return nil }
+            let distance = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude).distance(from: subjectLocation)
+            return (TrafficStudy(
+                locationDescription: site,
+                vehiclesCounted: row.int("total"),
+                countDate: parseDate(row.string("timestamp")),
+                direction: nil,
+                distanceDescription: distanceDescription(meters: distance),
+                countMetricLabel: "Vehicles (latest count)",
+                countSummaryUnit: "vehicles",
+                countNote: nil
+            ), distance)
+        }.min { $0.1 < $1.1 }
+        return nearest?.0
+    }
+
+    private func trafficCountDay(_ value: String) -> String {
+        String(value.prefix(10))
+    }
+
+    // MARK: - Neighbourhood risk
+
+    private func fetchNeighbourhoodRisk(property: PropertyAssessment?) async -> NeighbourhoodRiskSummary? {
+        guard let property else { return nil }
+        async let rooming = fetchRoomingHouse(neighbourhood: property.neighbourhood)
+        async let fires = fetchVacantFireTrend()
+        async let towing = fetchTowingNearby(coordinate: property.coordinate)
+        async let parking = fetchPaidParkingNearby(coordinate: property.coordinate)
+
+        let roomingActivity = await rooming
+        let fireTrend = await fires
+        let towingCount = await towing
+        let parkingInfo = await parking
+
+        if roomingActivity == nil && fireTrend.isEmpty && towingCount == 0 && parkingInfo.count == 0 {
+            return nil
+        }
+        return NeighbourhoodRiskSummary(
+            roomingHouse: roomingActivity,
+            vacantFireTrend: fireTrend,
+            towingNearby: towingCount,
+            paidParkingNearby: parkingInfo.count,
+            nearestPaidParking: parkingInfo.nearest
+        )
+    }
+
+    private func fetchRoomingHouse(neighbourhood: String) async -> RoomingHouseActivity? {
+        guard let dataset = datasets.roomingHouseEnforcement else { return nil }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$where", value: "upper(neighbourhood)='\(escaped(neighbourhood.uppercased()))'"),
+            URLQueryItem(name: "$order", value: "year DESC"),
+            URLQueryItem(name: "$limit", value: "1")
+        ])) ?? []
+        guard let row = rows.first, let year = row.int("year") else { return nil }
+        return RoomingHouseActivity(
+            year: year,
+            complaintDriven: row.int("complaint_driven"),
+            proactive: row.int("proactive_enforcement"),
+            inProgress: row.int("in_progress"),
+            completed: row.int("completed")
+        )
+    }
+
+    private func fetchVacantFireTrend() async -> [YearCount] {
+        guard let dataset = datasets.vacantPropertyFires else { return [] }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "month,value"),
+            URLQueryItem(name: "$limit", value: "2000")
+        ])) ?? []
+        var byYear: [Int: Int] = [:]
+        for row in rows {
+            guard let value = row.int("value") else { continue }
+            var year: Int?
+            if let date = parseDate(row.string("month")) {
+                year = Calendar.current.component(.year, from: date)
+            } else if let raw = row.string("month"), let parsed = Int(raw.prefix(4)) {
+                year = parsed
+            }
+            guard let year else { continue }
+            byYear[year, default: 0] += value
+        }
+        let currentYear = yearOffset(0)
+        return byYear.keys.sorted()
+            .filter { $0 >= currentYear - 6 }
+            .map { YearCount(year: $0, count: byYear[$0] ?? 0) }
+    }
+
+    private func fetchTowingNearby(coordinate: CLLocationCoordinate2D?) async -> Int {
+        guard let dataset = datasets.rushHourTowing, let coordinate else { return 0 }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "count(*) as cnt"),
+            URLQueryItem(name: "$where", value: "within_circle(gps_pickup,\(coordinate.latitude),\(coordinate.longitude),500)")
+        ])) ?? []
+        return rows.first?.int("cnt") ?? 0
+    }
+
+    private func fetchPaidParkingNearby(coordinate: CLLocationCoordinate2D?) async -> (count: Int, nearest: String?) {
+        guard let dataset = datasets.paidParking, let coordinate else { return (0, nil) }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "restriction,time_limit,street,center_point"),
+            URLQueryItem(name: "$where", value: "within_circle(center_point,\(coordinate.latitude),\(coordinate.longitude),400)"),
+            URLQueryItem(name: "$limit", value: "60")
+        ])) ?? []
+        guard !rows.isEmpty else { return (0, nil) }
+        let subjectLocation = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        let nearest = rows.compactMap { row -> (String, Double)? in
+            guard let coordinate = parseCoordinate(row) else { return nil }
+            let distance = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude).distance(from: subjectLocation)
+            let label = [row.string("street"), row.string("time_limit")].compactMap { $0 }.joined(separator: " · ")
+            return (label.isEmpty ? (row.string("restriction") ?? "Paid parking") : label, distance)
+        }.min { $0.1 < $1.1 }
+        return (rows.count, nearest?.0)
+    }
+
+    // MARK: - Water quality
+
+    private func fetchWaterQuality() async -> WaterQualitySummary? {
+        guard let dataset = datasets.waterQuality else { return nil }
+        let yearRows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "max(year) as y")
+        ])) ?? []
+        guard let latestYear = yearRows.first?.int("y") else { return nil }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "area,parameter,units,average,minimum,maximum"),
+            URLQueryItem(name: "$where", value: "year=\(latestYear) AND average IS NOT NULL"),
+            URLQueryItem(name: "$limit", value: "60")
+        ])) ?? []
+        guard !rows.isEmpty else { return nil }
+        var seen = Set<String>()
+        var readings: [WaterQualityReading] = []
+        var area: String?
+        for row in rows {
+            guard let parameter = row.string("parameter"), !seen.contains(parameter) else { continue }
+            seen.insert(parameter)
+            if area == nil { area = row.string("area") }
+            readings.append(WaterQualityReading(parameter: parameter, average: row.double("average"), minimum: row.double("minimum"), maximum: row.double("maximum"), units: row.string("units")))
+            if readings.count >= 8 { break }
+        }
+        guard !readings.isEmpty else { return nil }
+        return WaterQualitySummary(year: latestYear, area: area, parameters: readings)
+    }
+
+    // MARK: - Capital works
+
+    private func fetchCapitalWorks(address: NormalizedAddress) async -> CapitalWorksSummary? {
+        let core = escaped(streetCore(address.streetName))
+        guard core.count >= 3 else { return nil }
+        async let projectsRaw = fetchOptional(datasets.capitalProjects, [
+            URLQueryItem(name: "$select", value: "project_description,project_status,project_year,adopted_budget,amended_budget,report_date"),
+            URLQueryItem(name: "$where", value: "upper(project_description) like '%\(core)%' AND upper(project_status) not like '%CLOSED%'"),
+            URLQueryItem(name: "$order", value: "report_date DESC"),
+            URLQueryItem(name: "$limit", value: "8")
+        ])
+        async let fundingRaw = fetchOptional(datasets.infrastructureFunding, [
+            URLQueryItem(name: "$select", value: "investment_name,project_details,capital_cost,funding_year,funded"),
+            URLQueryItem(name: "$where", value: "upper(project_details) like '%\(core)%' OR upper(investment_name) like '%\(core)%'"),
+            URLQueryItem(name: "$limit", value: "5")
+        ])
+
+        var projects: [CapitalProject] = (await projectsRaw).compactMap { row in
+            guard let name = row.string("project_description") else { return nil }
+            return CapitalProject(
+                name: name,
+                detail: row.string("project_status"),
+                status: row.string("project_status"),
+                budget: row.double("amended_budget") ?? row.double("adopted_budget"),
+                year: row.string("project_year"),
+                funded: nil
+            )
+        }
+        for row in await fundingRaw {
+            guard let name = row.string("investment_name") else { continue }
+            let funded = (row.double("funded") ?? 0) > 0
+            projects.append(CapitalProject(
+                name: name,
+                detail: plainText(row.string("project_details")),
+                status: nil,
+                budget: row.double("capital_cost"),
+                year: row.string("funding_year"),
+                funded: funded
+            ))
+        }
+        guard !projects.isEmpty else { return nil }
+        return CapitalWorksSummary(projects: Array(projects.prefix(8)))
+    }
+
+    // MARK: - Facility closures
+
+    private func fetchFacilityClosures(address: NormalizedAddress, property: PropertyAssessment?) async -> FacilityClosureSummary? {
+        guard let dataset = datasets.facilityClosures else { return nil }
+        let core = escaped(streetCore(address.streetName))
+        guard core.count >= 3 else { return nil }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$where", value: "upper(name_and_address) like '%\(core)%'"),
+            URLQueryItem(name: "$order", value: "closure_date DESC"),
+            URLQueryItem(name: "$limit", value: "10")
+        ])) ?? []
+        let closures: [FacilityClosureRecord] = rows.compactMap { row in
+            guard let name = row.string("name_and_address") else { return nil }
+            return FacilityClosureRecord(
+                name: plainText(name) ?? name,
+                establishmentType: row.string("type_of_establishment"),
+                reason: plainText(row.string("reasons_for_closure")),
+                closureDate: parseDate(row.string("closure_date")),
+                reopenDate: parseDate(row.string("re_open_date"))
+            )
+        }
+        guard !closures.isEmpty else { return nil }
+        return FacilityClosureSummary(closures: closures)
+    }
+
+    private func fetchOptional(_ dataset: String?, _ items: [URLQueryItem]) async -> [[String: Any]] {
+        guard let dataset else { return [] }
+        return (try? await fetch(dataset, queryItems: items)) ?? []
+    }
+
+    private func isoNow() -> String {
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.string(from: .now).replacingOccurrences(of: "Z", with: "")
     }
 
     private func parseCoordinate(_ row: [String: Any]) -> CLLocationCoordinate2D? {

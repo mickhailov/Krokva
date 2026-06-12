@@ -6,7 +6,8 @@ struct PropertyCompareView: View {
     @Query(sort: \SavedReport.savedAt, order: .reverse) private var saved: [SavedReport]
     @Environment(\.modelContext) private var modelContext
 
-    private var props: [SavedReport] { Array(saved.prefix(4)) }
+    private var props: [SavedReport] { Array(saved.prefix(SavedReport.maxSaved)) }
+    private var reports: [AddressReport?] { props.map { $0.decodedReport() } }
 
     var body: some View {
         NavigationStack {
@@ -70,7 +71,7 @@ struct PropertyCompareView: View {
                 ForEach(Array(props.enumerated()), id: \.offset) { i, prop in
                     miniCard(prop, colorIndex: i)
                 }
-                if props.count < 4 {
+                if props.count < SavedReport.maxSaved {
                     addSlot
                 }
             }
@@ -84,6 +85,7 @@ struct PropertyCompareView: View {
             [Color(hex: 0xC4C8DC), Color(hex: 0xD0D4E8)],
             [Color(hex: 0xD0CCC8), Color(hex: 0xDCD8D4)],
             [Color(hex: 0xC8CED4), Color(hex: 0xD4DAE0)],
+            [Color(hex: 0xD5CEBA), Color(hex: 0xE4DDC8)],
         ]
         let colors = gradients[colorIndex % gradients.count]
 
@@ -234,6 +236,10 @@ struct PropertyCompareView: View {
         let label: String
         let values: [String?]
         let bestIndex: Int?
+
+        var hasValues: Bool {
+            values.contains { ($0?.nilIfEmpty) != nil }
+        }
     }
 
     private struct CompareSection {
@@ -247,8 +253,18 @@ struct PropertyCompareView: View {
             CompareSection(title: "SIZE",          rows: sizeRows),
             CompareSection(title: "PROPERTY",      rows: propertyRows),
             CompareSection(title: "FEATURES",      rows: featureRows),
-            CompareSection(title: "NEIGHBOURHOOD", rows: neighbourhoodRows),
-        ]
+            CompareSection(title: "CIVIC",         rows: civicRows),
+            CompareSection(title: "COLLECTION",    rows: collectionRows),
+            CompareSection(title: "SCHOOLS",       rows: schoolRows),
+            CompareSection(title: "SAFETY",        rows: safetyRows),
+            CompareSection(title: "ACCESS",        rows: accessRows),
+            CompareSection(title: "PLANNING",      rows: planningRows),
+            CompareSection(title: "LOCAL AREA",    rows: localAreaRows),
+            CompareSection(title: "RISK & WORKS",  rows: riskAndWorksRows),
+        ].compactMap { section in
+            let rows = section.rows.filter(\.hasValues)
+            return rows.isEmpty ? nil : CompareSection(title: section.title, rows: rows)
+        }
     }
 
     private var valueRows: [CompareRow] {
@@ -320,13 +336,49 @@ struct PropertyCompareView: View {
         )
     }
 
-    private var neighbourhoodRows: [CompareRow] {
+    private var civicRows: [CompareRow] {
         [
             CompareRow(
                 label: "District",
                 values: props.map { $0.neighbourhood.nilIfEmpty },
                 bestIndex: nil
             ),
+            CompareRow(label: "Ward", values: reports.map { $0?.civicContext?.ward?.nilIfEmpty }, bestIndex: nil),
+            CompareRow(label: "Postal", values: reports.map { $0?.civicContext?.postalCode?.nilIfEmpty }, bestIndex: nil),
+            CompareRow(label: "Plow Zone", values: reports.map { $0?.civicContext?.plowZone?.nilIfEmpty }, bestIndex: nil),
+            CompareRow(label: "School Div.", values: reports.map { $0?.civicContext?.schoolDivision?.nilIfEmpty }, bestIndex: nil),
+            CompareRow(label: "School Ward", values: reports.map { $0?.civicContext?.schoolDivisionWard?.nilIfEmpty }, bestIndex: nil),
+        ]
+    }
+
+    private var collectionRows: [CompareRow] {
+        [
+            CompareRow(label: "Garbage", values: reports.map { $0?.waste?.garbageDay?.nilIfEmpty }, bestIndex: nil),
+            CompareRow(label: "Recycling", values: reports.map { $0?.waste?.recycleDay?.nilIfEmpty }, bestIndex: nil),
+            CompareRow(label: "Yard Waste", values: reports.map { $0?.waste?.yardWasteDay?.nilIfEmpty }, bestIndex: nil),
+            CompareRow(label: "Next Plow", values: reports.map { $0?.waste?.nextPlowWindow?.nilIfEmpty }, bestIndex: nil),
+            CompareRow(label: "Snow Ban", values: reports.map { $0?.waste?.activeSnowBan == nil ? nil : "Active" }, bestIndex: nil),
+        ]
+    }
+
+    private var schoolRows: [CompareRow] {
+        [
+            CompareRow(label: "Nearest", values: reports.map { $0?.nearbySchools.first?.name.nilIfEmpty }, bestIndex: nil),
+            CompareRow(label: "Distance", values: reports.map { $0?.nearbySchools.first?.distanceDescription.nilIfEmpty }, bestIndex: nil),
+            CompareRow(label: "Grades", values: reports.map { $0?.nearbySchools.first?.grades?.nilIfEmpty }, bestIndex: nil),
+            CompareRow(
+                label: "Nearby",
+                values: reports.map { report in
+                    guard let count = report?.nearbySchools.count, count > 0 else { return nil }
+                    return "\(count)"
+                },
+                bestIndex: bestInt(reports.map { $0?.nearbySchools.count }, higher: true)
+            ),
+        ]
+    }
+
+    private var safetyRows: [CompareRow] {
+        [
             CompareRow(
                 label: "Permits",
                 values: props.map { Optional("\($0.permitCount)") },
@@ -343,19 +395,220 @@ struct PropertyCompareView: View {
                 bestIndex: bestInt(props.map(\.serviceRequestTotal), higher: false)
             ),
             CompareRow(
+                label: "311 Open",
+                values: reports.map { $0?.serviceRequests.map { "\($0.openLastYear.formatted())" } },
+                bestIndex: bestInt(reports.map { $0?.serviceRequests?.openLastYear }, higher: false)
+            ),
+            CompareRow(
+                label: "Fire/Med",
+                values: reports.map { $0?.emergency.map { "\($0.totalLastYear.formatted())" } },
+                bestIndex: bestInt(reports.map { $0?.emergency?.totalLastYear }, higher: false)
+            ),
+            CompareRow(
+                label: "Avg Call",
+                values: reports.map { $0?.emergency?.averageDurationMinutes.map { "\(Int($0.rounded())) min" } },
+                bestIndex: bestDouble(reports.map { $0?.emergency?.averageDurationMinutes }, higher: false)
+            ),
+            CompareRow(
+                label: "Vehicle",
+                values: reports.map { $0?.emergency.map { "\($0.motorVehicleLastYear.formatted())" } },
+                bestIndex: bestInt(reports.map { $0?.emergency?.motorVehicleLastYear }, higher: false)
+            ),
+            CompareRow(
                 label: "Crime/Year",
                 values: props.map { $0.crimeLastYear.map { "\($0.formatted())" } },
                 bestIndex: bestInt(props.map(\.crimeLastYear), higher: false)
             ),
             CompareRow(
+                label: "Bylaw",
+                values: reports.map { $0?.bylaw?.yearly.last.map { "\($0.count.formatted())" } },
+                bestIndex: bestInt(reports.map { $0?.bylaw?.yearly.last?.count }, higher: false)
+            ),
+            CompareRow(label: "ER", values: reports.map { $0?.publicHealth?.nearestER?.name.nilIfEmpty }, bestIndex: nil),
+            CompareRow(
+                label: "Walk-ins",
+                values: reports.map { $0?.publicHealth?.walkInClinicsNearby.map { "\($0)" } },
+                bestIndex: bestInt(reports.map { $0?.publicHealth?.walkInClinicsNearby }, higher: true)
+            ),
+        ]
+    }
+
+    private var accessRows: [CompareRow] {
+        [
+            CompareRow(
                 label: "Parks Nearby",
                 values: props.map { $0.parkCount.map { "\($0)" } },
                 bestIndex: bestInt(props.map(\.parkCount), higher: true)
+            ),
+            CompareRow(label: "Nearest Park", values: reports.map { $0?.parks?.nearestPark?.name.nilIfEmpty }, bestIndex: nil),
+            CompareRow(
+                label: "Park Ha",
+                values: reports.map { $0?.parks?.neighbourhoodHectares.map { String(format: "%.1f", $0) } },
+                bestIndex: bestDouble(reports.map { $0?.parks?.neighbourhoodHectares }, higher: true)
             ),
             CompareRow(
                 label: "Transit",
                 values: props.map { $0.transitOnTimePct.map { String(format: "%.0f%%", $0) } },
                 bestIndex: bestDouble(props.map(\.transitOnTimePct), higher: true)
+            ),
+            CompareRow(
+                label: "Routes",
+                values: reports.map { report in
+                    guard let count = report?.transit?.routes.count, count > 0 else { return nil }
+                    return "\(count)"
+                },
+                bestIndex: bestInt(reports.map { $0?.transit?.routes.count }, higher: true)
+            ),
+            CompareRow(label: "Stop", values: reports.map { $0?.transit?.nearestStop?.distanceDescription.nilIfEmpty }, bestIndex: nil),
+            CompareRow(label: "Road", values: reports.map { $0?.streetAccess?.pavementCondition?.nilIfEmpty }, bestIndex: nil),
+            CompareRow(label: "Speed", values: reports.map { $0?.infrastructure?.speedLimit?.nilIfEmpty }, bestIndex: nil),
+            CompareRow(
+                label: "Bike Routes",
+                values: reports.map { $0?.streetAccess.map { "\($0.cyclingRoutesNearby)" } },
+                bestIndex: bestInt(reports.map { $0?.streetAccess?.cyclingRoutesNearby }, higher: true)
+            ),
+            CompareRow(
+                label: "Disruptions",
+                values: reports.map { report in
+                    guard let street = report?.streetAccess else { return nil }
+                    return "\(street.activeDisruptions.count + street.activeLaneClosures.count)"
+                },
+                bestIndex: bestInt(reports.map { report in
+                    guard let street = report?.streetAccess else { return nil }
+                    return street.activeDisruptions.count + street.activeLaneClosures.count
+                }, higher: false)
+            ),
+            CompareRow(label: "Library", values: reports.map { $0?.library?.name.nilIfEmpty }, bestIndex: nil),
+            CompareRow(label: "Rec Centre", values: reports.map { $0?.recreation?.nearestComplex?.name.nilIfEmpty }, bestIndex: nil),
+            CompareRow(
+                label: "Activities",
+                values: reports.map { report in
+                    guard let count = report?.recreation?.activities.count, count > 0 else { return nil }
+                    return "\(count)"
+                },
+                bestIndex: bestInt(reports.map { $0?.recreation?.activities.count }, higher: true)
+            ),
+            CompareRow(
+                label: "Pools",
+                values: reports.map { report in
+                    guard let count = report?.aquatics?.pools.count, count > 0 else { return nil }
+                    return "\(count)"
+                },
+                bestIndex: bestInt(reports.map { $0?.aquatics?.pools.count }, higher: true)
+            ),
+            CompareRow(
+                label: "Walkways",
+                values: reports.map { $0?.aquatics.map { "\($0.walkwaysNearby)" } },
+                bestIndex: bestInt(reports.map { $0?.aquatics?.walkwaysNearby }, higher: true)
+            ),
+            CompareRow(label: "Wi-Fi", values: reports.map { $0?.aquatics?.nearestWifi?.name.nilIfEmpty }, bestIndex: nil),
+        ]
+    }
+
+    private var planningRows: [CompareRow] {
+        [
+            CompareRow(label: "Zoning Use", values: reports.map { $0?.planning?.zoningDescription?.nilIfEmpty }, bestIndex: nil),
+            CompareRow(
+                label: "Notices",
+                values: reports.map { report in
+                    guard let count = report?.planning?.publicNotices.count, count > 0 else { return nil }
+                    return "\(count)"
+                },
+                bestIndex: bestInt(reports.map { $0?.planning?.publicNotices.count }, higher: false)
+            ),
+            CompareRow(
+                label: "Dev Permits",
+                values: reports.map { report in
+                    guard let count = report?.development?.recentPermits.count, count > 0 else { return nil }
+                    return "\(count)"
+                },
+                bestIndex: bestInt(reports.map { $0?.development?.recentPermits.count }, higher: false)
+            ),
+            CompareRow(
+                label: "Review Days",
+                values: reports.map { $0?.development?.reviewProcessing.first?.averageBusinessDays.formatted(.number.precision(.fractionLength(0))) },
+                bestIndex: bestDouble(reports.map { $0?.development?.reviewProcessing.first?.averageBusinessDays }, higher: false)
+            ),
+            CompareRow(
+                label: "STRs",
+                values: reports.map { $0?.shortTermRentals.map { "\($0.total)" } },
+                bestIndex: bestInt(reports.map { $0?.shortTermRentals?.total }, higher: false)
+            ),
+        ]
+    }
+
+    private var localAreaRows: [CompareRow] {
+        [
+            CompareRow(label: "Population", values: reports.map { $0?.demographics?.totalPopulation.map { "\($0.formatted())" } }, bestIndex: nil),
+            CompareRow(
+                label: "Income",
+                values: reports.map { $0?.demographics?.medianHouseholdIncome.map(currencyLabel) },
+                bestIndex: bestDouble(reports.map { $0?.demographics?.medianHouseholdIncome }, higher: true)
+            ),
+            CompareRow(label: "Household", values: reports.map { $0?.demographics?.averageHouseholdSize.map { String(format: "%.1f", $0) } }, bestIndex: nil),
+            CompareRow(label: "Children", values: reports.map { $0?.demographics?.childrenPercent.map(percentLabel) }, bestIndex: nil),
+            CompareRow(label: "Seniors", values: reports.map { $0?.demographics?.seniorsPercent.map(percentLabel) }, bestIndex: nil),
+            CompareRow(label: "Councillor", values: reports.map { $0?.localGovernment?.councillor?.nilIfEmpty }, bestIndex: nil),
+            CompareRow(label: "Committee", values: reports.map { $0?.localGovernment?.communityCommittee?.nilIfEmpty }, bestIndex: nil),
+            CompareRow(
+                label: "Businesses",
+                values: reports.map { $0?.localBusiness.map { "\($0.totalNearby)" } },
+                bestIndex: bestInt(reports.map { $0?.localBusiness?.totalNearby }, higher: true)
+            ),
+            CompareRow(label: "Top Biz", values: reports.map { $0?.localBusiness?.topCategories.first?.incidentType.nilIfEmpty }, bestIndex: nil),
+        ]
+    }
+
+    private var riskAndWorksRows: [CompareRow] {
+        [
+            CompareRow(
+                label: "Traffic",
+                values: reports.map { report in
+                    guard let study = report?.traffic?.streetStudy ?? report?.traffic?.nearestPermanentStation,
+                          let count = study.vehiclesCounted else { return nil }
+                    return "\(count.formatted()) \(study.countSummaryUnit ?? "")".trimmingCharacters(in: .whitespaces)
+                },
+                bestIndex: bestInt(reports.map { $0?.traffic?.streetStudy?.vehiclesCounted ?? $0?.traffic?.nearestPermanentStation?.vehiclesCounted }, higher: false)
+            ),
+            CompareRow(
+                label: "Tows",
+                values: reports.map { $0?.neighbourhoodRisk.map { "\($0.towingNearby)" } },
+                bestIndex: bestInt(reports.map { $0?.neighbourhoodRisk?.towingNearby }, higher: false)
+            ),
+            CompareRow(
+                label: "Paid Pkg",
+                values: reports.map { $0?.neighbourhoodRisk.map { "\($0.paidParkingNearby)" } },
+                bestIndex: bestInt(reports.map { $0?.neighbourhoodRisk?.paidParkingNearby }, higher: false)
+            ),
+            CompareRow(
+                label: "Rooming",
+                values: reports.map { $0?.neighbourhoodRisk?.roomingHouse?.complaintDriven.map { "\($0)" } },
+                bestIndex: bestInt(reports.map { $0?.neighbourhoodRisk?.roomingHouse?.complaintDriven }, higher: false)
+            ),
+            CompareRow(label: "Water Area", values: reports.map { $0?.waterQuality?.area?.nilIfEmpty }, bestIndex: nil),
+            CompareRow(
+                label: "Water Tests",
+                values: reports.map { report in
+                    guard let count = report?.waterQuality?.parameters.filter({ !$0.parameter.lowercased().contains("temperature") }).count, count > 0 else { return nil }
+                    return "\(count)"
+                },
+                bestIndex: bestInt(reports.map { $0?.waterQuality?.parameters.filter { !$0.parameter.lowercased().contains("temperature") }.count }, higher: true)
+            ),
+            CompareRow(
+                label: "Capital",
+                values: reports.map { report in
+                    guard let count = report?.capitalWorks?.projects.count, count > 0 else { return nil }
+                    return "\(count)"
+                },
+                bestIndex: bestInt(reports.map { $0?.capitalWorks?.projects.count }, higher: true)
+            ),
+            CompareRow(
+                label: "Closures",
+                values: reports.map { report in
+                    guard let count = report?.facilityClosures?.closures.count, count > 0 else { return nil }
+                    return "\(count)"
+                },
+                bestIndex: bestInt(reports.map { $0?.facilityClosures?.closures.count }, higher: false)
             ),
         ]
     }
@@ -422,6 +675,10 @@ struct PropertyCompareView: View {
         if value >= 1_000_000 { return String(format: "$%.2fM", value / 1_000_000) }
         if value >= 1_000     { return String(format: "$%.0fK", value / 1_000) }
         return String(format: "$%.0f", value)
+    }
+
+    private func percentLabel(_ value: Double) -> String {
+        String(format: "%.0f%%", value)
     }
 
     private func shortAddress(_ address: String) -> String {

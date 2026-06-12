@@ -132,15 +132,45 @@ struct NearbySchoolsCard: View {
             }
 
             // School division
-            if let division = civicContext?.schoolDivision {
+            if let context = civicContext, context.schoolDivision != nil
+                || context.schoolDivisionCode != nil
+                || context.schoolDivisionWard != nil
+                || context.schoolDivisionBoundaryName != nil {
                 if schoolZone != nil || !schools.isEmpty {
                     Divider().foregroundStyle(Color.cleanSep)
                 }
                 VStack(alignment: .leading, spacing: 8) {
                     Text("School division").eyebrow(color: .cleanLabel3)
-                    Text(division)
-                        .font(.system(size: 13.5, weight: .semibold))
-                        .foregroundStyle(Color.cleanLabel)
+                    if let division = context.schoolDivision {
+                        Text(division)
+                            .font(.system(size: 13.5, weight: .semibold))
+                            .foregroundStyle(Color.cleanLabel)
+                    }
+                    if let code = context.schoolDivisionCode {
+                        KeyValueRow(key: "Division no.", value: "#\(code)")
+                    }
+                    if let ward = context.schoolDivisionWard {
+                        KeyValueRow(key: "School ward", value: ward)
+                    }
+                    if let boundary = context.schoolDivisionBoundaryName {
+                        KeyValueRow(key: "Boundary", value: boundary)
+                    }
+                    if let website = context.schoolDivisionWebsite,
+                       let url = URL(string: website) {
+                        Link(destination: url) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "safari")
+                                    .font(.system(size: 12, weight: .semibold))
+                                Text(website)
+                                    .font(KrokvaTypography.caption)
+                                    .lineLimit(1)
+                                Spacer(minLength: 0)
+                                Image(systemName: "arrow.up.right")
+                                    .font(.system(size: 10, weight: .bold))
+                            }
+                            .foregroundStyle(Color.cleanSky)
+                        }
+                    }
                 }
             }
 

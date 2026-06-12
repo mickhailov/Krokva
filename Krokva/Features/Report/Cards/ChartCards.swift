@@ -1,6 +1,8 @@
 import Charts
 import SwiftUI
 
+private let comparisonCityAveragePosition: CGFloat = 0.50
+
 // MARK: - PermitActivityCard
 
 struct PermitActivityCard: View {
@@ -40,6 +42,7 @@ struct PermitActivityCard: View {
 struct EmergencyActivityCard: View {
     let summary: EmergencySummary?
     var substances: [IncidentBreakdown] = []
+    var sourceFailed = false
     @State private var isExpanded = false
     @State private var selectedYear: Int?
 
@@ -103,6 +106,7 @@ struct EmergencyActivityCard: View {
     }
 
     private var smallSummary: String {
+        if sourceFailed { return "Database error" }
         guard let s = summary else { return "Unavailable" }
         let medical = s.last12Months.first { $0.incidentType.localizedCaseInsensitiveContains("medical") }
         let fire = s.last12Months.first { $0.incidentType.localizedCaseInsensitiveContains("fire") }
@@ -132,6 +136,10 @@ struct EmergencyActivityCard: View {
                     .font(KrokvaTypography.caption)
                     .foregroundStyle(Color.cleanLabel3)
             }
+        } else if sourceFailed {
+            Text("Database error loading emergency response activity.")
+                .font(KrokvaTypography.bodySecondary)
+                .foregroundStyle(Color.cleanLabel2)
         } else {
             Text("Emergency response activity is unavailable.")
                 .font(KrokvaTypography.bodySecondary)
@@ -145,9 +153,26 @@ struct EmergencyActivityCard: View {
             let active = activeYear(for: summary)
             let years = summary.yearlyCalls.map(\.year)
             let yearLabels = years.map(String.init)
+            let hasCityAverage = summary.yearlyCalls.contains { $0.citywideAverage > 0 }
             Chart(summary.yearlyCalls) { item in
                 BarMark(x: .value("Year", String(item.year)), y: .value("Calls", item.count))
                     .foregroundStyle(item.year == active ? Color.cleanAmber : Color.cleanSky.opacity(0.7))
+
+                if hasCityAverage {
+                    LineMark(
+                        x: .value("Year", String(item.year)),
+                        y: .value("City neighbourhood average", item.citywideAverage)
+                    )
+                    .foregroundStyle(Color.cleanIndigo)
+                    .lineStyle(StrokeStyle(lineWidth: 2, dash: [4, 3]))
+
+                    PointMark(
+                        x: .value("Year", String(item.year)),
+                        y: .value("City neighbourhood average", item.citywideAverage)
+                    )
+                    .foregroundStyle(item.year == active ? Color.cleanIndigo : Color.cleanLabel3)
+                    .symbolSize(item.year == active ? 120 : 55)
+                }
             }
             .frame(height: 180)
             .chartXScale(domain: yearLabels)
@@ -176,8 +201,31 @@ struct EmergencyActivityCard: View {
                     AxisValueLabel()
                 }
             }
-            .accessibilityLabel("Selectable bar chart of fire and medical calls by year.")
+            .accessibilityLabel("Selectable bar chart of fire and medical calls by year, compared with the city neighbourhood average.")
+
+            if hasCityAverage, let item = active.flatMap(yearCall(for: summary)) {
+                VStack(alignment: .leading, spacing: 6) {
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("\(item.year) \(summary.neighbourhood)").eyebrow(color: .cleanLabel3)
+                        Spacer()
+                        Text("\(item.count.formatted()) calls")
+                            .font(KrokvaTypography.monoBold)
+                            .foregroundStyle(Color.cleanLabel)
+                    }
+                    HStack(alignment: .firstTextBaseline) {
+                        Text("City neighbourhood avg").eyebrow(color: .cleanLabel3)
+                        Spacer()
+                        Text(item.citywideAverage.formatted(.number.precision(.fractionLength(0))) + " calls")
+                            .font(KrokvaTypography.monoBold)
+                            .foregroundStyle(Color.cleanIndigo)
+                    }
+                }
+            }
         }
+    }
+
+    private func yearCall(for summary: EmergencySummary) -> (Int) -> YearCount? {
+        { year in summary.yearlyCalls.first { $0.year == year } }
     }
 
     @ViewBuilder
@@ -210,21 +258,83 @@ struct EmergencyActivityCard: View {
         let active = activeYear(for: summary)
         let selectedBreakdown = active.flatMap { summary.breakdownByYear[$0] } ?? summary.last12Months
         if !selectedBreakdown.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                if let y = active {
-                    Text("Incident types in \(y)").eyebrow(color: .cleanLabel3)
-                }
-                ForEach(selectedBreakdown.prefix(8)) { item in
-                    HStack {
-                        Text(item.incidentType)
-                            .font(KrokvaTypography.bodySecondary)
-                            .foregroundStyle(Color.cleanLabel2)
-                        Spacer()
-                        Text("\(item.count)")
-                            .font(KrokvaTypography.monoBold)
-                            .foregroundStyle(Color.cleanLabel)
+            let hasCityAverage = selectedBreakdown.contains { $0.citywideAverage > 0 }
+            VStack(alignment: .leading, spacing: 10) {
+                Text(active.map { "Incident types in \($0)" } ?? "Incident types").eyebrow(color: .cleanLabel3)
+                if hasCityAverage {
+                    ForEach(selectedBreakdown.prefix(8)) { item in
+                        comparisonRow(item)
+                    }
+                    comparisonLegend
+                } else {
+                    // No city-average context available — fall back to a plain count list.
+                    ForEach(selectedBreakdown.prefix(8)) { item in
+                        HStack {
+                            Text(item.incidentType)
+                                .font(KrokvaTypography.bodySecondary)
+                                .foregroundStyle(Color.cleanLabel2)
+                            Spacer()
+                            Text("\(item.count)")
+                                .font(KrokvaTypography.monoBold)
+                                .foregroundStyle(Color.cleanLabel)
+                        }
                     }
                 }
+            }
+        }
+    }
+
+    // MARK: Comparison bars (neighbourhood vs city average)
+
+    private func comparisonRow(_ item: IncidentBreakdown) -> some View {
+        let aboveAverage = Double(item.count) > item.citywideAverage
+        let barColor: Color = aboveAverage ? .cleanRed : .cleanGreen
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(item.incidentType)
+                    .font(KrokvaTypography.caption)
+                    .foregroundStyle(Color.cleanLabel2)
+                    .lineLimit(1)
+                Spacer(minLength: 6)
+                Text(item.count.formatted())
+                    .font(KrokvaTypography.monoSmall)
+                    .foregroundStyle(Color.cleanLabel)
+                Text("avg \(item.citywideAverage.formatted(.number.precision(.fractionLength(0))))")
+                    .font(KrokvaTypography.monoSmall)
+                    .foregroundStyle(Color.cleanLabel3)
+            }
+            GeometryReader { geo in
+                let width = geo.size.width
+                let average = max(item.citywideAverage, 0.0001)
+                let fillRatio = min((Double(item.count) / average) * Double(comparisonCityAveragePosition), 1)
+                let fillWidth = width * CGFloat(fillRatio)
+                let avgX = width * comparisonCityAveragePosition
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.cleanTrack)
+                    Capsule().fill(barColor).frame(width: fillWidth)
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(Color.cleanIndigo)
+                        .frame(width: 2, height: 12)
+                        .offset(x: max(avgX - 1, 0))
+                }
+            }
+            .frame(height: 8)
+        }
+    }
+
+    private var comparisonLegend: some View {
+        HStack(spacing: 14) {
+            HStack(spacing: 5) {
+                Capsule().fill(Color.cleanRed).frame(width: 14, height: 6)
+                Text("Above city avg").font(KrokvaTypography.caption).foregroundStyle(Color.cleanLabel3)
+            }
+            HStack(spacing: 5) {
+                Capsule().fill(Color.cleanGreen).frame(width: 14, height: 6)
+                Text("At or below").font(KrokvaTypography.caption).foregroundStyle(Color.cleanLabel3)
+            }
+            HStack(spacing: 5) {
+                RoundedRectangle(cornerRadius: 1).fill(Color.cleanIndigo).frame(width: 2, height: 12)
+                Text("City avg").font(KrokvaTypography.caption).foregroundStyle(Color.cleanLabel3)
             }
         }
     }
@@ -233,12 +343,8 @@ struct EmergencyActivityCard: View {
     private func breakdownGridSection(for summary: EmergencySummary) -> some View {
         Grid(horizontalSpacing: 14, verticalSpacing: 10) {
             GridRow {
-                breakdownColumn("Ward", summary.wardBreakdown)
                 breakdownColumn("Motor vehicle", summary.motorVehicleBreakdown)
-            }
-            GridRow {
                 breakdownColumn("Units dispatched", summary.unitBreakdown)
-                    .gridCellColumns(2)
             }
         }
     }
@@ -246,6 +352,8 @@ struct EmergencyActivityCard: View {
     @ViewBuilder
     private var substanceSection: some View {
         if !substances.isEmpty {
+            let sortedSubstances = substances.sorted { $0.count > $1.count }
+            let hasCityAverage = sortedSubstances.contains { $0.citywideAverage > 0 }
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text("Substance-related calls").eyebrow(color: .cleanLabel3)
@@ -254,15 +362,22 @@ struct EmergencyActivityCard: View {
                         .font(KrokvaTypography.monoSmall)
                         .foregroundStyle(Color.cleanLabel2)
                 }
-                ForEach(substances.sorted { $0.count > $1.count }) { item in
-                    HStack {
-                        Text(item.incidentType)
-                            .font(KrokvaTypography.bodySecondary)
-                            .foregroundStyle(Color.cleanLabel2)
-                        Spacer()
-                        Text(item.count.formatted())
-                            .font(KrokvaTypography.monoBold)
-                            .foregroundStyle(Color.cleanLabel)
+                if hasCityAverage {
+                    ForEach(sortedSubstances) { item in
+                        comparisonRow(item)
+                    }
+                    comparisonLegend
+                } else {
+                    ForEach(sortedSubstances) { item in
+                        HStack {
+                            Text(item.incidentType)
+                                .font(KrokvaTypography.bodySecondary)
+                                .foregroundStyle(Color.cleanLabel2)
+                            Spacer()
+                            Text(item.count.formatted())
+                                .font(KrokvaTypography.monoBold)
+                                .foregroundStyle(Color.cleanLabel)
+                        }
                     }
                 }
             }
@@ -272,7 +387,7 @@ struct EmergencyActivityCard: View {
     // MARK: Helpers
 
     private func chartMaxValue(for summary: EmergencySummary) -> Double {
-        let values = summary.yearlyCalls.map { Double($0.count) }
+        let values = summary.yearlyCalls.flatMap { [Double($0.count), $0.citywideAverage] }
         return max((values.max() ?? 1) * 1.18, 1)
     }
 
@@ -481,11 +596,10 @@ struct PoliceCrimeCard: View {
                 let selectedTypes = activeYear.flatMap { summary.crimeTypesByYear[$0] } ?? summary.crimeTypes
                 let selectedOffences = activeYear.flatMap { summary.offenceTypesByYear[$0] } ?? summary.offenceTypes
 
-                Grid(horizontalSpacing: 14, verticalSpacing: 10) {
-                    GridRow {
-                        breakdownColumn(activeYear.map { "Crime types in \($0)" } ?? "Crime types", selectedTypes)
-                        breakdownColumn(activeYear.map { "Top offences in \($0)" } ?? "Top offences", selectedOffences)
-                    }
+                VStack(alignment: .leading, spacing: 16) {
+                    comparisonColumn(activeYear.map { "Crime types in \($0)" } ?? "Crime types", selectedTypes)
+                    comparisonColumn(activeYear.map { "Top offences in \($0)" } ?? "Top offences", selectedOffences)
+                    comparisonLegend
                 }
             }
         } else {
@@ -534,5 +648,75 @@ struct PoliceCrimeCard: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+
+    // MARK: Comparison list (neighbourhood vs city average)
+
+    private func comparisonColumn(_ title: String, _ items: [IncidentBreakdown]) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title).eyebrow(color: .cleanLabel3)
+            if items.isEmpty {
+                Text("—").font(KrokvaTypography.bodySecondary).foregroundStyle(Color.cleanLabel3)
+            } else {
+                ForEach(items.prefix(8)) { item in
+                    comparisonRow(item)
+                }
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .topLeading)
+    }
+
+    private func comparisonRow(_ item: IncidentBreakdown) -> some View {
+        let aboveAverage = Double(item.count) > item.citywideAverage
+        let barColor: Color = aboveAverage ? .cleanRed : .cleanGreen
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .firstTextBaseline, spacing: 6) {
+                Text(item.incidentType)
+                    .font(KrokvaTypography.caption)
+                    .foregroundStyle(Color.cleanLabel2)
+                    .lineLimit(1)
+                Spacer(minLength: 6)
+                Text(item.count.formatted())
+                    .font(KrokvaTypography.monoSmall)
+                    .foregroundStyle(Color.cleanLabel)
+                Text("avg \(item.citywideAverage.formatted(.number.precision(.fractionLength(0))))")
+                    .font(KrokvaTypography.monoSmall)
+                    .foregroundStyle(Color.cleanLabel3)
+            }
+            GeometryReader { geo in
+                let width = geo.size.width
+                let average = max(item.citywideAverage, 0.0001)
+                let fillRatio = min((Double(item.count) / average) * Double(comparisonCityAveragePosition), 1)
+                let fillWidth = width * CGFloat(fillRatio)
+                let avgX = width * comparisonCityAveragePosition
+                ZStack(alignment: .leading) {
+                    Capsule().fill(Color.cleanTrack)
+                    Capsule().fill(barColor).frame(width: fillWidth)
+                    // City-average marker
+                    RoundedRectangle(cornerRadius: 1)
+                        .fill(Color.cleanIndigo)
+                        .frame(width: 2, height: 12)
+                        .offset(x: max(avgX - 1, 0))
+                }
+            }
+            .frame(height: 8)
+        }
+    }
+
+    private var comparisonLegend: some View {
+        HStack(spacing: 14) {
+            HStack(spacing: 5) {
+                Capsule().fill(Color.cleanRed).frame(width: 14, height: 6)
+                Text("Above city avg").font(KrokvaTypography.caption).foregroundStyle(Color.cleanLabel3)
+            }
+            HStack(spacing: 5) {
+                Capsule().fill(Color.cleanGreen).frame(width: 14, height: 6)
+                Text("At or below").font(KrokvaTypography.caption).foregroundStyle(Color.cleanLabel3)
+            }
+            HStack(spacing: 5) {
+                RoundedRectangle(cornerRadius: 1).fill(Color.cleanIndigo).frame(width: 2, height: 12)
+                Text("City avg").font(KrokvaTypography.caption).foregroundStyle(Color.cleanLabel3)
+            }
+        }
     }
 }

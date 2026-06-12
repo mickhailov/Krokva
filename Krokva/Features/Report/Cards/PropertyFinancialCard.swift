@@ -5,10 +5,12 @@ struct PropertyFinancialCard: View {
 
     @State private var isExpanded = false
     @State private var listingText = ""
-    @State private var downPct: Int = 20
-    @State private var annualRateValue: Double = 5.50
-    @State private var amortYears = 25
-    @FocusState private var focusListing: Bool
+    @State private var downText = "20"
+    @State private var rateText = "4.00"
+    @State private var amortText = "25"
+    @FocusState private var focusedField: Field?
+
+    private enum Field { case listing, down, rate, amort }
 
     // MARK: - Computed
 
@@ -17,8 +19,19 @@ struct PropertyFinancialCard: View {
         return Double(raw).flatMap { $0 > 0 ? $0 : nil }
     }
 
+    // Editable calculator inputs are parsed (and clamped to sane bounds) from their text fields.
+    private var downPct: Double {
+        min(max(Double(downText.filter { $0.isNumber || $0 == "." }) ?? 0, 0), 100)
+    }
+    private var annualRateValue: Double {
+        min(max(Double(rateText.filter { $0.isNumber || $0 == "." }) ?? 0, 0), 25)
+    }
+    private var amortYears: Int {
+        min(max(Int(amortText.filter { $0.isNumber }) ?? 25, 1), 40)
+    }
+
     private var purchasePrice: Double { listingPrice ?? property?.totalAssessedValue ?? 0 }
-    private var downAmt: Double { purchasePrice * Double(downPct) / 100 }
+    private var downAmt: Double { purchasePrice * downPct / 100 }
     private var loanBase: Double { max(0, purchasePrice - downAmt) }
 
     private var cmhcPct: Double {
@@ -82,6 +95,12 @@ struct PropertyFinancialCard: View {
         }
         .onChange(of: listingText) { _, new in
             UserDefaults.standard.set(new, forKey: storageKey)
+        }
+        .toolbar {
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                Button("Done") { focusedField = nil }
+            }
         }
     }
 
@@ -183,7 +202,7 @@ struct PropertyFinancialCard: View {
                     .foregroundStyle(listingPrice != nil ? Color.cleanLabel : Color.cleanLabel3)
                 TextField(plainDecimal(property?.totalAssessedValue.map { $0 * 1.3 }) ?? "Optional", text: $listingText)
                     .keyboardType(.numberPad)
-                    .focused($focusListing)
+                    .focused($focusedField, equals: .listing)
                     .multilineTextAlignment(.trailing)
                     .font(.system(size: 14, weight: listingPrice != nil ? .semibold : .regular).monospacedDigit())
                     .foregroundStyle(listingPrice != nil ? Color.cleanLabel : Color.cleanLabel3)
@@ -214,32 +233,16 @@ struct PropertyFinancialCard: View {
 
             finRow("Purchase price", value: purchasePrice > 0 ? money(purchasePrice) : "—")
 
-            stepperRow(
-                "Down payment",
-                display: "\(downPct)%",
-                canDecrement: downPct > 0,
-                canIncrement: downPct < 50,
-                onDecrement: { downPct = max(0, downPct - 5) },
-                onIncrement: { downPct = min(50, downPct + 5) }
-            )
+            entryRow("Down payment", text: $downText, suffix: "%", field: .down, keyboard: .decimalPad)
+            if downAmt > 0 {
+                Text(money(downAmt) + " down payment")
+                    .font(.system(size: 11, weight: .medium).monospacedDigit())
+                    .foregroundStyle(Color.cleanLabel3)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
 
-            stepperRow(
-                "Interest rate",
-                display: String(format: "%.2f%%", annualRateValue),
-                canDecrement: annualRateValue > 0.1,
-                canIncrement: annualRateValue < 15.0,
-                onDecrement: { annualRateValue = max(0.1, (annualRateValue * 100 - 10).rounded() / 100) },
-                onIncrement: { annualRateValue = min(15.0, (annualRateValue * 100 + 10).rounded() / 100) }
-            )
-
-            stepperRow(
-                "Amortization",
-                display: "\(amortYears) yrs",
-                canDecrement: amortYears > 5,
-                canIncrement: amortYears < 30,
-                onDecrement: { amortYears = max(5, amortYears - 5) },
-                onIncrement: { amortYears = min(30, amortYears + 5) }
-            )
+            entryRow("Interest rate", text: $rateText, suffix: "%", field: .rate, keyboard: .decimalPad)
+            entryRow("Amortization", text: $amortText, suffix: "yrs", field: .amort, keyboard: .numberPad)
 
             if cmhcPct > 0 {
                 cmhcBanner
@@ -247,56 +250,37 @@ struct PropertyFinancialCard: View {
         }
     }
 
-    private func stepperRow(
+    private func entryRow(
         _ label: String,
-        display: String,
-        canDecrement: Bool,
-        canIncrement: Bool,
-        onDecrement: @escaping () -> Void,
-        onIncrement: @escaping () -> Void
+        text: Binding<String>,
+        suffix: String,
+        field: Field,
+        keyboard: UIKeyboardType
     ) -> some View {
         HStack {
             Text(label)
                 .font(.system(size: 14))
                 .foregroundStyle(Color.cleanLabel2)
             Spacer(minLength: 8)
-            HStack(spacing: 0) {
-                Button {
-                    withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) { onDecrement() }
-                } label: {
-                    Image(systemName: "minus")
-                        .font(.system(size: 12, weight: .semibold))
-                        .frame(width: 34, height: 34)
-                        .foregroundStyle(canDecrement ? Color.cleanLabel2 : Color.cleanLabel3)
-                }
-                .buttonStyle(.plain)
-                .disabled(!canDecrement)
-
-                Rectangle().fill(Color.cleanSep).frame(width: 0.5, height: 18)
-
-                Text(display)
-                    .font(.system(size: 13, weight: .semibold).monospacedDigit())
+            HStack(spacing: 4) {
+                TextField("", text: text)
+                    .keyboardType(keyboard)
+                    .focused($focusedField, equals: field)
+                    .multilineTextAlignment(.trailing)
+                    .font(.system(size: 14, weight: .semibold).monospacedDigit())
                     .foregroundStyle(Color.cleanLabel)
-                    .frame(minWidth: 64)
-                    .multilineTextAlignment(.center)
-
-                Rectangle().fill(Color.cleanSep).frame(width: 0.5, height: 18)
-
-                Button {
-                    withAnimation(.spring(response: 0.2, dampingFraction: 0.8)) { onIncrement() }
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .semibold))
-                        .frame(width: 34, height: 34)
-                        .foregroundStyle(canIncrement ? Color.cleanLabel2 : Color.cleanLabel3)
-                }
-                .buttonStyle(.plain)
-                .disabled(!canIncrement)
+                    .frame(minWidth: 40, maxWidth: 64)
+                Text(suffix)
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Color.cleanLabel3)
             }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
             .background(Color.cleanBg, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(Color.cleanSep, lineWidth: 0.5)
+                    .stroke(focusedField == field ? Color.cleanSky : Color.cleanSep,
+                            lineWidth: focusedField == field ? 1 : 0.5)
             )
         }
     }

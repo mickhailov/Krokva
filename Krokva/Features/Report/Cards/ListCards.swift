@@ -290,6 +290,12 @@ struct TransitAccessCard: View {
                         infoTile("On time", percent(summary.onTimePercentage))
                         infoTile("Pass-ups", "\(summary.passUpsLastYear)")
                     }
+                    if let boardings = summary.averageDailyBoardings {
+                        GridRow {
+                            infoTile("Avg. daily riders", Int(boardings.rounded()).formatted())
+                            infoTile("", "")
+                        }
+                    }
                 }
 
                 if !summary.routes.isEmpty {
@@ -468,7 +474,13 @@ struct CivicAmenitiesCard: View {
     let parks: ParksSummary?
     let river: RiverGaugeSummary?
     let library: LibraryAmenity?
+    var aquatics: AquaticsAmenitiesSummary?
     @State private var isExpanded = false
+
+    private var hasAquatics: Bool {
+        guard let aquatics else { return false }
+        return !aquatics.pools.isEmpty || aquatics.walkwaysNearby > 0 || aquatics.nearestWifi != nil
+    }
 
     var body: some View {
         CleanCard(padding: 0) {
@@ -527,6 +539,9 @@ struct CivicAmenitiesCard: View {
         if let count = parks?.nearbyParks.count, count > 0 {
             parts.append("\(count) \(count == 1 ? "park" : "parks")")
         }
+        if let pools = aquatics?.pools.count, pools > 0 {
+            parts.append("\(pools) \(pools == 1 ? "pool" : "pools")")
+        }
         if library != nil { parts.append("1 library") }
         return parts.isEmpty ? "Tap to view" : parts.joined(separator: " · ")
     }
@@ -537,56 +552,123 @@ struct CivicAmenitiesCard: View {
     private var fullContent: some View {
         VStack(alignment: .leading, spacing: 14) {
             if let parks, !parks.nearbyParks.isEmpty {
-                Text("Parks nearby").eyebrow(color: .cleanLabel3)
-                ParksInlineContent(summary: parks)
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Parks nearby").eyebrow(color: .cleanLabel3)
+                    ForEach(parks.nearbyParks) { park in
+                        amenityRow(tag: "PARK", tagColor: .cleanGreen, name: park.name,
+                                   distance: park.distanceDescription, detail: parkDetail(park))
+                    }
+                }
             }
 
             if let library {
                 let hasPrior = parks?.nearbyParks.isEmpty == false
                 if hasPrior { Divider().foregroundStyle(Color.cleanSep) }
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 10) {
                     Text("Library").eyebrow(color: .cleanLabel3)
-                    Text(library.name)
-                        .font(.system(size: 13.5, weight: .semibold))
-                        .foregroundStyle(Color.cleanLabel)
-                    Text("\(library.address) · \(library.distanceDescription)")
-                        .font(KrokvaTypography.caption)
-                        .foregroundStyle(Color.cleanLabel3)
-                    Text([
-                        library.wifi ? "Wi-Fi" : nil,
-                        library.accessibility ? "Accessible" : nil,
-                        library.parkingLot ? "Parking" : nil,
-                        library.roomRentals ? "Rooms" : nil
-                    ].compactMap { $0 }.joined(separator: " · "))
-                        .font(KrokvaTypography.caption)
-                        .foregroundStyle(Color.cleanLabel2)
+                    amenityRow(tag: "LIBRARY", tagColor: .cleanIndigo, name: library.name,
+                               distance: library.distanceDescription, detail: libraryDetail(library))
                 }
             }
 
             if let river {
                 let hasPrior = (parks?.nearbyParks.isEmpty == false) || library != nil
                 if hasPrior { Divider().foregroundStyle(Color.cleanSep) }
-                VStack(alignment: .leading, spacing: 4) {
+                VStack(alignment: .leading, spacing: 10) {
                     Text("River gauge").eyebrow(color: .cleanLabel3)
-                    Text("\(river.riverName) River · \(river.location)")
-                        .font(.system(size: 13.5, weight: .semibold))
-                        .foregroundStyle(Color.cleanLabel)
-                    Text("Nearest gauge · \(river.distanceDescription)")
-                        .font(KrokvaTypography.caption)
-                        .foregroundStyle(Color.cleanLabel3)
-                    HStack {
-                        infoTile("James", river.jamesFeet.map { String(format: "%.2f ft", $0) } ?? "—")
-                        infoTile("Geodetic", river.geodeticMetric.map { String(format: "%.2f m", $0) } ?? "—")
+                    amenityRow(tag: "RIVER", tagColor: .cleanSky,
+                               name: "\(river.riverName) River · \(river.location)",
+                               distance: river.distanceDescription, detail: riverDetail(river))
+                }
+            }
+
+            if let aquatics, hasAquatics {
+                let hasPrior = (parks?.nearbyParks.isEmpty == false) || library != nil || river != nil
+                if hasPrior { Divider().foregroundStyle(Color.cleanSep) }
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Pools & amenities").eyebrow(color: .cleanLabel3)
+                    ForEach(aquatics.pools) { pool in
+                        amenityRow(tag: pool.kind, tagColor: .cleanSky, name: pool.name,
+                                   distance: pool.distanceDescription,
+                                   detail: pool.features.isEmpty ? nil : pool.features.joined(separator: " · "))
+                    }
+                    if aquatics.walkwaysNearby > 0 {
+                        KeyValueRow(key: "Walkways within 600 m", value: "\(aquatics.walkwaysNearby)")
+                    }
+                    if let wifi = aquatics.nearestWifi {
+                        KeyValueRow(key: "Public Wi-Fi", value: [wifi.name, wifi.distanceDescription].compactMap { $0 }.joined(separator: " · "))
                     }
                 }
             }
 
-            if parks == nil && library == nil && river == nil {
+            if parks == nil && library == nil && river == nil && !hasAquatics {
                 Text("Civic amenity data is unavailable.")
                     .font(KrokvaTypography.bodySecondary)
                     .foregroundStyle(Color.cleanLabel2)
             }
         }
+    }
+
+    // MARK: Unified amenity row (tag pill + name + distance + detail line)
+
+    private func amenityRow(tag: String, tagColor: Color, name: String,
+                            distance: String?, detail: String?) -> some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Text(tag.uppercased())
+                    .font(.system(size: 9, weight: .heavy))
+                    .tracking(0.6)
+                    .foregroundStyle(tagColor)
+                    .padding(.horizontal, 6).padding(.vertical, 2)
+                    .background(tagColor.opacity(0.12), in: Capsule())
+                Text(name)
+                    .font(.system(size: 13.5, weight: .semibold))
+                    .foregroundStyle(Color.cleanLabel)
+                    .lineLimit(1)
+                Spacer(minLength: 4)
+                if let distance {
+                    Text(distance)
+                        .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                        .foregroundStyle(Color.cleanLabel3)
+                }
+            }
+            if let detail, !detail.isEmpty {
+                Text(detail)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.cleanLabel2)
+            }
+        }
+    }
+
+    private func parkDetail(_ park: ParkAmenity) -> String? {
+        let pieces: [String?] = [
+            park.playgrounds > 0 ? "\(park.playgrounds) playground\(park.playgrounds == 1 ? "" : "s")" : nil,
+            park.benches > 0 ? "\(park.benches) bench\(park.benches == 1 ? "" : "es")" : nil,
+            park.courts > 0 ? "\(park.courts) court\(park.courts == 1 ? "" : "s")" : nil,
+            park.fields > 0 ? "\(park.fields) field\(park.fields == 1 ? "" : "s")" : nil,
+            park.washrooms > 0 ? "Washrooms" : nil
+        ]
+        let detail = pieces.compactMap { $0 }.joined(separator: " · ")
+        return detail.isEmpty ? nil : detail
+    }
+
+    private func libraryDetail(_ library: LibraryAmenity) -> String? {
+        let features = [
+            library.wifi ? "Wi-Fi" : nil,
+            library.accessibility ? "Accessible" : nil,
+            library.parkingLot ? "Parking" : nil,
+            library.roomRentals ? "Rooms" : nil
+        ].compactMap { $0 }
+        return ([library.address] + features).joined(separator: " · ")
+    }
+
+    private func riverDetail(_ river: RiverGaugeSummary) -> String? {
+        let pieces: [String?] = [
+            river.jamesFeet.map { String(format: "James %.2f ft", $0) },
+            river.geodeticMetric.map { String(format: "Geodetic %.2f m", $0) }
+        ]
+        let detail = pieces.compactMap { $0 }.joined(separator: " · ")
+        return detail.isEmpty ? nil : detail
     }
 }
 
@@ -995,171 +1077,6 @@ struct CivicContextCard: View {
             }
         } else {
             Text("Address-level civic boundary data is unavailable.")
-                .font(KrokvaTypography.bodySecondary)
-                .foregroundStyle(Color.cleanLabel2)
-        }
-    }
-}
-
-// MARK: - SchoolDivisionsCard
-
-struct SchoolDivisionsCard: View {
-    let context: AddressCivicContext?
-    let schools: [SchoolAmenity]
-    let schoolZone: SchoolSpeedLimit?
-    @State private var isExpanded = false
-
-    var body: some View {
-        CleanCard(padding: 0) {
-            VStack(spacing: 0) {
-                headerButton
-                if isExpanded {
-                    Divider()
-                    fullContent
-                        .padding(18)
-                }
-            }
-        }
-    }
-
-    private var headerButton: some View {
-        Button {
-            withAnimation(.spring(response: 0.32, dampingFraction: 0.82)) {
-                isExpanded.toggle()
-            }
-        } label: {
-            HStack(spacing: 10) {
-                Image(systemName: "graduationcap")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 30, height: 30)
-                    .background(Color.cleanIndigo, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("School divisions")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(Color.cleanLabel)
-                    if !isExpanded {
-                        Text(smallSummary)
-                            .font(.system(size: 13, weight: .semibold).monospacedDigit())
-                            .foregroundStyle(Color.cleanLabel2)
-                    }
-                }
-
-                Spacer(minLength: 0)
-
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(Color.cleanLabel3)
-                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
-            }
-            .padding(18)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var smallSummary: String {
-        guard let context else { return "School boundary unavailable" }
-        var parts: [String] = []
-        if let division = context.schoolDivision { parts.append(division) }
-        if let code = context.schoolDivisionCode { parts.append("#\(code)") }
-        if let ward = context.schoolDivisionWard { parts.append("Ward \(ward)") }
-        if let speed = schoolZone?.speedLimit { parts.append("Zone \(speed)") }
-        if !schools.isEmpty { parts.append("\(schools.count) nearby") }
-        return parts.isEmpty ? "School boundary unavailable" : parts.joined(separator: " · ")
-    }
-
-    @ViewBuilder
-    private var fullContent: some View {
-        if let context {
-            VStack(alignment: .leading, spacing: 14) {
-                Grid(horizontalSpacing: 12, verticalSpacing: 0) {
-                    GridRow {
-                        infoTile("Division", context.schoolDivision ?? "—")
-                        infoTile("Division no.", context.schoolDivisionCode.map { "#\($0)" } ?? "—")
-                    }
-                    GridRow {
-                        infoTile("School ward", context.schoolDivisionWard ?? "—")
-                        infoTile("Boundary", context.schoolDivisionBoundaryName ?? context.schoolDivision ?? "—")
-                    }
-                }
-
-                if let schoolZone {
-                    Divider().foregroundStyle(Color.cleanSep)
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("School zone").eyebrow(color: .cleanLabel3)
-                        Grid(horizontalSpacing: 12, verticalSpacing: 0) {
-                            GridRow {
-                                infoTile("Speed", schoolZone.speedLimit)
-                                infoTile("School", schoolZone.school)
-                            }
-                            GridRow {
-                                infoTile("Days", schoolZone.effectiveDays ?? "—")
-                                infoTile("Hours", schoolZone.effectiveTime ?? "—")
-                            }
-                        }
-                    }
-                }
-
-                if let website = context.schoolDivisionWebsite,
-                   let url = URL(string: website) {
-                    Link(destination: url) {
-                        HStack(spacing: 8) {
-                            Image(systemName: "safari")
-                                .font(.system(size: 12, weight: .semibold))
-                            Text(website)
-                                .font(KrokvaTypography.caption)
-                                .lineLimit(1)
-                            Spacer(minLength: 0)
-                            Image(systemName: "arrow.up.right")
-                                .font(.system(size: 10, weight: .bold))
-                        }
-                        .foregroundStyle(Color.cleanSky)
-                    }
-                }
-
-                if !schools.isEmpty {
-                    Divider().foregroundStyle(Color.cleanSep)
-
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("Nearby schools").eyebrow(color: .cleanLabel3)
-                            .padding(.bottom, 4)
-
-                        ForEach(Array(schools.prefix(5).enumerated()), id: \.element.id) { index, school in
-                            VStack(alignment: .leading, spacing: 3) {
-                                HStack(alignment: .firstTextBaseline, spacing: 8) {
-                                    Text(school.name)
-                                        .font(.system(size: 12.5, weight: .semibold))
-                                        .foregroundStyle(Color.cleanLabel)
-                                    Spacer(minLength: 0)
-                                    Text(school.distanceDescription)
-                                        .font(KrokvaTypography.monoSmall)
-                                        .foregroundStyle(Color.cleanLabel3)
-                                }
-                                Text(school.address)
-                                    .font(KrokvaTypography.caption)
-                                    .foregroundStyle(Color.cleanLabel3)
-                                Text([school.schoolType, school.grades].compactMap { $0 }.joined(separator: " · "))
-                                    .font(KrokvaTypography.caption)
-                                    .foregroundStyle(Color.cleanLabel3)
-                            }
-                            .padding(.vertical, 8)
-
-                            if index < min(schools.count, 5) - 1 {
-                                Divider().foregroundStyle(Color.cleanSep)
-                            }
-                        }
-                    }
-                } else {
-                    Text("School division comes from address boundary data. Nearby school locations are not available for this report yet.")
-                        .font(KrokvaTypography.caption)
-                        .foregroundStyle(Color.cleanLabel3)
-                }
-            }
-        } else {
-            Text("School division data is unavailable for this address.")
                 .font(KrokvaTypography.bodySecondary)
                 .foregroundStyle(Color.cleanLabel2)
         }

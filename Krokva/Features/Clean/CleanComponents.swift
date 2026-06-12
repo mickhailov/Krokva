@@ -177,10 +177,12 @@ struct PillBar: View {
             }
             .frame(height: 7)
 
-            Text("\(value)")
+            Text(value.formatted(.number))
                 .font(.system(size: 12, weight: .semibold).monospacedDigit())
                 .foregroundStyle(Color.cleanLabel3)
-                .frame(width: 30, alignment: .trailing)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+                .frame(minWidth: 30, alignment: .trailing)
         }
         .onAppear {
             withAnimation(.timingCurve(0.4, 0, 0.2, 1, duration: 0.9).delay(animationDelay)) {

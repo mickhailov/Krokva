@@ -6,8 +6,13 @@ struct HomeView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(ReportRouter.self) private var router
     @State private var viewModel = SearchViewModel()
+    @State private var searchTask: Task<Void, Never>? = nil
+    @State private var notFoundAddress: String? = nil
     @FocusState private var searchFocused: Bool
 
+    private var appVersion: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.0"
+    }
 
     var body: some View {
         NavigationStack {
@@ -45,7 +50,8 @@ struct HomeView: View {
                     LoadingScreenAnimation(
                         addressText: viewModel.query,
                         cityName: viewModel.detectedProvider?.displayName ?? "Winnipeg, MB",
-                        stage: viewModel.loadingStage
+                        stage: viewModel.loadingStage,
+                        onCancel: { cancelSearch() }
                     )
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))
                 }
@@ -71,6 +77,11 @@ struct HomeView: View {
                 .font(.system(size: 13, weight: .regular))
                 .foregroundStyle(Color.cleanLabel3)
                 .padding(.top, 4)
+
+            Text("v\(appVersion)")
+                .font(.system(size: 11, weight: .semibold))
+                .foregroundStyle(Color.cleanLabel.opacity(0.38))
+                .padding(.top, 8)
 
             Text("Search any address to instantly uncover permit history, zoning info, assessment data, and neighbourhood insights.")
                 .font(.system(size: 14, weight: .regular))
@@ -102,7 +113,7 @@ struct HomeView: View {
 
                     TextField("Street address", text: Binding(
                         get: { viewModel.query },
-                        set: { viewModel.updateQuery($0) }
+                        set: { notFoundAddress = nil; viewModel.updateQuery($0) }
                     ))
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Color.cleanLabel)
@@ -146,7 +157,38 @@ struct HomeView: View {
             if !viewModel.completions.isEmpty {
                 completionsDropdown
             }
+
+            // No-data banner
+            if let notFoundAddress {
+                notFoundBanner(notFoundAddress)
+            }
         }
+    }
+
+    private func notFoundBanner(_ address: String) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.cleanAmber)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("No records found")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(Color.cleanLabel)
+                Text("The city has no open data for \(address). Check the address and try again.")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Color.cleanLabel2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.horizontal, 16)
+        .padding(.vertical, 12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.cleanAmber.opacity(0.10))
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).stroke(Color.cleanAmber.opacity(0.3), lineWidth: 1))
+        .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
     private var completionsDropdown: some View {
@@ -155,6 +197,7 @@ struct HomeView: View {
                 Button {
                     viewModel.updateQuery(c.title + ", " + c.subtitle)
                     searchFocused = false
+                    runSearch()
                 } label: {
                     HStack(spacing: 12) {
                         Image(systemName: "mappin.circle")
@@ -164,9 +207,13 @@ struct HomeView: View {
                             Text(c.subtitle).font(.caption).foregroundStyle(Color.cleanLabel.opacity(0.55))
                         }
                         Spacer(minLength: 0)
+                        Image(systemName: "arrow.up.right")
+                            .font(.system(size: 12, weight: .bold))
+                            .foregroundStyle(Color.cleanLabel.opacity(0.35))
                     }
                     .padding(.vertical, 10)
                     .padding(.horizontal, 14)
+                    .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 if idx < min(viewModel.completions.count, 5) - 1 {
@@ -254,8 +301,17 @@ struct HomeView: View {
 
     private func runSearch() {
         searchFocused = false
-        Task {
+        notFoundAddress = nil
+        searchTask?.cancel()
+        searchTask = Task {
             guard let report = await viewModel.fetchReport() else { return }
+            if Task.isCancelled { return }
+            // The city has no data for this address — keep the user on Home so they can
+            // correct the address, rather than pushing them to an empty Report tab.
+            if report.addressNotFound {
+                notFoundAddress = report.address.displayAddress
+                return
+            }
             modelContext.insert(RecentSearch(address: report.address.displayAddress, cityID: report.providerID))
             router.pendingReport = report
         }
@@ -263,9 +319,22 @@ struct HomeView: View {
 
     private func openReport(for fav: SavedAddress) {
         viewModel.updateQuery(fav.address)
-        Task {
+        notFoundAddress = nil
+        searchTask?.cancel()
+        searchTask = Task {
             guard let report = await viewModel.fetchReport() else { return }
+            if Task.isCancelled { return }
+            if report.addressNotFound {
+                notFoundAddress = report.address.displayAddress
+                return
+            }
             router.pendingReport = report
         }
+    }
+
+    private func cancelSearch() {
+        searchTask?.cancel()
+        searchTask = nil
+        viewModel.cancelLoading()
     }
 }

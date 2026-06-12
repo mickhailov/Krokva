@@ -3,6 +3,9 @@ import Foundation
 class SocrataProvider {
     let domain: String
     let client: OpenDataClient
+    /// Tracks which report modules failed to load during the current report build, so cards
+    /// can distinguish a loaded-but-empty dataset from a database error.
+    let dataSourceHealth = DataSourceHealth()
 
     init(domain: String, client: OpenDataClient = OpenDataClient()) {
         self.domain = domain
@@ -20,6 +23,13 @@ class SocrataProvider {
     }
 
     func fetch(_ datasetID: String, queryItems: [URLQueryItem] = []) async throws -> [[String: Any]] {
-        try await client.getJSON(url: resourceURL(datasetID, queryItems: queryItems))
+        do {
+            return try await client.getJSON(url: resourceURL(datasetID, queryItems: queryItems))
+        } catch {
+            // A thrown request is a transport/HTTP failure (an empty result returns []), so
+            // attribute it to the module currently being fetched before rethrowing.
+            await dataSourceHealth.recordCurrentModuleFailure()
+            throw error
+        }
     }
 }

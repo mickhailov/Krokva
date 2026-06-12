@@ -13,7 +13,7 @@ struct RootTabView: View {
             NavigationStack {
                 SavedReportsView()
             }
-                .tabItem { Label("Report", systemImage: "doc.text.magnifyingglass") }
+                .tabItem { Label("Reports", systemImage: "doc.text.magnifyingglass") }
                 .tag(1)
 
             PropertyCompareView(selectedTab: $selection)

@@ -134,7 +134,7 @@ String tables live in `Krokva/Resources/*.lproj/Localizable.strings`. Supported 
 | Key | Value |
 |-----|-------|
 | Bundle ID | `ca.krokva.app` |
-| Version | `0.1.2` (set `MARKETING_VERSION` in `project.yml`) |
+| Version | `0.2.0` (set `MARKETING_VERSION` in `project.yml`) |
 | Build number | `CURRENT_PROJECT_VERSION` |
 | Device family | iPhone only (`TARGETED_DEVICE_FAMILY: "1"`) |
 | UI style | Light mode only |

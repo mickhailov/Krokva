@@ -281,8 +281,6 @@ struct HealthInlineContent: View {
 struct Service311InlineContent: View {
     let summary: ServiceRequestSummary
 
-    private let channelColors: [Color] = [.cleanSky, .cleanIndigo, .cleanAmber,
-                                          Color(hex: 0x10B981), .cleanRed]
     private let reasonColors: [Color] = [.cleanSky, .cleanIndigo, Color(hex: 0x0EA5E9),
                                          Color(hex: 0x10B981), .cleanAmber]
 
@@ -322,40 +320,6 @@ struct Service311InlineContent: View {
                 }
             }
 
-            // Channel breakdown
-            if !summary.channelBreakdown.isEmpty {
-                Divider().foregroundStyle(Color.cleanSep)
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("By channel").eyebrow(color: .cleanLabel3)
-                    let maxVal = summary.channelBreakdown.map(\.count).max() ?? 1
-                    ForEach(Array(summary.channelBreakdown.enumerated()), id: \.offset) { i, ch in
-                        HStack(spacing: 10) {
-                            Circle()
-                                .fill(channelColors[i % channelColors.count])
-                                .frame(width: 7, height: 7)
-                            Text(ch.incidentType)
-                                .font(.system(size: 12.5, weight: .medium))
-                                .foregroundStyle(Color.cleanLabel)
-                            Spacer()
-                            GeometryReader { geo in
-                                ZStack(alignment: .leading) {
-                                    Capsule().fill(Color.cleanTrack)
-                                    Capsule()
-                                        .fill(channelColors[i % channelColors.count])
-                                        .frame(width: maxVal > 0
-                                               ? geo.size.width * CGFloat(ch.count) / CGFloat(maxVal) : 0)
-                                }
-                            }
-                            .frame(width: 90, height: 6)
-                            Text("\(ch.count)")
-                                .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                                .foregroundStyle(Color.cleanLabel3)
-                                .frame(width: 34, alignment: .trailing)
-                        }
-                    }
-                }
-            }
-
             // Top reasons
             if !summary.topReasons.isEmpty {
                 Divider().foregroundStyle(Color.cleanSep)
@@ -363,8 +327,31 @@ struct Service311InlineContent: View {
                     Text("Top reasons").eyebrow(color: .cleanLabel3)
                     let maxVal = summary.topReasons.map(\.count).max() ?? 1
                     ForEach(Array(summary.topReasons.prefix(5).enumerated()), id: \.offset) { i, reason in
-                        PillBar(label: reason.incidentType, value: reason.count, maxValue: maxVal,
-                                color: reasonColors[i % reasonColors.count], animationDelay: Double(i) * 0.08)
+                        HStack(spacing: 10) {
+                            Circle()
+                                .fill(reasonColors[i % reasonColors.count])
+                                .frame(width: 7, height: 7)
+                            Text(reason.incidentType)
+                                .font(.system(size: 12.5, weight: .medium))
+                                .foregroundStyle(Color.cleanLabel)
+                                .lineLimit(1)
+                                .truncationMode(.tail)
+                            Spacer(minLength: 8)
+                            GeometryReader { geo in
+                                ZStack(alignment: .leading) {
+                                    Capsule().fill(Color.cleanTrack)
+                                    Capsule()
+                                        .fill(reasonColors[i % reasonColors.count])
+                                        .frame(width: maxVal > 0
+                                               ? geo.size.width * CGFloat(reason.count) / CGFloat(maxVal) : 0)
+                                }
+                            }
+                            .frame(width: 90, height: 6)
+                            Text("\(reason.count)")
+                                .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                                .foregroundStyle(Color.cleanLabel3)
+                                .frame(width: 34, alignment: .trailing)
+                        }
                     }
                 }
             }
