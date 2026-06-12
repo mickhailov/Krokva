@@ -7,6 +7,7 @@ struct FavoritesView: View {
     @State private var selectedReport: AddressReport?
     @State private var showReport = false
     @State private var viewModel = SearchViewModel()
+    @State private var searchTask: Task<Void, Never>?
 
     var body: some View {
         NavigationStack {
@@ -39,7 +40,8 @@ struct FavoritesView: View {
                     LoadingScreenAnimation(
                         addressText: viewModel.query,
                         cityName: viewModel.detectedProvider?.displayName ?? "Winnipeg, MB",
-                        stage: viewModel.loadingStage
+                        stage: viewModel.loadingStage,
+                        onCancel: { cancelLoading() }
                     )
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))
                 }
@@ -162,11 +164,19 @@ struct FavoritesView: View {
     // MARK: Navigation
 
     private func openReport(for fav: SavedAddress) {
+        searchTask?.cancel()
         viewModel.updateQuery(fav.address)
-        Task {
+        searchTask = Task {
+            defer { searchTask = nil }
             guard let report = await viewModel.fetchReport() else { return }
             selectedReport = report
             showReport = true
         }
+    }
+
+    private func cancelLoading() {
+        searchTask?.cancel()
+        searchTask = nil
+        viewModel.cancelLoading()
     }
 }

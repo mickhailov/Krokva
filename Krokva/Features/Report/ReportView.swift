@@ -51,9 +51,11 @@ struct ReportView: View {
         .toolbarBackground(.visible, for: .navigationBar)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Text("Address report")
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                Text(reportAddress)
+                    .font(.system(size: 15, weight: .semibold, design: .rounded))
                     .foregroundStyle(Color.cleanLabel)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
             if !addressNotFound {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -79,15 +81,8 @@ struct ReportView: View {
     }
 
     private var reportScroll: some View {
-        VStack(spacing: 0) {
-            stickyAddressBar
-                .padding(.horizontal, 20)
-                .padding(.top, 10)
-                .padding(.bottom, 8)
-                .background(Color.cleanBg.opacity(0.92))
-
-            ScrollView {
-                LazyVStack(spacing: 14) {
+        ScrollView {
+            LazyVStack(spacing: 14) {
                     if report.providerState == .comingSoon {
                         ComingSoonReportCard(report: report)
                     }
@@ -185,34 +180,9 @@ struct ReportView: View {
                     ReportMapCard(report: report)
 
                     SourcesCard(report: report)
-                }
-                .padding(20)
             }
+            .padding(20)
         }
-    }
-
-    private var stickyAddressBar: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "mappin.circle.fill")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(Color.cleanSky)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(reportAddress)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(Color.cleanLabel)
-                    .lineLimit(1)
-                Text(report.cityName)
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Color.cleanLabel3)
-                    .lineLimit(1)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(Color.cleanCard.opacity(0.94), in: Capsule())
-        .overlay(Capsule().stroke(Color.white.opacity(0.65), lineWidth: 1))
-        .shadow(color: Color.cleanLabel.opacity(0.07), radius: 10, x: 0, y: 4)
     }
 
     private var reportAddress: String {
@@ -474,8 +444,11 @@ struct SavedReportsView: View {
     @State private var selectedReport: AddressReport?
     @State private var isShowingReport = false
     @State private var loadingAddress: String?
+    @State private var loadingCityName = "Winnipeg, MB"
     @State private var loadingStage: ReportLoadingStage = .normalizing
+    @State private var loadingTask: Task<Void, Never>?
     @State private var refreshingAddress: String?
+    private let loadingStageDelay: UInt64 = 3_000_000_000
 
     var body: some View {
         ZStack {
@@ -542,10 +515,10 @@ struct SavedReportsView: View {
             if let loadingAddress {
                 LoadingScreenAnimation(
                     addressText: loadingAddress,
-                    cityName: "Winnipeg, MB",
-                    stage: loadingStage
+                    cityName: loadingCityName,
+                    stage: loadingStage,
+                    onCancel: { cancelLoadingReport() }
                 )
-                .ignoresSafeArea()
                 .transition(.opacity.combined(with: .scale(scale: 0.98)))
             }
         }
@@ -622,7 +595,7 @@ struct SavedReportsView: View {
 
     private func recentReportRow(_ recent: RecentSearch) -> some View {
         Button {
-            Task { await fetchRecentAndOpen(recent) }
+            startLoadingReport(address: recent.address, cityName: cityName(for: recent), updateSaved: nil)
         } label: {
             HStack(spacing: 12) {
                 ZStack {
@@ -767,15 +740,7 @@ struct SavedReportsView: View {
     }
 
     private func fetchRecentAndOpen(_ recent: RecentSearch) async {
-        guard loadingAddress == nil else { return }
-        loadingStage = .normalizing
-        loadingAddress = recent.address
-        defer { loadingAddress = nil }
-        let report = await ReportService().report(for: recent.address) { stage in
-            await MainActor.run { loadingStage = stage }
-        }
-        selectedReport = report
-        isShowingReport = true
+        await loadAndOpenReport(address: recent.address, cityName: cityName(for: recent), updateSaved: nil)
     }
 
     private func open(_ saved: SavedReport) {
@@ -783,22 +748,79 @@ struct SavedReportsView: View {
             selectedReport = report
             isShowingReport = true
         } else {
-            Task { await fetchAndOpen(saved) }
+            startLoadingReport(address: saved.address, cityName: saved.cityName, updateSaved: saved)
         }
     }
 
     private func fetchAndOpen(_ saved: SavedReport) async {
+        await loadAndOpenReport(address: saved.address, cityName: saved.cityName, updateSaved: saved)
+    }
+
+    private func startLoadingReport(address: String, cityName: String, updateSaved saved: SavedReport?) {
         guard loadingAddress == nil else { return }
+        loadingTask?.cancel()
         loadingStage = .normalizing
-        loadingAddress = saved.address
-        defer { loadingAddress = nil }
-        let report = await ReportService().report(for: saved.address) { stage in
-            await MainActor.run { loadingStage = stage }
+        loadingCityName = cityName
+        loadingAddress = address
+        loadingTask = Task {
+            await loadAndOpenReport(address: address, cityName: cityName, updateSaved: saved)
         }
-        saved.update(from: report)
-        try? modelContext.save()
+    }
+
+    private func loadAndOpenReport(address: String, cityName: String, updateSaved saved: SavedReport?) async {
+        guard loadingAddress == nil || loadingAddress == address else { return }
+        loadingStage = .normalizing
+        loadingCityName = cityName
+        loadingAddress = address
+        defer {
+            loadingAddress = nil
+            loadingTask = nil
+        }
+
+        async let reportTask = ReportService().report(for: address)
+        await playFixedLoadingSequence()
+        guard !Task.isCancelled else { return }
+        await setLoadingStage(.assembling)
+        try? await Task.sleep(nanoseconds: loadingStageDelay)
+        guard !Task.isCancelled else { return }
+
+        let report = await reportTask
+        guard !Task.isCancelled else { return }
+        if let saved {
+            saved.update(from: report)
+            try? modelContext.save()
+        }
         selectedReport = report
         isShowingReport = true
+    }
+
+    private func cancelLoadingReport() {
+        loadingTask?.cancel()
+        loadingTask = nil
+        loadingAddress = nil
+        loadingCityName = "Winnipeg, MB"
+        loadingStage = .normalizing
+    }
+
+    private func cityName(for recent: RecentSearch) -> String {
+        CityRegistry.shared.provider(for: recent.cityID)?.displayName ?? recent.cityID
+    }
+
+    private func playFixedLoadingSequence() async {
+        let preFinalStages = ReportLoadingStage.allCases.filter { $0 != .assembling }
+        for stage in preFinalStages {
+            if Task.isCancelled { return }
+            await setLoadingStage(stage)
+            try? await Task.sleep(nanoseconds: loadingStageDelay)
+        }
+    }
+
+    private func setLoadingStage(_ stage: ReportLoadingStage) async {
+        await MainActor.run {
+            withAnimation(.easeInOut(duration: 0.28)) {
+                loadingStage = stage
+            }
+        }
     }
 
     private func remove(_ saved: SavedReport) {

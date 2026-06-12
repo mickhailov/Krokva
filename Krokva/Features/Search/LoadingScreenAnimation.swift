@@ -88,18 +88,30 @@ struct LoadingScreenAnimation: View {
     // MARK: Header
 
     private var header: some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(Color.cleanSky)
-                .frame(width: 6, height: 6)
-                .scaleEffect(liveDot ? 1.0 : 0.55)
-                .opacity(liveDot ? 1.0 : 0.35)
-            Text("LOADING")
-                .font(.system(size: 10, weight: .heavy))
-                .tracking(1.6)
-                .foregroundStyle(Color.cleanLabel3)
+        HStack(spacing: 10) {
+            BrandMarkView(color: .cleanLabel, lineWidth: 2.2)
+                .frame(width: 24, height: 24)
+
+            Text("Krokva")
+                .font(.system(size: 18, weight: .bold))
+                .foregroundStyle(Color.cleanLabel)
+
+            Spacer(minLength: 12)
+
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(Color.cleanSky)
+                    .frame(width: 6, height: 6)
+                    .scaleEffect(liveDot ? 1.0 : 0.55)
+                    .opacity(liveDot ? 1.0 : 0.35)
+                Text("LOADING")
+                    .font(.system(size: 10, weight: .heavy))
+                    .tracking(1.6)
+                    .foregroundStyle(Color.cleanLabel3)
+            }
         }
         .frame(maxWidth: .infinity)
+        .padding(.horizontal, 20)
         .padding(.top, 20)
         .padding(.bottom, 8)
         .background(Color.cleanBg)
