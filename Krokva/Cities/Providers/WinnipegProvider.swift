@@ -3070,7 +3070,15 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
 
     private func parseDate(_ value: String?) -> Date? {
         guard let value else { return nil }
-        return ISO8601DateFormatter().date(from: value)
+        let fractional = ISO8601DateFormatter()
+        fractional.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = fractional.date(from: value) { return date }
+        if let date = ISO8601DateFormatter().date(from: value) { return date }
+
+        let socrataTimestamp = DateFormatter()
+        socrataTimestamp.locale = Locale(identifier: "en_US_POSIX")
+        socrataTimestamp.dateFormat = "yyyy-MM-dd'T'HH:mm:ss.SSS"
+        return socrataTimestamp.date(from: value)
     }
 
     private func yearOffset(_ offset: Int) -> Int {
