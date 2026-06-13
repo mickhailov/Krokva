@@ -6,8 +6,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.9"
-    CURRENT_PROJECT_VERSION: "4"
-    MARKETING_VERSION: "0.2.3"
+    CURRENT_PROJECT_VERSION: "5"
+    MARKETING_VERSION: "0.2.4"
 targets:
   Krokva:
     type: application
@@ -29,6 +29,11 @@ targets:
         NSLocationWhenInUseUsageDescription: Krokva uses location only when you choose to search near you.
         ERstatAPIKey: "$(esk_uL6OxzJHOAQzmR8q1SxaCtLG6wnGCo4HeEH9agp3)"
         UIUserInterfaceStyle: Light
+        NSAppTransportSecurity:
+          NSExceptionDomains:
+            16.52.129.61:
+              NSExceptionAllowsInsecureHTTPLoads: true
+              NSIncludesSubdomains: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ca.krokva.app

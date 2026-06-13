@@ -245,17 +245,17 @@ struct KrokvaSplashView: View {
 
     var body: some View {
         ZStack {
-            Color.krokvaNavy.ignoresSafeArea()
+            Color.white.ignoresSafeArea()
             VStack(spacing: 22) {
                 ZStack {
                     Circle()
-                        .stroke(Color.krokvaGold.opacity(0.14), lineWidth: 1)
+                        .stroke(Color.krokvaGold.opacity(0.18), lineWidth: 1)
                         .frame(width: 148, height: 148)
                         .scaleEffect(pulse ? 1.06 : 0.92)
-                        .opacity(pulse ? 0.25 : 0.9)
+                        .opacity(pulse ? 0.35 : 0.9)
                     Circle()
                         .trim(from: 0, to: 0.34)
-                        .stroke(Color.krokvaGold.opacity(0.65),
+                        .stroke(Color.krokvaGold.opacity(0.55),
                                 style: StrokeStyle(lineWidth: 3, lineCap: .round))
                         .frame(width: 124, height: 124)
                         .rotationEffect(.degrees(rotateHalo ? 360 : 0))
@@ -265,17 +265,17 @@ struct KrokvaSplashView: View {
                                 style: StrokeStyle(lineWidth: 10, lineCap: .round, lineJoin: .round))
                         .frame(width: 96, height: 96)
                         .scaleEffect(pulse ? 1.03 : 0.96)
-                        .shadow(color: Color.krokvaGold.opacity(0.35), radius: pulse ? 16 : 4)
+                        .shadow(color: Color.krokvaGold.opacity(0.25), radius: pulse ? 14 : 4)
                 }
                 Text("Krokva")
                     .font(KrokvaTypography.wordmark)
                     .tracking(1.2)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color.krokvaInk)
                     .opacity(revealText ? 1 : 0)
                     .offset(y: revealText ? 0 : 8)
                 Text("The foundation of every address.")
                     .font(.caption)
-                    .foregroundStyle(.white.opacity(0.62))
+                    .foregroundStyle(Color.krokvaInk3)
                     .opacity(revealText ? 1 : 0)
                     .offset(y: revealText ? 0 : 8)
             }

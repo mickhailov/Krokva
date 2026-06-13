@@ -7,15 +7,21 @@ class SocrataProvider {
     /// can distinguish a loaded-but-empty dataset from a database error.
     let dataSourceHealth = DataSourceHealth()
 
-    init(domain: String, client: OpenDataClient = OpenDataClient()) {
+    let scheme: String
+
+    init(domain: String, scheme: String = "https", client: OpenDataClient = OpenDataClient()) {
         self.domain = domain
+        self.scheme = scheme
         self.client = client
     }
 
     func resourceURL(_ datasetID: String, queryItems: [URLQueryItem] = []) throws -> URL {
         var components = URLComponents()
-        components.scheme = "https"
-        components.host = domain
+        components.scheme = scheme
+        // Split host and port if present (e.g. "16.52.129.61:8889")
+        let parts = domain.split(separator: ":", maxSplits: 1)
+        components.host = String(parts[0])
+        if parts.count == 2, let port = Int(parts[1]) { components.port = port }
         components.path = "/resource/\(datasetID).json"
         components.queryItems = queryItems
         guard let url = components.url else { throw OpenDataError.invalidURL }

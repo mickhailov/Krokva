@@ -50,6 +50,7 @@
 		A986BB87F5A793D2B25BD270 /* SelfInspectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A60F406E70F97E7F81F931C /* SelfInspectionView.swift */; };
 		B6BBED01EB36BCCD162172FE /* Service311View.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1676381B41A097942051EFCD /* Service311View.swift */; };
 		B8433B8AFDAD29A67D54A545 /* DataSourceHealth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ACFA09CFFCB70198757DA6D /* DataSourceHealth.swift */; };
+		C2B39E1DB6BD77B2A02C5F29 /* DataStatusService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79A15CC362BC7FAAE91D9207 /* DataStatusService.swift */; };
 		C50E03509CA1167594372E68 /* LoadingScreenAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 189159582EB5E4F5FF4C6FD2 /* LoadingScreenAnimation.swift */; };
 		C8FA2D5D29DF3ACEEBF7A79F /* CityDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA022CB7A47C4C9260F5D6B2 /* CityDataProvider.swift */; };
 		CB53429D374C4CC30CB3E734 /* WRHAWaitTimesClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0458BEF8DC7227A7F0CF9B0C /* WRHAWaitTimesClient.swift */; };
@@ -96,8 +97,9 @@
 		6A60F406E70F97E7F81F931C /* SelfInspectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SelfInspectionView.swift; sourceTree = "<group>"; };
 		6DB3C9838504936BE566FC91 /* HeroPropertyCard+Editorial.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HeroPropertyCard+Editorial.swift"; sourceTree = "<group>"; };
 		6FEEAB4689ACCBBCFB2D67AD /* ReportRating.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportRating.swift; sourceTree = "<group>"; };
-		74B574BD6B938B415BCED4E4 /* Krokva.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Krokva.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		74B574BD6B938B415BCED4E4 /* Krokva.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Krokva.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		769D61AFF41D9C47FF63D345 /* ReportRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportRouter.swift; sourceTree = "<group>"; };
+		79A15CC362BC7FAAE91D9207 /* DataStatusService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStatusService.swift; sourceTree = "<group>"; };
 		7A7885B55E9CFB81A846104D /* uk */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = uk; path = uk.lproj/Localizable.strings; sourceTree = "<group>"; };
 		7E3E48AAB8B62199429FE998 /* HealthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthView.swift; sourceTree = "<group>"; };
 		8ACFA09CFFCB70198757DA6D /* DataSourceHealth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataSourceHealth.swift; sourceTree = "<group>"; };
@@ -113,7 +115,7 @@
 		AB000B3A21C51A38EEDB7EFA /* HomeView+Editorial.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "HomeView+Editorial.swift"; sourceTree = "<group>"; };
 		AB695AF5864B7C93A970E471 /* CompareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompareView.swift; sourceTree = "<group>"; };
 		B2721C378AB3D61C4A836A13 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
-		B6E1A69646C041B3CFBD6ABE /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		B6E1A69646C041B3CFBD6ABE /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		B7F1905B4B6739B2C6F2E50C /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		BB625FD5DEE14E21C60EFF75 /* PropertyFactsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PropertyFactsCard.swift; sourceTree = "<group>"; };
 		BC1194C7694F1F34C41D90AB /* KrokvaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KrokvaApp.swift; sourceTree = "<group>"; };
@@ -279,6 +281,7 @@
 			isa = PBXGroup;
 			children = (
 				8ACFA09CFFCB70198757DA6D /* DataSourceHealth.swift */,
+				79A15CC362BC7FAAE91D9207 /* DataStatusService.swift */,
 				06E7850784CC851E7953DF39 /* ERstatClient.swift */,
 				FBF242F3724ED06A3A624C9F /* OpenDataClient.swift */,
 				0458BEF8DC7227A7F0CF9B0C /* WRHAWaitTimesClient.swift */,
@@ -434,6 +437,8 @@
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
 				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+				};
 			};
 			buildConfigurationList = DF7482B7967A242CC3206BF8 /* Build configuration list for PBXProject "Krokva" */;
 			developmentRegion = en;
@@ -489,6 +494,7 @@
 				3FD5B20A38138C0D34DD0AF6 /* CleanComponents.swift in Sources */,
 				83A0D44A8E95083ACDC72938 /* CompareView.swift in Sources */,
 				B8433B8AFDAD29A67D54A545 /* DataSourceHealth.swift in Sources */,
+				C2B39E1DB6BD77B2A02C5F29 /* DataStatusService.swift in Sources */,
 				94FC36F08FDE36337E9A6BF2 /* ERstatClient.swift in Sources */,
 				5FB2B2626CBF34527D129349 /* FavoritesView.swift in Sources */,
 				1F896D2A04E651490D6BA2ED /* GlassSurfaces.swift in Sources */,
@@ -583,7 +589,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -602,7 +608,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.2.3;
+				MARKETING_VERSION = 0.2.4;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -648,7 +654,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -661,7 +667,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.2.3;
+				MARKETING_VERSION = 0.2.4;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -678,7 +684,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = 53DNVZWMD3;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				ERSTAT_API_KEY = "";
 				INFOPLIST_FILE = Krokva/Resources/Info.plist;
@@ -698,7 +703,6 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				DEVELOPMENT_ASSET_PATHS = "";
-				DEVELOPMENT_TEAM = 53DNVZWMD3;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
 				ERSTAT_API_KEY = "";
 				INFOPLIST_FILE = Krokva/Resources/Info.plist;

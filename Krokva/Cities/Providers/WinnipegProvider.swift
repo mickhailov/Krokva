@@ -109,7 +109,7 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
     let implementationState: ProviderImplementationState = .live
 
     init() {
-        super.init(domain: "data.winnipeg.ca")
+        super.init(domain: "16.52.129.61:8889", scheme: "http")
     }
 
     func fetchReport(for address: NormalizedAddress) async -> AddressReport {

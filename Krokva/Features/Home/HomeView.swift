@@ -9,6 +9,7 @@ struct HomeView: View {
     @State private var searchTask: Task<Void, Never>? = nil
     @State private var notFoundAddress: String? = nil
     @FocusState private var searchFocused: Bool
+    @StateObject private var dataStatus = DataStatusService()
 
     private var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.0"
@@ -90,8 +91,52 @@ struct HomeView: View {
                 .lineSpacing(3)
                 .padding(.horizontal, 38)
                 .padding(.top, 14)
+
+            dataStatusBadge
+                .padding(.top, 16)
         }
         .frame(maxWidth: .infinity)
+        .task { dataStatus.refresh() }
+    }
+
+    @ViewBuilder
+    private var dataStatusBadge: some View {
+        if let s = dataStatus.status {
+            HStack(spacing: 6) {
+                Image(systemName: "cylinder.split.1x2.fill")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Color.cleanSky)
+                Text(badgeText(s))
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(Color.cleanLabel.opacity(0.55))
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 5)
+            .background(Color.cleanSky.opacity(0.08))
+            .clipShape(Capsule())
+        }
+    }
+
+    private func badgeText(_ s: DataStatus) -> String {
+        let rows = formatCount(s.totalRows)
+        if let date = s.lastUpdated {
+            let age = ageString(date)
+            return "Analyzing \(rows) records · Updated \(age)"
+        }
+        return "Analyzing \(rows) records"
+    }
+
+    private func formatCount(_ n: Int) -> String {
+        if n >= 1_000_000 { return String(format: "%.1fM", Double(n) / 1_000_000) }
+        if n >= 1_000 { return String(format: "%.0fK", Double(n) / 1_000) }
+        return "\(n)"
+    }
+
+    private func ageString(_ date: Date) -> String {
+        let h = Int(-date.timeIntervalSinceNow / 3600)
+        if h < 1 { return "just now" }
+        if h < 24 { return "\(h)h ago" }
+        return "\(h / 24)d ago"
     }
 
     // MARK: - Search
