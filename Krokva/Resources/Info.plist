@@ -24,16 +24,8 @@
 	<string>$(esk_uL6OxzJHOAQzmR8q1SxaCtLG6wnGCo4HeEH9agp3)</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
-		<key>NSExceptionDomains</key>
-		<dict>
-			<key>16.52.129.61</key>
-			<dict>
-				<key>NSExceptionAllowsInsecureHTTPLoads</key>
-				<true/>
-				<key>NSIncludesSubdomains</key>
-				<false/>
-			</dict>
-		</dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
 	</dict>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Krokva uses location only when you choose to search near you.</string>

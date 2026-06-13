@@ -30,10 +30,7 @@ targets:
         ERstatAPIKey: "$(esk_uL6OxzJHOAQzmR8q1SxaCtLG6wnGCo4HeEH9agp3)"
         UIUserInterfaceStyle: Light
         NSAppTransportSecurity:
-          NSExceptionDomains:
-            16.52.129.61:
-              NSExceptionAllowsInsecureHTTPLoads: true
-              NSIncludesSubdomains: false
+          NSAllowsArbitraryLoads: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ca.krokva.app
