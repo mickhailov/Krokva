@@ -89,9 +89,39 @@ project.yml                # XcodeGen project definition
 5. Set `implementationState` to `.comingSoon` until data is validated; flip to `.live` when ready.
 6. Add licence attribution text to `SettingsView` if the portal requires it.
 
-## Winnipeg Data Sources
+## Winnipeg Data Mirror
 
-All Winnipeg data is fetched from `https://data.winnipeg.ca/resource/{dataset}.json`.
+The iOS app reads Winnipeg data from the self-hosted Socrata-compatible mirror:
+
+```text
+http://3.99.123.190:8889/resource/{dataset}.json
+```
+
+The mirror lives on AWS Lightsail and serves City of Winnipeg Open Data from local
+PostgreSQL 16 + PostGIS tables. This avoids hitting `data.winnipeg.ca` during every
+report build and keeps address reports responsive even when the upstream portal is
+slow or temporarily returns `503`.
+
+Runtime wiring:
+
+- `WinnipegProvider` points Socrata reads at `3.99.123.190:8889`.
+- `DataStatusService` reads `http://3.99.123.190:8889/api/status`.
+- `OpenDataClient` uses a 30-second timeout because some aggregate/geospatial mirror
+  queries can be slower during cold cache or maintenance windows.
+- Report cards distinguish empty data from fetch failures through `DataSourceHealth`.
+
+Server maintenance:
+
+- Daily delta sync runs at `03:00 UTC` / `10:00 PM CDT`.
+- Weekly full sync runs Sunday at `02:00 UTC`.
+- Sync retries transient upstream `429/500/502/503/504`, timeout, and connection errors.
+- Each successful dataset sync runs `ANALYZE` for that table.
+- Final maintenance can run `ANALYZE` across all `wnpg_%` tables.
+- Hot report paths are indexed for assessment lookup, 311 aggregations, traffic
+  street lookups, and nearby PostGIS queries.
+
+The canonical upstream source remains City of Winnipeg Open Data:
+`https://data.winnipeg.ca/resource/{dataset}.json`.
 
 | Dataset | ID |
 |---|---|
@@ -134,7 +164,7 @@ String tables live in `Krokva/Resources/*.lproj/Localizable.strings`. Supported 
 | Key | Value |
 |-----|-------|
 | Bundle ID | `ca.krokva.app` |
-| Version | `0.2.0` (set `MARKETING_VERSION` in `project.yml`) |
+| Version | `0.2.5` (set `MARKETING_VERSION` in `project.yml`) |
 | Build number | `CURRENT_PROJECT_VERSION` |
 | Device family | iPhone only (`TARGETED_DEVICE_FAMILY: "1"`) |
 | UI style | Light mode only |
