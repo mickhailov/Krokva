@@ -10,8 +10,10 @@ final class OpenDataClient {
 
     init() {
         let configuration = URLSessionConfiguration.default
-        configuration.timeoutIntervalForRequest = 10
-        configuration.timeoutIntervalForResource = 10
+        // The self-hosted Socrata-compatible mirror can take 10-20 seconds for
+        // aggregate/geospatial queries while it warms up or lacks city indexes.
+        configuration.timeoutIntervalForRequest = 30
+        configuration.timeoutIntervalForResource = 30
         self.session = URLSession(configuration: configuration)
     }
 

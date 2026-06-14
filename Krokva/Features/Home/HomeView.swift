@@ -10,6 +10,8 @@ struct HomeView: View {
     @State private var notFoundAddress: String? = nil
     @FocusState private var searchFocused: Bool
     @StateObject private var dataStatus = DataStatusService()
+    @State private var animatedRows: Double = 0
+    @State private var animatedTables: Double = 0
 
     private var appVersion: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.2.0"
@@ -97,46 +99,46 @@ struct HomeView: View {
         }
         .frame(maxWidth: .infinity)
         .task { dataStatus.refresh() }
+        .onChange(of: dataStatus.status) { _, s in
+            guard let s else { return }
+            animatedRows = 0; animatedTables = 0
+            withAnimation(.easeOut(duration: 4)) {
+                animatedRows = Double(s.totalRows)
+                animatedTables = Double(s.tableCount)
+            }
+        }
     }
 
     @ViewBuilder
     private var dataStatusBadge: some View {
         if let s = dataStatus.status {
-            HStack(spacing: 6) {
-                Image(systemName: "cylinder.split.1x2.fill")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(Color.cleanSky)
-                Text(badgeText(s))
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Color.cleanLabel.opacity(0.55))
+            VStack(spacing: 4) {
+                HStack(spacing: 0) {
+                    Text("Database contain ")
+                    AnimatedNumber(value: animatedRows)
+                        .fontWeight(.semibold)
+                    Text(" records in ")
+                    AnimatedNumber(value: animatedTables)
+                        .fontWeight(.semibold)
+                    Text(" databases.")
+                }
+                .font(.system(size: 13, weight: .regular))
+                .foregroundStyle(Color.cleanLabel.opacity(0.55))
+
+                if let date = s.lastUpdated {
+                    Text("Last update on \(statusDateString(date)).")
+                        .font(.system(size: 11, weight: .regular))
+                        .foregroundStyle(Color.cleanLabel.opacity(0.35))
+                }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 5)
-            .background(Color.cleanSky.opacity(0.08))
-            .clipShape(Capsule())
+            .multilineTextAlignment(.center)
         }
     }
 
-    private func badgeText(_ s: DataStatus) -> String {
-        let rows = formatCount(s.totalRows)
-        if let date = s.lastUpdated {
-            let age = ageString(date)
-            return "Analyzing \(rows) records · Updated \(age)"
-        }
-        return "Analyzing \(rows) records"
-    }
-
-    private func formatCount(_ n: Int) -> String {
-        if n >= 1_000_000 { return String(format: "%.1fM", Double(n) / 1_000_000) }
-        if n >= 1_000 { return String(format: "%.0fK", Double(n) / 1_000) }
-        return "\(n)"
-    }
-
-    private func ageString(_ date: Date) -> String {
-        let h = Int(-date.timeIntervalSinceNow / 3600)
-        if h < 1 { return "just now" }
-        if h < 24 { return "\(h)h ago" }
-        return "\(h / 24)d ago"
+    private func statusDateString(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "MMM d, yyyy"
+        return f.string(from: date)
     }
 
     // MARK: - Search
@@ -381,5 +383,18 @@ struct HomeView: View {
         searchTask?.cancel()
         searchTask = nil
         viewModel.cancelLoading()
+    }
+}
+
+private struct AnimatedNumber: View, Animatable {
+    var value: Double
+
+    var animatableData: Double {
+        get { value }
+        set { value = newValue }
+    }
+
+    var body: some View {
+        Text(Int(value).formatted(.number))
     }
 }

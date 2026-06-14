@@ -1,6 +1,6 @@
 import Foundation
 
-struct DataStatus: Sendable {
+struct DataStatus: Sendable, Equatable {
     let totalRows: Int
     let lastUpdated: Date?
     let tableCount: Int
@@ -10,7 +10,7 @@ struct DataStatus: Sendable {
 final class DataStatusService: ObservableObject {
     @Published var status: DataStatus?
 
-    private static let url = URL(string: "http://16.52.129.61:8889/api/status")!
+    private static let url = URL(string: "http://3.99.123.190:8889/api/status")!
 
     func refresh() {
         Task {
@@ -21,7 +21,7 @@ final class DataStatusService: ObservableObject {
 
     private func fetch() async throws -> DataStatus {
         let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 5
+        config.timeoutIntervalForRequest = 15
         let session = URLSession(configuration: config)
         let (data, _) = try await session.data(from: Self.url)
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
