@@ -135,6 +135,50 @@ The canonical upstream source remains City of Winnipeg Open Data:
 | WFPS Call Logs | `yg42-q284` |
 | Naloxone Administrations | `qd6b-q49i` |
 | Substance Use | `6x82-bz5y` |
+| Trade Permits | `urbd-qygv` |
+| Park Asset Inventory | `dk7c-zxyd` |
+| Parks and Open Space | `tx3d-pfxq` |
+| Transit On-Time Performance | `gp3k-am4u` |
+| Transit Pass-ups | `mer2-irmb` |
+| Transit Passenger Activity | `bv6q-du26` |
+| By-Law Investigations | `eye3-guud` |
+| Detailed Development Permits | `w842-cdeb` |
+| River Water Levels | `tgrf-v2zc` |
+| Libraries | `bt47-pkkm` |
+| Neighbourhoods | `8k6x-xxsy` |
+| 311 Service Requests | `u7f6-5326` |
+| Public Notices | `gnxp-9hpt` |
+| School Zone Signage | `5298-dhjx` |
+| School Divisions | `capx-4rye` |
+| Recreation Complexes | `bmi4-vvs2` |
+| LeisureONLINE Activities | `a2fq-ufu6` |
+| Snow Clearing / Winter Parking Bans | `g3p4-h83y` |
+| Plow Zones | `39ur-higg` |
+| Waste Collection Days | `6rcy-9uik` |
+| Business Licenses | `d5k3-sfzx` |
+| Seasonal Patios | `cd49-nk9h` |
+| Water Quality Test Results | `a5ix-gnny` |
+| Midblock Traffic Counts | `buvf-b9wp` |
+| Permanent Traffic Count Stations | `46sc-6jrs` |
+| Census — Population By Age | `hiqy-dd38` |
+| Census — Households | `nmk5-uwfw` |
+| Census — Language | `wgmu-db32` |
+| Census — Mode of Transportation | `ijxa-tybv` |
+| Census — Citizenship & Immigration | `g66p-wwve` |
+| Higher Poverty Areas (2021 Census) | `ige9-5jxk` |
+| Electoral Wards | `t4cg-yaxs` |
+| Community Committees | `dvqz-nw8j` |
+| Swimming Pools (Indoor / Outdoor / Wading / Spray) | `rnpn-3qku` / `dqfv-rh5e` / `npmi-43db` / `uwfj-6mt2` |
+| Public Wi-Fi Sites | `rzm8-wh6x` |
+| Off-Leash Dog Areas (via Park Assets) | `dk7c-zxyd` |
+| Vacant Property Fires | `tnm5-yaem` |
+| Rooming House Enforcement | `vk2f-xwp7` |
+| Rush-Hour Towing | `8phf-9kb6` |
+| Paid Parking | `rmsh-97k4` |
+| Capital Projects | `9xar-v8xm` |
+| Public AEDs | `osm-aeds` |
+| Health Protection Facility Closures | `fxcw-yyy2` |
+| WPS Crime Maps | `d920a305d0024913a64e61ee1ef1d2a3` (ArcGIS) |
 
 Contains information licensed under the Open Government Licence — Winnipeg.
 
@@ -164,7 +208,7 @@ String tables live in `Krokva/Resources/*.lproj/Localizable.strings`. Supported 
 | Key | Value |
 |-----|-------|
 | Bundle ID | `ca.krokva.app` |
-| Version | `0.2.5` (set `MARKETING_VERSION` in `project.yml`) |
+| Version | `0.2.7` (set `MARKETING_VERSION` in `project.yml`) |
 | Build number | `CURRENT_PROJECT_VERSION` |
 | Device family | iPhone only (`TARGETED_DEVICE_FAMILY: "1"`) |
 | UI style | Light mode only |
