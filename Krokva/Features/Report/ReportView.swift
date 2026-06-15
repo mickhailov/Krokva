@@ -6,6 +6,10 @@ import SwiftUI
 struct ReportView: View {
     @State private var currentReport: AddressReport
     @State private var permitHistoryRefreshToken = UUID()
+    // Hoisted so the Investment-Momentum analytics index can use the property's
+    // real on-property permit record (the Hero/permit cards keep their own VMs,
+    // which share the same SwiftData-backed cache).
+    @State private var permitVM = PermitHistoryViewModel()
     @State private var isRetrying = false
     @State private var showSaveSheet = false
     @Environment(\.modelContext) private var modelContext
@@ -90,9 +94,18 @@ struct ReportView: View {
                     // ── A. Property & valuation ──────────────────────────────
                     // Identity first: what is this place, what does it cost, key facts.
                     HeroPropertyCard(report: report)
+
+                    // Analytics band: composite indices, year-over-year trends,
+                    // and comparative percentiles derived from the report data.
+                    let analytics = ReportAnalytics.compute(report: report, permitHistory: permitVM.result)
+                    CompositeIndicesCard(analytics: analytics)
+                    TrendsCard(analytics: analytics)
+                    ComparativeCard(analytics: analytics)
+
                     PropertyFinancialCard(property: report.property)
                     PropertyFactsCard(property: report.property, sourceFailed: report.moduleFailed(.property))
                     CivicContextCard(summary: report.civicContext, sourceFailed: report.moduleFailed(.civicContext))
+                    RentalMarketCard(summary: report.rentalMarket)
 
                     // ── B. Safety & health ───────────────────────────────────
                     // The questions buyers/renters fear most, surfaced high.
@@ -154,10 +167,13 @@ struct ReportView: View {
                     VacantOrdersCard(orders: report.vacantOrders, sourceFailed: report.moduleFailed(.vacantOrders))
                     DevelopmentContextCard(summary: report.development, sourceFailed: report.moduleFailed(.development))
                     PlanningContextCard(summary: report.planning, sourceFailed: report.moduleFailed(.planning))
+                    HeritageCard(summary: report.heritage, sourceFailed: report.moduleFailed(.heritage))
                     ShortTermRentalsCard(summary: report.shortTermRentals, sourceFailed: report.moduleFailed(.shortTermRentals))
                     BylawInvestigationsCard(summary: report.bylaw, sourceFailed: report.moduleFailed(.bylaw))
 
                     // ── G. Environment, city works & reference ───────────────
+                    MosquitoCard(summary: report.mosquito, sourceFailed: report.moduleFailed(.mosquito))
+                    RadonCard(summary: report.radon)
                     WaterQualityCard(summary: report.waterQuality, sourceFailed: report.moduleFailed(.waterQuality))
                     CapitalWorksCard(summary: report.capitalWorks, sourceFailed: report.moduleFailed(.capitalWorks))
                     FacilityClosuresCard(summary: report.facilityClosures, sourceFailed: report.moduleFailed(.facilityClosures))
@@ -165,6 +181,12 @@ struct ReportView: View {
                     SourcesCard(report: report)
             }
             .padding(20)
+        }
+        .task(id: report.id) {
+            await permitVM.load(report: report, modelContext: modelContext)
+        }
+        .onChange(of: permitHistoryRefreshToken) {
+            Task { await permitVM.load(report: report, modelContext: modelContext, forceRefresh: true) }
         }
     }
 

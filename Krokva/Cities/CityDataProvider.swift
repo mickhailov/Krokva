@@ -81,6 +81,10 @@ struct CityDatasets {
     var infrastructureFunding: String? = nil
     // Health protection
     var facilityClosures: String? = nil
+
+    // Heritage & insect control
+    var heritage: String? = nil
+    var mosquitoTraps: String? = nil
 }
 
 struct FieldMappings {

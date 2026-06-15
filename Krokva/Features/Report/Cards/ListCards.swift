@@ -815,6 +815,13 @@ struct PlanningContextCard: View {
                                 .font(KrokvaTypography.caption)
                                 .foregroundStyle(Color.cleanLabel3)
                         }
+                        if let intent = summary.zoningIntent, !intent.isEmpty {
+                            Text(intent)
+                                .font(KrokvaTypography.bodySecondary)
+                                .foregroundStyle(Color.cleanLabel2)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.top, 2)
+                        }
                     }
                 }
 

@@ -921,3 +921,207 @@ struct FacilityClosuresCard: View {
         )
     }
 }
+
+// MARK: - Heritage / historical resources
+
+struct HeritageCard: View {
+    let summary: HeritageSummary?
+    var sourceFailed = false
+
+    var body: some View {
+        guard let summary, summary.subjectDesignation != nil || !summary.nearby.isEmpty else {
+            return AnyView(sourceFailed
+                ? AnyView(ModuleErrorCard(title: "Heritage & historical", systemImage: "building.columns", iconColor: .cleanIndigo,
+                                          message: "Database error loading heritage register."))
+                : AnyView(EmptyView()))
+        }
+        return AnyView(
+            ReportCard(title: "Heritage & historical", systemImage: "building.columns", iconColor: .cleanIndigo,
+                       subtitle: "City of Winnipeg Historical Resources") {
+                VStack(alignment: .leading, spacing: 12) {
+                    if let subject = summary.subjectDesignation {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("THIS ADDRESS IS A LISTED HERITAGE RESOURCE").eyebrow(color: .cleanIndigo)
+                            heritageRow(subject, emphasize: true)
+                            Text("Listed buildings have rules on alterations and demolition — confirm with the City before renovating.")
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.cleanLabel2)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    if !summary.nearby.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text(summary.subjectDesignation == nil ? "Heritage buildings nearby" : "Also nearby")
+                                .eyebrow(color: .cleanLabel3)
+                            ForEach(summary.nearby) { building in
+                                heritageRow(building, emphasize: false)
+                            }
+                        }
+                    }
+                }
+            }
+        )
+    }
+
+    private func heritageRow(_ building: HeritageBuilding, emphasize: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(building.name)
+                    .font(.system(size: emphasize ? 15 : 13.5, weight: .semibold))
+                    .foregroundStyle(Color.cleanLabel)
+                    .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: 0)
+                if let grade = building.grade {
+                    Text("Grade \(grade)")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(Color.cleanIndigo)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Color.cleanIndigo.opacity(0.12), in: Capsule())
+                }
+            }
+            HStack(spacing: 8) {
+                if let address = building.address {
+                    Text(address)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.cleanLabel2)
+                }
+                if let year = building.constructionYear, !year.isEmpty {
+                    Text("Built \(year)")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.cleanLabel3)
+                }
+                Spacer(minLength: 0)
+                if !emphasize, let distance = building.distanceDescription {
+                    Text(distance)
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.cleanLabel3)
+                }
+            }
+            if let listType = building.listType, !listType.isEmpty {
+                Text(listType)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(Color.cleanLabel3)
+            }
+        }
+    }
+}
+
+// MARK: - Mosquito control
+
+struct MosquitoCard: View {
+    let summary: MosquitoSummary?
+    var sourceFailed = false
+
+    var body: some View {
+        guard let summary else {
+            return AnyView(sourceFailed
+                ? AnyView(ModuleErrorCard(title: "Mosquito control", systemImage: "ant", iconColor: .cleanAmber,
+                                          message: "Database error loading mosquito trap data."))
+                : AnyView(EmptyView()))
+        }
+        let dateLabel = summary.countDate.map { $0.formatted(date: .abbreviated, time: .omitted) }
+        return AnyView(
+            ReportCard(title: "Mosquito control", systemImage: "ant", iconColor: .cleanAmber,
+                       subtitle: dateLabel.map { "Latest trap count · \($0)" } ?? "Adult mosquito trap counts") {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(spacing: 10) {
+                        StatTile(label: "\(summary.quadrant) quadrant", value: summary.quadrantCount.map { "\($0)" } ?? "—")
+                        StatTile(label: "City-wide average", value: summary.cityWideAverage.map { "\($0)" } ?? "—")
+                    }
+                    Text("Average mosquitoes per trap. The City considers nuisance fogging when counts climb to about 100 per trap.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.cleanLabel2)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if summary.foggingThresholdReached {
+                        Label("Counts are near the level where fogging is typically considered.", systemImage: "exclamationmark.triangle.fill")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(Color.cleanAmber)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Text("Residents can register a fogging buffer zone around their home through the City’s Insect Control branch.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.cleanLabel3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        )
+    }
+}
+
+// MARK: - Radon potential
+
+struct RadonCard: View {
+    let summary: RadonSummary?
+
+    var body: some View {
+        guard let summary else { return AnyView(EmptyView()) }
+        return AnyView(
+            ReportCard(title: "Radon potential", systemImage: "aqi.medium", iconColor: .cleanSky,
+                       subtitle: "\(summary.region) regional reference") {
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack(alignment: .firstTextBaseline, spacing: 6) {
+                        Text("\(summary.percentAboveGuideline)%")
+                            .font(.system(.title2, design: .rounded, weight: .semibold))
+                            .foregroundStyle(Color.cleanLabel)
+                        Text("of tested homes were at or above Health Canada’s 200 Bq/m³ guideline.")
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.cleanLabel2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Text("This is a regional figure, not a reading for this address — radon varies house to house. The only way to know is a long-term test.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.cleanLabel3)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(summary.surveyName)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(Color.cleanLabel3)
+                }
+            }
+        )
+    }
+}
+
+// MARK: - Rental market (CMHC)
+
+struct RentalMarketCard: View {
+    let summary: RentalMarketSummary?
+
+    var body: some View {
+        guard let summary, !summary.brackets.isEmpty else { return AnyView(EmptyView()) }
+        return AnyView(
+            ReportCard(title: "Rental market", systemImage: "key", iconColor: .cleanIndigo,
+                       subtitle: "\(summary.area) · CMHC \(String(summary.year))") {
+                VStack(alignment: .leading, spacing: 12) {
+                    if let vacancy = summary.vacancyRate {
+                        HStack(spacing: 6) {
+                            Text(String(format: "%.1f%%", vacancy))
+                                .font(.system(.title3, design: .rounded, weight: .semibold))
+                                .foregroundStyle(Color.cleanLabel)
+                            Text("apartment vacancy rate")
+                                .font(.system(size: 12))
+                                .foregroundStyle(Color.cleanLabel2)
+                        }
+                    }
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Average rent").eyebrow(color: .cleanLabel3)
+                        ForEach(summary.brackets) { bracket in
+                            HStack {
+                                Text(bracket.bedrooms)
+                                    .font(.system(size: 13, weight: .medium))
+                                    .foregroundStyle(Color.cleanLabel2)
+                                Spacer(minLength: 16)
+                                Text(bracket.averageRent.map { cadCurrency($0) } ?? "—")
+                                    .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                                    .foregroundStyle(Color.cleanLabel)
+                            }
+                        }
+                    }
+                    Text("Metro-wide averages from CMHC’s annual Rental Market Survey — not specific to this address.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Color.cleanLabel3)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+        )
+    }
+}

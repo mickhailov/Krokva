@@ -178,6 +178,8 @@ The canonical upstream source remains City of Winnipeg Open Data:
 | Capital Projects | `9xar-v8xm` |
 | Public AEDs | `osm-aeds` |
 | Health Protection Facility Closures | `fxcw-yyy2` |
+| Historical Resources (heritage register) | `ptpx-kgiu` |
+| Daily Adult Mosquito Trap Data | `du7c-8488` |
 | WPS Crime Maps | `d920a305d0024913a64e61ee1ef1d2a3` (ArcGIS) |
 
 Contains information licensed under the Open Government Licence — Winnipeg.

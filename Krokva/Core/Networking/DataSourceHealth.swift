@@ -38,6 +38,8 @@ enum ReportModule: String, Codable, CaseIterable, Sendable {
     case waterQuality
     case capitalWorks
     case facilityClosures
+    case heritage
+    case mosquito
 }
 
 /// Task-local marker for the module currently being fetched. Set around each `async let`

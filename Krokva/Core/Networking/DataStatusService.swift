@@ -29,8 +29,18 @@ final class DataStatusService: ObservableObject {
         let count = json?["table_count"] as? Int ?? 0
         var date: Date?
         if let iso = json?["last_updated"] as? String {
-            date = ISO8601DateFormatter().date(from: iso)
+            date = Self.parseISODate(iso)
         }
         return DataStatus(totalRows: rows, lastUpdated: date, tableCount: count)
+    }
+
+    /// The status API returns timestamps with fractional seconds
+    /// (e.g. "2026-06-15T01:39:10.379874+00:00"), which a default
+    /// ISO8601DateFormatter rejects. Try the fractional variant first.
+    private static func parseISODate(_ iso: String) -> Date? {
+        let withFraction = ISO8601DateFormatter()
+        withFraction.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = withFraction.date(from: iso) { return date }
+        return ISO8601DateFormatter().date(from: iso)
     }
 }

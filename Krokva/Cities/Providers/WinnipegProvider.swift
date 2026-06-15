@@ -132,7 +132,9 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         paidParking: "rmsh-97k4",
         capitalProjects: "9xar-v8xm",
         infrastructureFunding: "rwrz-d7hc",
-        facilityClosures: "fxcw-yyy2"
+        facilityClosures: "fxcw-yyy2",
+        heritage: "ptpx-kgiu",
+        mosquitoTraps: "du7c-8488"
     )
     let fieldMappings = FieldMappings(
         assessment: [
@@ -209,6 +211,8 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         async let waterQuality = inModule(.waterQuality) { await self.fetchWaterQuality() }
         async let capitalWorks = inModule(.capitalWorks) { await self.fetchCapitalWorks(address: address, property: assessment) }
         async let facilityClosures = inModule(.facilityClosures) { await self.fetchFacilityClosures(address: address, property: assessment) }
+        async let heritage = inModule(.heritage) { await self.fetchHeritage(address: address, property: assessment) }
+        async let mosquito = inModule(.mosquito) { await self.fetchMosquito(property: assessment) }
 
         await progress?(.infrastructure)
         let infrastructureSummary = await infrastructure
@@ -257,6 +261,12 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         let waterQualitySummary = await waterQuality
         let capitalWorksSummary = await capitalWorks
         let facilityClosureSummary = await facilityClosures
+        let heritageSummary = await heritage
+        let mosquitoSummary = await mosquito
+        // Radon and rental-market figures are metro-wide reference values (not per-address),
+        // so they are filled from static City/Province sources rather than fetched.
+        let radonSummary = assessment == nil ? nil : winnipegRadon
+        let rentalMarketSummary = assessment == nil ? nil : winnipegRentalMarket
 
         await progress?(.assembling)
 
@@ -307,6 +317,10 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             waterQuality: waterQualitySummary,
             capitalWorks: capitalWorksSummary,
             facilityClosures: facilityClosureSummary,
+            heritage: heritageSummary,
+            mosquito: mosquitoSummary,
+            radon: radonSummary,
+            rentalMarket: rentalMarketSummary,
             sources: sourceList(),
             failedModules: failedModules.isEmpty ? nil : failedModules
         )
@@ -500,7 +514,9 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             ("Block by Block On-Street Paid Parking", datasets.paidParking),
             ("Capital Projects Current Status", datasets.capitalProjects),
             ("Infrastructure Plan Funding", datasets.infrastructureFunding),
-            ("Province of Manitoba - Health Protection Reports - Winnipeg", datasets.facilityClosures)
+            ("Province of Manitoba - Health Protection Reports - Winnipeg", datasets.facilityClosures),
+            ("Historical Resources", datasets.heritage),
+            ("Daily Adult Mosquito Trap Data", datasets.mosquitoTraps)
         ]
         let citySources: [DatasetSource] = sourcePairs.compactMap { pair -> DatasetSource? in
             let (name, id) = pair
@@ -2057,26 +2073,30 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         guard let property else { return nil }
         async let zoning = fetchZoningDescription(zoningCode: property.zoning)
         async let notices = fetchPublicNotices(property: property)
-        let zoningDescription = await zoning
+        let zoningInfo = await zoning
         let publicNotices = await notices
-        if property.zoning == nil && zoningDescription == nil && publicNotices.isEmpty { return nil }
+        if property.zoning == nil && zoningInfo.short == nil && zoningInfo.long == nil && publicNotices.isEmpty { return nil }
         return PlanningContextSummary(
             zoningCode: property.zoning,
-            zoningDescription: zoningDescription,
+            zoningDescription: zoningInfo.short ?? zoningInfo.long,
+            zoningIntent: zoningInfo.long,
             publicNotices: publicNotices
         )
     }
 
-    private func fetchZoningDescription(zoningCode: String?) async -> String? {
+    private func fetchZoningDescription(zoningCode: String?) async -> (short: String?, long: String?) {
         guard let dataset = datasets.zoningParcels,
               let zoningCode,
-              !zoningCode.isEmpty else { return nil }
+              !zoningCode.isEmpty else { return (nil, nil) }
         let rows = (try? await fetch(dataset, queryItems: [
             URLQueryItem(name: "$select", value: "short_description,long_description"),
             URLQueryItem(name: "$where", value: "upper(zoning)='\(escaped(zoningCode.uppercased()))'"),
             URLQueryItem(name: "$limit", value: "1")
         ])) ?? []
-        return rows.first?.string("short_description") ?? rows.first?.string("long_description")
+        let short = rows.first?.string("short_description")
+        let long = rows.first?.string("long_description")
+        // Don't repeat the same text in both slots — the card shows them separately.
+        return (short, long == short ? nil : long)
     }
 
     private func fetchPublicNotices(property: PropertyAssessment) async -> [PublicNotice] {
@@ -3660,6 +3680,120 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         }
         guard !closures.isEmpty else { return nil }
         return FacilityClosureSummary(closures: closures)
+    }
+
+    // MARK: - Heritage / historical resources
+
+    private func fetchHeritage(address: NormalizedAddress, property: PropertyAssessment?) async -> HeritageSummary? {
+        guard let dataset = datasets.heritage,
+              let subject = property?.coordinate else { return nil }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "historical_name,street_number,street_name,grade,sub_code,construction_date,point"),
+            URLQueryItem(name: "$where", value: "within_circle(point,\(subject.latitude),\(subject.longitude),500)"),
+            URLQueryItem(name: "$limit", value: "40")
+        ])) ?? []
+        guard !rows.isEmpty else { return nil }
+
+        let subjectLocation = CLLocation(latitude: subject.latitude, longitude: subject.longitude)
+        let subjectNumber = address.civicNumber.map(String.init)
+        let subjectStreet = streetCore(address.streetName)
+
+        var subjectDesignation: HeritageBuilding?
+        var nearby: [(HeritageBuilding, Double)] = []
+
+        for row in rows {
+            guard let name = row.string("historical_name") else { continue }
+            guard let coordinate = parseCoordinate(row) else { continue }
+            let distance = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude).distance(from: subjectLocation)
+            let number = row.string("street_number")
+            let streetName = row.string("street_name")
+            let addressLabel = [number, streetName].compactMap { $0 }.joined(separator: " ")
+            let grade = row.string("grade").flatMap { $0 == "N/A" ? nil : $0 }
+            let building = HeritageBuilding(
+                name: name,
+                address: addressLabel.isEmpty ? nil : addressLabel,
+                grade: grade,
+                listType: row.string("sub_code"),
+                constructionYear: row.string("construction_date"),
+                distanceDescription: distanceDescription(meters: distance)
+            )
+            let isSubject = subjectNumber != nil
+                && number == subjectNumber
+                && !subjectStreet.isEmpty
+                && streetCore(streetName ?? "") == subjectStreet
+            if isSubject, subjectDesignation == nil {
+                subjectDesignation = building
+            } else {
+                nearby.append((building, distance))
+            }
+        }
+
+        let nearbySorted = nearby.sorted { $0.1 < $1.1 }.prefix(8).map(\.0)
+        guard subjectDesignation != nil || !nearbySorted.isEmpty else { return nil }
+        return HeritageSummary(subjectDesignation: subjectDesignation, nearby: Array(nearbySorted))
+    }
+
+    // MARK: - Mosquito control (Insect Control)
+
+    private func fetchMosquito(property: PropertyAssessment?) async -> MosquitoSummary? {
+        guard let dataset = datasets.mosquitoTraps,
+              let subject = property?.coordinate else { return nil }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "count_date,city_wide_daily_average,north_west_average,north_east_average,south_east_average,south_west_average"),
+            URLQueryItem(name: "$order", value: "count_date DESC"),
+            URLQueryItem(name: "$limit", value: "1")
+        ])) ?? []
+        guard let row = rows.first else { return nil }
+
+        // Winnipeg's geographic quadrants split roughly at the city centre (Portage & Main).
+        // The trap dataset reports one average per quadrant, so we pick the matching one.
+        let centreLat = 49.8951
+        let centreLon = -97.1384
+        let northSouth = subject.latitude >= centreLat ? "north" : "south"
+        let eastWest = subject.longitude >= centreLon ? "east" : "west"
+        let quadrantKey = "\(northSouth)_\(eastWest)_average"
+        let quadrantName = "\(northSouth.capitalized) \(eastWest.capitalized)"
+
+        let quadrantCount = row.int(quadrantKey)
+        let cityWide = row.int("city_wide_daily_average")
+        guard quadrantCount != nil || cityWide != nil else { return nil }
+        let peak = max(quadrantCount ?? 0, cityWide ?? 0)
+        return MosquitoSummary(
+            quadrant: quadrantName,
+            quadrantCount: quadrantCount,
+            cityWideAverage: cityWide,
+            countDate: parseDate(row.string("count_date")),
+            foggingThresholdReached: peak >= 100
+        )
+    }
+
+    // MARK: - Static metro-wide reference figures
+
+    /// Health Canada, 2012 Cross-Canada Survey of Radon Concentrations in Homes — 19% of
+    /// Manitoba homes tested at or above the 200 Bq/m³ guideline. A regional reference, not
+    /// an address-level reading; presented as information with a "test your home" prompt.
+    private var winnipegRadon: RadonSummary {
+        RadonSummary(
+            region: "Manitoba",
+            percentAboveGuideline: 19,
+            surveyName: "Health Canada Cross-Canada Survey of Radon Concentrations in Homes"
+        )
+    }
+
+    /// CMHC Rental Market Survey (Winnipeg CMA). Metro-wide averages updated annually each
+    /// October; not specific to one address.
+    private var winnipegRentalMarket: RentalMarketSummary {
+        RentalMarketSummary(
+            area: "Winnipeg CMA",
+            year: 2025,
+            vacancyRate: 2.8,
+            brackets: [
+                RentBracket(bedrooms: "Bachelor", averageRent: 1000),
+                RentBracket(bedrooms: "1 bedroom", averageRent: 1230),
+                RentBracket(bedrooms: "2 bedroom", averageRent: 1480),
+                RentBracket(bedrooms: "3 bedroom+", averageRent: 1700)
+            ]
+        )
     }
 
     private func fetchOptional(_ dataset: String?, _ items: [URLQueryItem]) async -> [[String: Any]] {

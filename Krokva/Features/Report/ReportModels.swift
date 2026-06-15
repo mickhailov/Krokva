@@ -56,6 +56,10 @@ struct AddressReport: Identifiable, Codable {
     var waterQuality: WaterQualitySummary?
     var capitalWorks: CapitalWorksSummary?
     var facilityClosures: FacilityClosureSummary?
+    var heritage: HeritageSummary?
+    var mosquito: MosquitoSummary?
+    var radon: RadonSummary?
+    var rentalMarket: RentalMarketSummary?
     var sources: [DatasetSource] = []
     /// Modules whose data source threw a network/HTTP error during this build. A card uses
     /// this to show "Database error" instead of silently hiding when its module is empty.
@@ -101,6 +105,10 @@ struct AddressReport: Identifiable, Codable {
         waterQuality: WaterQualitySummary? = nil,
         capitalWorks: CapitalWorksSummary? = nil,
         facilityClosures: FacilityClosureSummary? = nil,
+        heritage: HeritageSummary? = nil,
+        mosquito: MosquitoSummary? = nil,
+        radon: RadonSummary? = nil,
+        rentalMarket: RentalMarketSummary? = nil,
         sources: [DatasetSource] = [],
         failedModules: Set<ReportModule>? = nil
     ) {
@@ -142,6 +150,10 @@ struct AddressReport: Identifiable, Codable {
         self.waterQuality = waterQuality
         self.capitalWorks = capitalWorks
         self.facilityClosures = facilityClosures
+        self.heritage = heritage
+        self.mosquito = mosquito
+        self.radon = radon
+        self.rentalMarket = rentalMarket
         self.sources = sources
         self.failedModules = failedModules
     }
@@ -508,6 +520,8 @@ struct ServiceRequestRecord: Identifiable, Codable {
 struct PlanningContextSummary: Codable {
     var zoningCode: String?
     var zoningDescription: String?
+    /// The district's full intent / permitted-use paragraph from the zoning by-law.
+    var zoningIntent: String?
     var publicNotices: [PublicNotice]
 }
 
@@ -1081,5 +1095,81 @@ struct FacilityClosureRecord: Identifiable, Codable {
         self.reason = reason
         self.closureDate = closureDate
         self.reopenDate = reopenDate
+    }
+}
+
+// MARK: - Heritage / historical resources
+
+struct HeritageSummary: Codable {
+    /// Set when the report's own address appears on the City's heritage register.
+    var subjectDesignation: HeritageBuilding?
+    /// Other designated buildings within walking distance.
+    var nearby: [HeritageBuilding]
+}
+
+struct HeritageBuilding: Identifiable, Codable {
+    let id: UUID
+    var name: String
+    var address: String?
+    /// City heritage grade: "I", "II", "III", or "N/A" for commemorative entries.
+    var grade: String?
+    /// Register sub-list, e.g. "List of Historical Resources" / "Commemorative List".
+    var listType: String?
+    var constructionYear: String?
+    var distanceDescription: String?
+
+    init(id: UUID = UUID(), name: String, address: String? = nil, grade: String? = nil, listType: String? = nil, constructionYear: String? = nil, distanceDescription: String? = nil) {
+        self.id = id
+        self.name = name
+        self.address = address
+        self.grade = grade
+        self.listType = listType
+        self.constructionYear = constructionYear
+        self.distanceDescription = distanceDescription
+    }
+}
+
+// MARK: - Mosquito control (Insect Control)
+
+struct MosquitoSummary: Codable {
+    /// City geographic quadrant the address falls in, e.g. "South West".
+    var quadrant: String
+    /// Latest adult-nuisance trap count for that quadrant (mosquitoes per trap).
+    var quadrantCount: Int?
+    /// City-wide daily average for the same count date.
+    var cityWideAverage: Int?
+    var countDate: Date?
+    /// True when counts are high enough that the City typically considers fogging
+    /// (≈100+ per trap). Used for an informational note, never as a score.
+    var foggingThresholdReached: Bool
+}
+
+// MARK: - Radon potential (Health Canada regional reference)
+
+struct RadonSummary: Codable {
+    var region: String
+    /// Share of tested homes at/above Health Canada's 200 Bq/m³ guideline.
+    var percentAboveGuideline: Int
+    var surveyName: String
+}
+
+// MARK: - Rental market (CMHC reference)
+
+struct RentalMarketSummary: Codable {
+    var area: String
+    var year: Int
+    var vacancyRate: Double?
+    var brackets: [RentBracket]
+}
+
+struct RentBracket: Identifiable, Codable {
+    let id: UUID
+    var bedrooms: String
+    var averageRent: Double?
+
+    init(id: UUID = UUID(), bedrooms: String, averageRent: Double? = nil) {
+        self.id = id
+        self.bedrooms = bedrooms
+        self.averageRent = averageRent
     }
 }
