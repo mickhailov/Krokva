@@ -65,6 +65,9 @@ struct PublicHealthCard: View {
         if let count = summary.walkInClinicsNearby {
             parts.append("\(count) walk-ins")
         }
+        if let aed = summary.nearestAED {
+            parts.append("AED \(aed.distanceDescription)")
+        }
         return parts.isEmpty ? "Emergency activity · age groups · substances" : parts.joined(separator: " · ")
     }
 }
@@ -159,8 +162,12 @@ struct HealthInlineContent: View {
                 if summary.nearestER != nil { Divider().foregroundStyle(Color.cleanSep) }
                 facilitySection(eyebrow: "WALK-IN CLINIC", icon: "stethoscope", iconColor: .cleanSky, facility: walkIn)
             }
+            if let aed = summary.nearestAED {
+                if summary.nearestER != nil || summary.nearestWalkIn != nil { Divider().foregroundStyle(Color.cleanSep) }
+                aedSection(aed)
+            }
             if !summary.ageGroups.isEmpty {
-                if summary.nearestER != nil || summary.nearestWalkIn != nil {
+                if summary.nearestER != nil || summary.nearestWalkIn != nil || summary.nearestAED != nil {
                     Divider().foregroundStyle(Color.cleanSep)
                 }
                 VStack(alignment: .leading, spacing: 8) {
@@ -225,6 +232,41 @@ struct HealthInlineContent: View {
             }
             if let attribution = summary.emergencyRoomAttribution {
                 Text(attribution)
+                    .font(.system(size: 10))
+                    .foregroundStyle(Color.cleanLabel3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func aedSection(_ aed: DefibrillatorAccess) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("PUBLIC AED").eyebrow(color: .cleanLabel3)
+            HStack(spacing: 10) {
+                Image(systemName: "bolt.heart.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Color.cleanRed)
+                    .frame(width: 26, height: 26)
+                    .background(Color.cleanRed.opacity(0.12), in: RoundedRectangle(cornerRadius: 6))
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(aed.name)
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.cleanLabel)
+                    if let location = aed.locationDescription {
+                        Text(location)
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.cleanLabel2)
+                            .lineLimit(2)
+                    }
+                }
+            }
+            statRow(label: "Distance", value: aed.distanceDescription)
+            if let count = summary.aedsNearby {
+                statRow(label: "AEDs within 500 m", value: count.formatted())
+            }
+            let detail = [aed.access, aed.indoor.map { $0 ? "Indoor" : "Outdoor" }, aed.source].compactMap { $0 }.joined(separator: " · ")
+            if !detail.isEmpty {
+                Text(detail)
                     .font(.system(size: 10))
                     .foregroundStyle(Color.cleanLabel3)
                     .fixedSize(horizontal: false, vertical: true)

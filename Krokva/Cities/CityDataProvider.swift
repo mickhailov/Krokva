@@ -39,6 +39,7 @@ struct CityDatasets {
     var schoolDivisions: String? = nil
     var recreationComplexes: String? = nil
     var leisureActivities: String? = nil
+    var publicAeds: String? = nil
     var snowRouteAddresses: String? = nil
     var plowZones: String? = nil
     // Daily-living logistics

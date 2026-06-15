@@ -448,7 +448,6 @@ struct SavedReportsView: View {
     @State private var loadingStage: ReportLoadingStage = .normalizing
     @State private var loadingTask: Task<Void, Never>?
     @State private var refreshingAddress: String?
-    private let loadingStageDelay: UInt64 = 3_000_000_000
 
     var body: some View {
         ZStack {
@@ -777,14 +776,10 @@ struct SavedReportsView: View {
             loadingTask = nil
         }
 
-        async let reportTask = ReportService().report(for: address)
-        await playFixedLoadingSequence()
-        guard !Task.isCancelled else { return }
-        await setLoadingStage(.assembling)
-        try? await Task.sleep(nanoseconds: loadingStageDelay)
-        guard !Task.isCancelled else { return }
-
-        let report = await reportTask
+        let report = await ReportService().report(for: address) { stage in
+            guard !Task.isCancelled else { return }
+            await setLoadingStage(stage)
+        }
         guard !Task.isCancelled else { return }
         if let saved {
             saved.update(from: report)
@@ -804,15 +799,6 @@ struct SavedReportsView: View {
 
     private func cityName(for recent: RecentSearch) -> String {
         CityRegistry.shared.provider(for: recent.cityID)?.displayName ?? recent.cityID
-    }
-
-    private func playFixedLoadingSequence() async {
-        let preFinalStages = ReportLoadingStage.allCases.filter { $0 != .assembling }
-        for stage in preFinalStages {
-            if Task.isCancelled { return }
-            await setLoadingStage(stage)
-            try? await Task.sleep(nanoseconds: loadingStageDelay)
-        }
     }
 
     private func setLoadingStage(_ stage: ReportLoadingStage) async {

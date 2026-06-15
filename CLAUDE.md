@@ -46,11 +46,6 @@ ChartCards, CivicDataCards, HeroPropertyCard, HouseScoreCard, ListCards, NearbyS
 CKANProvider, SocrataProvider, StubProviders, WinnipegProvider
 
 ## Persistent memory (read on demand)
-- `memory/feature-house-score.md` — DossierRating model + HouseScoreCard — 5-section scoring system for each address dossier
-- `memory/feature-opendata-expansion.md` — "10 new Winnipeg open-data report modules added June 2026 (waste, demographics, local gov, business, aquatics, traffic, risk, water, capital, closures) + their verified dataset joins"
-- `memory/feedback-empty-vs-error-states.md` — "Report cards must show \"No data\" when loaded-but-empty and \"Database error\" when the fetch failed — never silently hide on error"
-- `memory/project-compare-feature.md` — "Compare feature implementation — SavedDossier model, bookmark in DossierView, real data comparison table"
-- `memory/project-krokva-design.md` — Krokva iOS app — Clean (Apple-grouped) design system, fully migrated June 2026
-- `memory/winnipeg-dataset-gotchas.md` — "Winnipeg open-data dataset gotchas for civic fields (postal code, plow zone, schools) in WinnipegProvider"
+_memory dir not found_
 
 <!-- AUTOGEN:END -->

@@ -510,7 +510,7 @@ struct NeighbourhoodRiskCard: View {
     var sourceFailed = false
 
     var body: some View {
-        guard let summary, summary.roomingHouse != nil || !summary.vacantFireTrend.isEmpty else {
+        guard let summary, summary.roomingHouse != nil || !summary.vacantFireTrend.isEmpty || (summary.graffitiReports ?? 0) > 0 else {
             return AnyView(sourceFailed
                 ? AnyView(ModuleErrorCard(title: "Neighbourhood risk signals", systemImage: "exclamationmark.shield", iconColor: .cleanAmber,
                                           message: "Database error loading neighbourhood risk signals."))
@@ -540,6 +540,15 @@ struct NeighbourhoodRiskCard: View {
                                 baseColor: Color.cleanRed.opacity(0.6)
                             )
                             .frame(height: 70)
+                        }
+                    }
+                    if let graffiti = summary.graffitiReports, graffiti > 0 {
+                        if summary.roomingHouse != nil || !summary.vacantFireTrend.isEmpty {
+                            Divider().foregroundStyle(Color.cleanSep)
+                        }
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("GRAFFITI REPORTS · NEIGHBOURHOOD").eyebrow(color: .cleanLabel3)
+                            KeyValueRow(key: "Total reports on record", value: graffiti.formatted())
                         }
                     }
                     // Rush-hour tows + paid-parking signals now surface in the Traffic & parking card.

@@ -14,8 +14,6 @@ final class SearchViewModel {
 
     private let completer = AddressCompleter()
     private let service = ReportService()
-    private let stageDelay: UInt64 = 3_000_000_000
-
     init() {
         completer.onUpdate = { [weak self] completions in
             self?.completions = completions
@@ -49,21 +47,9 @@ final class SearchViewModel {
         errorMessage = nil
         defer { isLoading = false }
 
-        async let report = service.report(for: trimmed)
-        await playFixedLoadingSequence()
-        guard !Task.isCancelled else { return nil }
-        await setLoadingStage(.assembling)
-        try? await Task.sleep(nanoseconds: stageDelay)
-        guard !Task.isCancelled else { return nil }
-        return await report
-    }
-
-    private func playFixedLoadingSequence() async {
-        let preFinalStages = ReportLoadingStage.allCases.filter { $0 != .assembling }
-        for stage in preFinalStages {
-            if Task.isCancelled { return }
-            await setLoadingStage(stage)
-            try? await Task.sleep(nanoseconds: stageDelay)
+        return await service.report(for: trimmed) { [weak self] stage in
+            guard !Task.isCancelled else { return }
+            await self?.setLoadingStage(stage)
         }
     }
 

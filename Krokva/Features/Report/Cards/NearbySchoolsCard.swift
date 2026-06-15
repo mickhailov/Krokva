@@ -73,10 +73,12 @@ struct NearbySchoolsCard: View {
 
     private var smallSummary: String {
         var parts: [String] = []
-        if !schools.isEmpty {
+        let assigned = schools.filter(\.isAssigned)
+        if !assigned.isEmpty {
+            parts.append("\(assigned.count) assigned")
+        } else if !schools.isEmpty {
             parts.append("\(schools.count) \(schools.count == 1 ? "school" : "schools") nearby")
         }
-        if let zone = schoolZone { parts.append(zone.speedLimit + " school zone") }
         if parts.isEmpty { return "Tap to view" }
         return parts.joined(separator: " · ")
     }
@@ -89,14 +91,18 @@ struct NearbySchoolsCard: View {
 
             // School list
             if !schools.isEmpty {
-                Text("Nearby schools").eyebrow(color: .cleanLabel3)
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(schools.enumerated()), id: \.element.id) { index, school in
-                        schoolRow(school, index: index)
-                        if index < schools.count - 1 {
-                            Divider().foregroundStyle(Color.cleanSep)
-                        }
+                let assignedSchools = schools.filter(\.isAssigned)
+                let nearbySchools = assignedSchools.isEmpty ? schools : schools.filter { !$0.isAssigned }
+
+                if !assignedSchools.isEmpty {
+                    schoolList(title: "Assigned schools", schools: assignedSchools)
+                }
+
+                if !nearbySchools.isEmpty {
+                    if !assignedSchools.isEmpty {
+                        Divider().foregroundStyle(Color.cleanSep)
                     }
+                    schoolList(title: "Nearby schools", schools: nearbySchools)
                 }
             } else {
                 Text(sourceFailed ? "Database error loading nearby schools." : "No nearby schools found in city data.")
@@ -208,8 +214,21 @@ struct NearbySchoolsCard: View {
 
     // MARK: Row
 
+    private func schoolList(title: String, schools: [SchoolAmenity]) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title).eyebrow(color: .cleanLabel3)
+                .padding(.bottom, 6)
+            ForEach(Array(schools.enumerated()), id: \.element.id) { index, school in
+                schoolRow(school, index: index)
+                if index < schools.count - 1 {
+                    Divider().foregroundStyle(Color.cleanSep)
+                }
+            }
+        }
+    }
+
     private func schoolRow(_ school: SchoolAmenity, index: Int) -> some View {
-        HStack(alignment: .center, spacing: 12) {
+        HStack(alignment: .top, spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: 7, style: .continuous)
                     .fill(Color.cleanIndigo.opacity(0.1))
@@ -219,28 +238,40 @@ struct NearbySchoolsCard: View {
                     .foregroundStyle(Color.cleanIndigo)
             }
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 5) {
                 Text(school.name)
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.cleanLabel)
-                Text([school.schoolType, school.address].compactMap { $0 }.joined(separator: " · "))
+                    .lineLimit(2)
+                Text([school.schoolType, school.grades.map { "Grades \($0)" }].compactMap { $0 }.joined(separator: " · "))
+                    .font(KrokvaTypography.caption)
+                    .foregroundStyle(Color.cleanLabel2)
+                    .lineLimit(2)
+
+                if !school.programs.isEmpty {
+                    FlexibleTagRow(tags: Array(school.programs.prefix(3)))
+                }
+
+                Text([school.address, school.walkingTimeDescription].compactMap { $0 }.joined(separator: " · "))
                     .font(KrokvaTypography.caption)
                     .foregroundStyle(Color.cleanLabel3)
-                    .lineLimit(1)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
-
-            Spacer(minLength: 0)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .layoutPriority(1)
 
             VStack(alignment: .trailing, spacing: 2) {
                 Text(school.distanceDescription)
                     .font(KrokvaTypography.monoSmall)
                     .foregroundStyle(Color.cleanLabel3)
-                if let grades = school.grades {
-                    Text(grades)
+                if school.isAssigned {
+                    Text("zone")
                         .font(KrokvaTypography.monoSmall)
                         .foregroundStyle(Color.cleanIndigo)
                 }
             }
+            .frame(width: 62, alignment: .trailing)
         }
         .padding(.vertical, 9)
     }
@@ -258,5 +289,23 @@ struct NearbySchoolsCard: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.vertical, 8)
+    }
+}
+
+private struct FlexibleTagRow: View {
+    let tags: [String]
+
+    var body: some View {
+        HStack(spacing: 5) {
+            ForEach(tags, id: \.self) { tag in
+                Text(tag)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Color.cleanIndigo)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 3)
+                    .background(Color.cleanIndigo.opacity(0.08), in: Capsule())
+                    .lineLimit(1)
+            }
+        }
     }
 }

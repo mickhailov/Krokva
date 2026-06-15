@@ -283,6 +283,7 @@ struct InfrastructureSummary: Codable {
     var potholes: Int
     var publicTrees: Int
     var taggedTrees: Int
+    var topTreeSpecies: String? = nil
 }
 
 struct ParksSummary: Codable {
@@ -290,6 +291,7 @@ struct ParksSummary: Codable {
     var nearbyParks: [ParkAmenity] = []
     var neighbourhoodParkCount: Int
     var neighbourhoodHectares: Double?
+    var nearestDogPark: DogParkAmenity? = nil
 }
 
 struct ParkAmenity: Identifiable, Codable {
@@ -303,6 +305,15 @@ struct ParkAmenity: Identifiable, Codable {
     var courts: Int
     var washrooms: Int
     var benches: Int
+}
+
+struct DogParkAmenity: Identifiable, Codable {
+    var id: String { parkID }
+    var parkID: String
+    var name: String
+    var distanceDescription: String
+    var classification: String?
+    var coordinate: CLLocationCoordinate2D?
 }
 
 struct TransitAccessSummary: Codable {
@@ -643,6 +654,16 @@ struct HealthFacilityAccess: Codable {
     var liveStatus: EmergencyRoomStatus? = nil
 }
 
+struct DefibrillatorAccess: Codable {
+    var name: String
+    var locationDescription: String?
+    var access: String?
+    var indoor: Bool?
+    var distanceDescription: String
+    var coordinate: CLLocationCoordinate2D?
+    var source: String? = nil
+}
+
 struct PublicHealthSummary: Codable {
     var yearlyEvents: [PublicHealthYear]
     var ageGroups: [IncidentBreakdown]
@@ -652,6 +673,8 @@ struct PublicHealthSummary: Codable {
     var nearestER: HealthFacilityAccess? = nil
     var nearestWalkIn: HealthFacilityAccess? = nil
     var walkInClinicsNearby: Int? = nil
+    var nearestAED: DefibrillatorAccess? = nil
+    var aedsNearby: Int? = nil
     var emergencyRoomClosures: [EmergencyRoomStatus] = []
     var emergencyRoomAttribution: String? = nil
 }
@@ -718,17 +741,40 @@ struct SchoolAmenity: Identifiable, Codable {
     var name: String
     var address: String
     var distanceDescription: String
+    var distanceMeters: Double?
+    var walkingTimeDescription: String?
     var grades: String?
     var schoolType: String?
+    var programs: [String]
+    var isAssigned: Bool
+    var source: String?
     var coordinate: CLLocationCoordinate2D?
 
-    init(id: UUID = UUID(), name: String, address: String, distanceDescription: String, grades: String? = nil, schoolType: String? = nil, coordinate: CLLocationCoordinate2D? = nil) {
+    init(
+        id: UUID = UUID(),
+        name: String,
+        address: String,
+        distanceDescription: String,
+        distanceMeters: Double? = nil,
+        walkingTimeDescription: String? = nil,
+        grades: String? = nil,
+        schoolType: String? = nil,
+        programs: [String] = [],
+        isAssigned: Bool = false,
+        source: String? = nil,
+        coordinate: CLLocationCoordinate2D? = nil
+    ) {
         self.id = id
         self.name = name
         self.address = address
         self.distanceDescription = distanceDescription
+        self.distanceMeters = distanceMeters
+        self.walkingTimeDescription = walkingTimeDescription
         self.grades = grades
         self.schoolType = schoolType
+        self.programs = programs
+        self.isAssigned = isAssigned
+        self.source = source
         self.coordinate = coordinate
     }
 }
@@ -773,6 +819,7 @@ struct RecreationSummary: Codable {
     var nearestComplex: RecreationComplex?
     var complexes: [RecreationComplex]
     var activities: [RecreationActivity]
+    var communityCentres: [CommunityCentre] = []
 }
 
 struct RecreationComplex: Identifiable, Codable {
@@ -789,6 +836,22 @@ struct RecreationComplex: Identifiable, Codable {
         self.address = address
         self.distanceDescription = distanceDescription
         self.amenities = amenities
+        self.coordinate = coordinate
+    }
+}
+
+struct CommunityCentre: Identifiable, Codable {
+    let id: UUID
+    var name: String
+    var address: String?
+    var distanceDescription: String?
+    var coordinate: CLLocationCoordinate2D?
+
+    init(id: UUID = UUID(), name: String, address: String? = nil, distanceDescription: String? = nil, coordinate: CLLocationCoordinate2D? = nil) {
+        self.id = id
+        self.name = name
+        self.address = address
+        self.distanceDescription = distanceDescription
         self.coordinate = coordinate
     }
 }
@@ -959,6 +1022,7 @@ struct NeighbourhoodRiskSummary: Codable {
     var towingNearby: Int
     var paidParkingNearby: Int
     var nearestPaidParking: String?
+    var graffitiReports: Int? = nil
 }
 
 struct RoomingHouseActivity: Codable {

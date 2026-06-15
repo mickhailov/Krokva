@@ -290,7 +290,11 @@ struct TransitAccessCard: View {
         guard let s = summary else { return sourceFailed ? "Database error" : "Unavailable" }
         var parts: [String] = []
         if let stop = s.nearestStop { parts.append("\(stop.distanceDescription) to bus stop") }
-        if !s.routes.isEmpty { parts.append("\(s.routes.count) \(s.routes.count == 1 ? "route" : "routes")") }
+        if !s.routes.isEmpty {
+            let nums = s.routes.prefix(3).map { $0.routeNumber }
+            let extra = s.routes.count > 3 ? " +\(s.routes.count - 3)" : ""
+            parts.append("Routes \(nums.joined(separator: ", "))\(extra)")
+        }
         return parts.isEmpty ? "Transit data unavailable" : parts.joined(separator: " · ")
     }
 
@@ -559,6 +563,9 @@ struct CivicAmenitiesCard: View {
         if let count = parks?.nearbyParks.count, count > 0 {
             parts.append("\(count) \(count == 1 ? "park" : "parks")")
         }
+        if let dogPark = parks?.nearestDogPark {
+            parts.append("\(dogPark.distanceDescription) to dog park")
+        }
         if let pools = aquatics?.pools.count, pools > 0 {
             parts.append("\(pools) \(pools == 1 ? "pool" : "pools")")
         }
@@ -578,6 +585,16 @@ struct CivicAmenitiesCard: View {
                         amenityRow(tag: "PARK", tagColor: .cleanGreen, name: park.name,
                                    distance: park.distanceDescription, detail: parkDetail(park))
                     }
+                    if let dogPark = parks.nearestDogPark {
+                        amenityRow(tag: "DOG", tagColor: .cleanAmber, name: dogPark.name,
+                                   distance: dogPark.distanceDescription, detail: dogPark.classification.map { "\($0) off-leash area" } ?? "Off-leash area")
+                    }
+                }
+            } else if let dogPark = parks?.nearestDogPark {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Off-leash dog park").eyebrow(color: .cleanLabel3)
+                    amenityRow(tag: "DOG", tagColor: .cleanAmber, name: dogPark.name,
+                               distance: dogPark.distanceDescription, detail: dogPark.classification.map { "\($0) off-leash area" } ?? "Off-leash area")
                 }
             }
 
@@ -592,7 +609,7 @@ struct CivicAmenitiesCard: View {
             }
 
             if let river {
-                let hasPrior = (parks?.nearbyParks.isEmpty == false) || library != nil
+                let hasPrior = (parks?.nearbyParks.isEmpty == false) || parks?.nearestDogPark != nil || library != nil
                 if hasPrior { Divider().foregroundStyle(Color.cleanSep) }
                 VStack(alignment: .leading, spacing: 10) {
                     Text("River gauge").eyebrow(color: .cleanLabel3)
@@ -603,7 +620,7 @@ struct CivicAmenitiesCard: View {
             }
 
             if let aquatics, hasAquatics {
-                let hasPrior = (parks?.nearbyParks.isEmpty == false) || library != nil || river != nil
+                let hasPrior = (parks?.nearbyParks.isEmpty == false) || parks?.nearestDogPark != nil || library != nil || river != nil
                 if hasPrior { Divider().foregroundStyle(Color.cleanSep) }
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Pools & amenities").eyebrow(color: .cleanLabel3)
@@ -1002,7 +1019,7 @@ struct StreetAccessCard: View {
                     }
                     GridRow {
                         infoTile("Public trees", "\(infra.publicTrees)")
-                        infoTile("DED-tagged", "\(infra.taggedTrees)")
+                        infoTile("Top species", infra.topTreeSpecies ?? "—")
                     }
                 }
                 if infra.potholes == 0 {
@@ -1176,6 +1193,9 @@ struct RecreationCard: View {
         if !summary.activities.isEmpty {
             parts.append("\(summary.activities.count) activities")
         }
+        if !summary.communityCentres.isEmpty {
+            parts.append("\(summary.communityCentres.count) community centres")
+        }
         return parts.isEmpty ? "No nearby recreation data" : parts.joined(separator: " · ")
     }
 
@@ -1212,8 +1232,38 @@ struct RecreationCard: View {
                     }
                 }
 
-                if !summary.activities.isEmpty {
+                if !summary.communityCentres.isEmpty {
                     if !summary.complexes.isEmpty { Divider().foregroundStyle(Color.cleanSep) }
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text("Community centres").eyebrow(color: .cleanLabel3).padding(.bottom, 6)
+                        ForEach(Array(summary.communityCentres.prefix(4).enumerated()), id: \.element.id) { index, centre in
+                            VStack(alignment: .leading, spacing: 4) {
+                                HStack(alignment: .firstTextBaseline) {
+                                    Text(centre.name)
+                                        .font(.system(size: 12.5, weight: .semibold))
+                                        .foregroundStyle(Color.cleanLabel)
+                                    Spacer(minLength: 8)
+                                    Text(centre.distanceDescription ?? "Nearby")
+                                        .font(KrokvaTypography.monoSmall)
+                                        .foregroundStyle(Color.cleanLabel3)
+                                }
+                                if let address = centre.address {
+                                    Text(address)
+                                        .font(KrokvaTypography.caption)
+                                        .foregroundStyle(Color.cleanLabel3)
+                                }
+                            }
+                            .padding(.vertical, 8)
+
+                            if index < min(summary.communityCentres.count, 4) - 1 {
+                                Divider().foregroundStyle(Color.cleanSep)
+                            }
+                        }
+                    }
+                }
+
+                if !summary.activities.isEmpty {
+                    if !summary.complexes.isEmpty || !summary.communityCentres.isEmpty { Divider().foregroundStyle(Color.cleanSep) }
                     VStack(alignment: .leading, spacing: 0) {
                         Text("Programs").eyebrow(color: .cleanLabel3).padding(.bottom, 6)
                         ForEach(Array(summary.activities.prefix(5).enumerated()), id: \.element.id) { index, activity in

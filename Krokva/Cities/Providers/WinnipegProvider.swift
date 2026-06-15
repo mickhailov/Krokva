@@ -8,6 +8,39 @@ private struct SchoolDivisionBoundaryInfo {
     var website: String?
 }
 
+private struct SchoolDirectoryInfo {
+    var name: String
+    var address: String?
+    var grades: String?
+    var division: String?
+    var program: String?
+}
+
+private struct ServerSchoolsResponse: Decodable {
+    var assigned: [ServerSchool]
+    var nearby: [ServerSchool]
+}
+
+private struct ServerSchool: Decodable {
+    var id: String?
+    var name: String
+    var address: String
+    var distanceDescription: String
+    var distanceMeters: Double?
+    var walkingTimeDescription: String?
+    var grades: String?
+    var schoolType: String?
+    var programs: [String]?
+    var isAssigned: Bool?
+    var source: String?
+    var coordinate: ServerCoordinate?
+}
+
+private struct ServerCoordinate: Decodable {
+    var latitude: Double
+    var longitude: Double
+}
+
 private struct CensusBoundaryCandidate {
     var boundaryType: String
     var names: [String]
@@ -59,6 +92,7 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         schoolDivisions: "capx-4rye",
         recreationComplexes: "bmi4-vvs2",
         leisureActivities: "a2fq-ufu6",
+        publicAeds: "osm-aeds",
         snowRouteAddresses: "g3p4-h83y",
         plowZones: "39ur-higg",
         wasteCollection: "6rcy-9uik",
@@ -696,7 +730,8 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             speedLimit: await speed,
             potholes: await potholes,
             publicTrees: treeCounts.public,
-            taggedTrees: treeCounts.tagged
+            taggedTrees: treeCounts.tagged,
+            topTreeSpecies: treeCounts.topSpecies
         )
     }
 
@@ -759,33 +794,47 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             .uppercased()
     }
 
-    private func fetchTrees(_ address: NormalizedAddress) async -> (public: Int, tagged: Int) {
-        guard let dataset = datasets.trees else { return (0, 0) }
+    private func fetchTrees(_ address: NormalizedAddress) async -> (public: Int, tagged: Int, topSpecies: String?) {
+        guard let dataset = datasets.trees else { return (0, 0, nil) }
         let streetClause = "upper(street) like '\(escaped(streetCore(address.streetName)))%'"
-        let total = (try? await fetch(dataset, queryItems: [
+        async let totalRows = (try? await fetch(dataset, queryItems: [
             URLQueryItem(name: "$select", value: "count(*) as cnt"),
             URLQueryItem(name: "$where", value: streetClause)
         ])) ?? []
-        let tagged = (try? await fetch(dataset, queryItems: [
+        async let taggedRows = (try? await fetch(dataset, queryItems: [
             URLQueryItem(name: "$select", value: "count(*) as cnt"),
             URLQueryItem(name: "$where", value: "\(streetClause) AND ded_tag_number IS NOT NULL")
         ])) ?? []
-        return (total.first?.int("cnt") ?? 0, tagged.first?.int("cnt") ?? 0)
+        async let speciesRows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "common_name, count(*) as cnt"),
+            URLQueryItem(name: "$where", value: "\(streetClause) AND common_name IS NOT NULL"),
+            URLQueryItem(name: "$group", value: "common_name"),
+            URLQueryItem(name: "$order", value: "cnt DESC"),
+            URLQueryItem(name: "$limit", value: "1")
+        ])) ?? []
+        return (
+            await totalRows.first?.int("cnt") ?? 0,
+            await taggedRows.first?.int("cnt") ?? 0,
+            await speciesRows.first?.string("common_name")
+        )
     }
 
     private func fetchParks(property: PropertyAssessment?) async -> ParksSummary? {
         guard let property else { return nil }
         async let nearby = fetchNearbyParks(property: property)
+        async let dogPark = fetchNearestDogPark(property: property)
         async let neighbourhood = fetchNeighbourhoodParks(neighbourhood: property.neighbourhood)
         let nearbyParks = await nearby
         let nearestPark = nearbyParks.first
+        let nearestDogPark = await dogPark
         let neighbourhoodStats = await neighbourhood
-        if nearestPark == nil && neighbourhoodStats.count == 0 { return nil }
+        if nearestPark == nil && nearestDogPark == nil && neighbourhoodStats.count == 0 { return nil }
         return ParksSummary(
             nearestPark: nearestPark,
             nearbyParks: nearbyParks,
             neighbourhoodParkCount: neighbourhoodStats.count,
-            neighbourhoodHectares: neighbourhoodStats.hectares
+            neighbourhoodHectares: neighbourhoodStats.hectares,
+            nearestDogPark: nearestDogPark
         )
     }
 
@@ -853,6 +902,36 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             URLQueryItem(name: "$where", value: "upper(neighbourhood)='\(escaped(neighbourhood.uppercased()))'")
         ])) ?? []
         return (rows.first?.int("cnt") ?? 0, rows.first?.double("hectares"))
+    }
+
+    private func fetchNearestDogPark(property: PropertyAssessment?, radiusMeters: Int = 3000) async -> DogParkAmenity? {
+        guard let dataset = datasets.parkAssets,
+              let subject = property?.coordinate else { return nil }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "park_id,park_name,asset_type,point"),
+            URLQueryItem(name: "$where", value: "within_circle(point,\(subject.latitude),\(subject.longitude),\(radiusMeters)) AND asset_class='OFF-LEASH DOG AREA'"),
+            URLQueryItem(name: "$limit", value: "100")
+        ])) ?? []
+        let subjectLocation = CLLocation(latitude: subject.latitude, longitude: subject.longitude)
+        return rows.compactMap { row -> (DogParkAmenity, Double)? in
+            guard let parkID = row.string("park_id"),
+                  let name = row.string("park_name"),
+                  let coordinate = parseCoordinate(row) else { return nil }
+            let distance = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude).distance(from: subjectLocation)
+            return (
+                DogParkAmenity(
+                    parkID: parkID,
+                    name: name,
+                    distanceDescription: distanceDescription(meters: distance),
+                    classification: row.string("asset_type")?.capitalized,
+                    coordinate: coordinate
+                ),
+                distance
+            )
+        }
+        .sorted { $0.1 < $1.1 }
+        .first?
+        .0
     }
 
     private func fetchTransit(property: PropertyAssessment?) async -> TransitAccessSummary? {
@@ -1108,13 +1187,20 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
     private func fetchNearbySchools(property: PropertyAssessment?) async -> [SchoolAmenity] {
         guard let dataset = datasets.schools,
               let subject = property?.coordinate else { return [] }
+
+        if let serverSchools = await fetchServerNearbySchools(subject: subject, address: property?.fullAddress), !serverSchools.isEmpty {
+            return serverSchools
+        }
+
         // School Zone Signage carries one Point per sign, so a single school appears as
         // many rows. Pull every sign within range, then collapse to one entry per school
-        // using the averaged sign location as the school's approximate position.
+        // using the averaged sign location as the school's approximate position. Keep a
+        // wider candidate pool because some school-zone signs sit farther from the school
+        // building than the building is from the subject property.
         let rows = (try? await fetch(dataset, queryItems: [
             URLQueryItem(name: "$select", value: "school,street_name,location"),
-            URLQueryItem(name: "$where", value: "within_circle(location,\(subject.latitude),\(subject.longitude),2000) AND school IS NOT NULL"),
-            URLQueryItem(name: "$limit", value: "400")
+            URLQueryItem(name: "$where", value: "within_circle(location,\(subject.latitude),\(subject.longitude),3500) AND school IS NOT NULL"),
+            URLQueryItem(name: "$limit", value: "900")
         ])) ?? []
 
         struct SchoolAccumulator { var latSum = 0.0; var lonSum = 0.0; var count = 0; var street: String? }
@@ -1132,7 +1218,7 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         }
 
         let subjectLocation = CLLocation(latitude: subject.latitude, longitude: subject.longitude)
-        return bySchool.compactMap { name, acc -> (school: SchoolAmenity, distance: Double)? in
+        let signageCandidates = bySchool.compactMap { name, acc -> (school: SchoolAmenity, distance: Double)? in
             guard acc.count > 0 else { return nil }
             let coordinate = CLLocationCoordinate2D(
                 latitude: acc.latSum / Double(acc.count),
@@ -1143,13 +1229,426 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
                 name: name,
                 address: acc.street ?? "Winnipeg, MB",
                 distanceDescription: distanceDescription(meters: distance),
+                distanceMeters: distance,
+                walkingTimeDescription: walkingTimeDescription(meters: distance),
+                source: "Winnipeg school-zone signs",
                 coordinate: coordinate
             )
+            return (school, distance)
+        }
+
+        let mapKitCandidates = await fetchMapKitNearbySchools(subject: subject)
+        let candidates = mergedSchoolCandidates(signageCandidates + mapKitCandidates)
+            .sorted { $0.distance < $1.distance }
+            .prefix(24)
+
+        var enriched: [(school: SchoolAmenity, distance: Double)] = []
+        await withTaskGroup(of: (SchoolAmenity, Double).self) { group in
+            for candidate in candidates {
+                group.addTask { [weak self] in
+                    guard let self else { return candidate }
+                    guard let info = await self.fetchSchoolDirectoryInfo(for: candidate.school) else {
+                        return candidate
+                    }
+                    var school = candidate.school
+                    if let address = info.address { school.address = address }
+                    school.grades = info.grades
+                    school.schoolType = schoolTypeLabel(division: info.division)
+                    school.programs = programTags(from: info.program)
+                    school.source = "Manitoba school directory"
+                    return (school, candidate.distance)
+                }
+            }
+
+            for await candidate in group {
+                enriched.append(candidate)
+            }
+        }
+
+        let addressCoordinates = await geocodeSchoolAddresses(enriched.map(\.school.address))
+        return enriched.map { candidate -> (school: SchoolAmenity, distance: Double) in
+            var school = candidate.school
+            guard let coordinate = addressCoordinates[addressSearchKey(school.address)] else {
+                return candidate
+            }
+            let distance = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude).distance(from: subjectLocation)
+            school.coordinate = coordinate
+            school.distanceMeters = distance
+            school.distanceDescription = distanceDescription(meters: distance)
+            school.walkingTimeDescription = walkingTimeDescription(meters: distance)
             return (school, distance)
         }
         .sorted { $0.distance < $1.distance }
         .prefix(6)
         .map(\.school)
+    }
+
+    private func fetchServerNearbySchools(subject: CLLocationCoordinate2D, address: String?) async -> [SchoolAmenity]? {
+        var components = URLComponents()
+        components.scheme = scheme
+        let parts = domain.split(separator: ":", maxSplits: 1)
+        components.host = String(parts[0])
+        if parts.count == 2, let port = Int(parts[1]) { components.port = port }
+        components.path = "/api/schools/nearby"
+        var queryItems = [
+            URLQueryItem(name: "lat", value: "\(subject.latitude)"),
+            URLQueryItem(name: "lon", value: "\(subject.longitude)"),
+            URLQueryItem(name: "radius", value: "3000"),
+            URLQueryItem(name: "limit", value: "8")
+        ]
+        if let address, !address.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            queryItems.append(URLQueryItem(name: "address", value: address))
+        }
+        components.queryItems = queryItems
+        guard let url = components.url else { return nil }
+
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            guard let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode else { return nil }
+            let decoded = try JSONDecoder().decode(ServerSchoolsResponse.self, from: data)
+            return (decoded.assigned + decoded.nearby).map { row in
+                SchoolAmenity(
+                    id: row.id.flatMap(UUID.init(uuidString:)) ?? UUID(),
+                    name: row.name,
+                    address: row.address,
+                    distanceDescription: row.distanceDescription,
+                    distanceMeters: row.distanceMeters,
+                    walkingTimeDescription: row.walkingTimeDescription,
+                    grades: row.grades,
+                    schoolType: row.schoolType,
+                    programs: row.programs ?? [],
+                    isAssigned: row.isAssigned ?? false,
+                    source: row.source,
+                    coordinate: row.coordinate.map { CLLocationCoordinate2D(latitude: $0.latitude, longitude: $0.longitude) }
+                )
+            }
+        } catch {
+            return nil
+        }
+    }
+
+    private func fetchMapKitNearbySchools(subject: CLLocationCoordinate2D) async -> [(school: SchoolAmenity, distance: Double)] {
+        let request = MKLocalSearch.Request()
+        request.naturalLanguageQuery = "school"
+        request.region = MKCoordinateRegion(center: subject, latitudinalMeters: 3000, longitudinalMeters: 3000)
+        request.resultTypes = .pointOfInterest
+
+        do {
+            let response = try await MKLocalSearch(request: request).start()
+            let subjectLocation = CLLocation(latitude: subject.latitude, longitude: subject.longitude)
+            return response.mapItems.compactMap { item in
+                guard let name = item.name?.trimmingCharacters(in: .whitespacesAndNewlines),
+                      isSchoolLikeName(name) else { return nil }
+                let coordinate = item.placemark.coordinate
+                let distance = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude).distance(from: subjectLocation)
+                guard distance <= 3000 else { return nil }
+                let address = mapItemAddress(item) ?? item.placemark.title ?? "Winnipeg, MB"
+                let school = SchoolAmenity(
+                    name: name.repairedFrenchCivicName,
+                    address: address,
+                    distanceDescription: distanceDescription(meters: distance),
+                    distanceMeters: distance,
+                    walkingTimeDescription: walkingTimeDescription(meters: distance),
+                    source: "Apple Maps",
+                    coordinate: coordinate
+                )
+                return (school, distance)
+            }
+        } catch {
+            return []
+        }
+    }
+
+    private func mergedSchoolCandidates(_ candidates: [(school: SchoolAmenity, distance: Double)]) -> [(school: SchoolAmenity, distance: Double)] {
+        var byName: [String: (school: SchoolAmenity, distance: Double)] = [:]
+        for candidate in candidates {
+            let key = normalizedSchoolName(candidate.school.name)
+            guard !key.isEmpty else { continue }
+            if let existing = byName[key], existing.distance <= candidate.distance { continue }
+            byName[key] = candidate
+        }
+        return Array(byName.values)
+    }
+
+    private func isSchoolLikeName(_ name: String) -> Bool {
+        let normalized = normalizedSchoolName(name)
+        return normalized.contains("school")
+            || normalized.contains("academy")
+            || normalized.contains("collegiate")
+            || normalized.contains("college")
+            || normalized.contains("montessori")
+            || normalized.contains("learning centre")
+            || normalized.contains("ecole")
+    }
+
+    private func mapItemAddress(_ item: MKMapItem) -> String? {
+        let placemark = item.placemark
+        let street = [placemark.subThoroughfare, placemark.thoroughfare]
+            .compactMap { $0?.nilIfEmpty }
+            .joined(separator: " ")
+            .nilIfEmpty
+        let city = [placemark.locality, placemark.administrativeArea]
+            .compactMap { $0?.nilIfEmpty }
+            .joined(separator: ", ")
+            .nilIfEmpty
+        return [street, city].compactMap { $0 }.joined(separator: ", ").nilIfEmpty
+    }
+
+    private func walkingTimeDescription(meters: Double) -> String {
+        let minutes = max(1, Int((meters / 80.0).rounded(.up)))
+        return "\(minutes) min walk"
+    }
+
+    private func schoolTypeLabel(division: String?) -> String? {
+        guard let division = division?.trimmingCharacters(in: .whitespacesAndNewlines), !division.isEmpty else {
+            return nil
+        }
+        if division.localizedCaseInsensitiveContains("Independent") {
+            return "Independent"
+        }
+        if division.localizedCaseInsensitiveContains("Catholic") {
+            return "Catholic"
+        }
+        if division.localizedCaseInsensitiveContains("Winnipeg School Division") {
+            return "Public · Winnipeg SD"
+        }
+        if division.localizedCaseInsensitiveContains("Louis Riel School Division") {
+            return "Public · Louis Riel SD"
+        }
+        return division
+            .replacingOccurrences(of: "School Division", with: "SD")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func programTags(from value: String?) -> [String] {
+        guard let value else { return [] }
+        let raw = value
+            .split(separator: ",")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+
+        var tags: [String] = []
+        func append(_ tag: String) {
+            if !tags.contains(tag) { tags.append(tag) }
+        }
+
+        for item in raw {
+            if item.localizedCaseInsensitiveContains("Early Immersion") {
+                append("Early Immersion")
+            } else if item.localizedCaseInsensitiveContains("Late Immersion") {
+                append("Late Immersion")
+            } else if item.localizedCaseInsensitiveContains("Middle Immersion") {
+                append("Middle Immersion")
+            } else if item.localizedCaseInsensitiveContains("French") {
+                append("French")
+            } else if item.localizedCaseInsensitiveContains("English") {
+                append("English")
+            } else if item.localizedCaseInsensitiveContains("Montessori") {
+                append("Montessori")
+            } else if item.count <= 22 {
+                append(item)
+            }
+        }
+        return Array(tags.prefix(4))
+    }
+
+    private func fetchSchoolDirectoryInfo(for school: SchoolAmenity) async -> SchoolDirectoryInfo? {
+        var ids: [String] = []
+        for term in schoolDirectorySearchTerms(for: school.name) {
+            ids.append(contentsOf: await fetchManitobaSchoolIDs(matching: term))
+        }
+        ids = Array(NSOrderedSet(array: ids).compactMap { $0 as? String })
+        guard !ids.isEmpty else { return nil }
+
+        var matches: [SchoolDirectoryInfo] = []
+        await withTaskGroup(of: SchoolDirectoryInfo?.self) { group in
+            for id in ids.prefix(8) {
+                group.addTask { await self.fetchManitobaSchoolDetail(id: id) }
+            }
+            for await info in group {
+                if let info { matches.append(info) }
+            }
+        }
+
+        let schoolName = normalizedSchoolName(school.name)
+        let street = streetCore(school.address)
+        return matches
+            .filter { info in
+                guard let address = info.address else { return false }
+                return address.localizedCaseInsensitiveContains("Winnipeg")
+                    || info.division?.localizedCaseInsensitiveContains("Winnipeg") == true
+                    || streetCore(address) == street
+            }
+            .sorted { lhs, rhs in
+                scoreSchoolDirectoryMatch(lhs, schoolName: schoolName, street: street)
+                    > scoreSchoolDirectoryMatch(rhs, schoolName: schoolName, street: street)
+            }
+            .first
+    }
+
+    private func fetchManitobaSchoolIDs(matching name: String) async -> [String] {
+        guard let url = URL(string: "https://web.gov.mb.ca/school/school?action=school") else { return [] }
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("application/x-www-form-urlencoded; charset=utf-8", forHTTPHeaderField: "Content-Type")
+        var body = URLComponents()
+        body.queryItems = [URLQueryItem(name: "SchoolText", value: name)]
+        let query = body.percentEncodedQuery ?? "SchoolText=\(formEncoded(name))"
+        request.httpBody = "\(query)&SchoolSearch=Submit".data(using: .utf8)
+
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode,
+                  let html = String(data: data, encoding: .utf8) else { return [] }
+            return regexCaptures(pattern: #"singleschool&name=(\d+)""#, in: html)
+        } catch {
+            return []
+        }
+    }
+
+    private func fetchManitobaSchoolDetail(id: String) async -> SchoolDirectoryInfo? {
+        guard let url = URL(string: "https://web.gov.mb.ca/school/school?action=singleschool&name=\(id)") else { return nil }
+        do {
+            let (data, response) = try await URLSession.shared.data(from: url)
+            guard let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode,
+                  let html = String(data: data, encoding: .utf8) else { return nil }
+
+            let rawName = firstRegexCapture(pattern: #"<div class="sc_name">([^<]+)</div>"#, in: html)
+            let name = rawName?
+                .htmlDecoded
+                .replacingOccurrences(of: #"\s*#\d+$"#, with: "", options: .regularExpression)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard let name, !name.isEmpty else { return nil }
+
+            let address = firstRegexCapture(pattern: #"<div class="sc_name">[^<]+</div><div>(.*?)<br />"#, in: html)?
+                .htmlDecoded
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let city = firstRegexCapture(pattern: #"<br />([^<]*Manitoba)<br />"#, in: html)?
+                .htmlDecoded
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let fullAddress = [address, city].compactMap { $0?.nilIfEmpty }.joined(separator: ", ").nilIfEmpty
+            let grades = firstRegexCapture(pattern: #"<strong>Grades:</strong>(?:&nbsp;|\s)*([^<]+)<br />"#, in: html)?
+                .htmlDecoded
+                .replacingOccurrences(of: " to ", with: "-")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let program = firstRegexCapture(pattern: #"<strong>Program:</strong>(?:&nbsp;|\s)*([^<]+)</div>"#, in: html)?
+                .htmlDecoded
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            let division = firstRegexCapture(pattern: #"<div class="sc_div">\s*([^<]+)</div>"#, in: html)?
+                .htmlDecoded
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+
+            return SchoolDirectoryInfo(name: name, address: fullAddress, grades: grades?.nilIfEmpty, division: division?.nilIfEmpty, program: program?.nilIfEmpty)
+        } catch {
+            return nil
+        }
+    }
+
+    private func geocodeSchoolAddresses(_ addresses: [String]) async -> [String: CLLocationCoordinate2D] {
+        guard let dataset = datasets.assessment else { return [:] }
+        let keys = Set(addresses.map(addressSearchKey).filter { !$0.isEmpty })
+        var byStreet: [String: Set<String>] = [:]
+        for key in keys {
+            let parts = key.split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
+            guard parts.count == 2 else { continue }
+            byStreet[String(parts[1]), default: []].insert(String(parts[0]))
+        }
+
+        var result: [String: CLLocationCoordinate2D] = [:]
+        await withTaskGroup(of: [(String, CLLocationCoordinate2D)].self) { group in
+            for (street, nums) in byStreet {
+                let numList = nums.map { "'\($0)'" }.joined(separator: ",")
+                let token = escaped(street)
+                group.addTask { [weak self] in
+                    guard let self else { return [] }
+                    let rows = (try? await self.fetch(dataset, queryItems: [
+                        URLQueryItem(name: "$select", value: "street_number,street_name,centroid_lat,centroid_lon,geometry"),
+                        URLQueryItem(name: "$where", value: "upper(street_name)='\(token)' AND street_number in (\(numList))"),
+                        URLQueryItem(name: "$limit", value: "50")
+                    ])) ?? []
+                    return rows.compactMap { row -> (String, CLLocationCoordinate2D)? in
+                        guard let number = row.string("street_number"),
+                              let coordinate = self.parseCoordinate(row) else { return nil }
+                        return ("\(number) \(street)", coordinate)
+                    }
+                }
+            }
+
+            for await pairs in group {
+                for (key, coordinate) in pairs where result[key] == nil {
+                    result[key] = coordinate
+                }
+            }
+        }
+        return result
+    }
+
+    private func schoolDirectorySearchTerms(for name: String) -> [String] {
+        var terms: [String] = []
+        func append(_ value: String) {
+            let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty, !terms.contains(trimmed) { terms.append(trimmed) }
+        }
+
+        append(name)
+        let withoutParenthetical = name
+            .replacingOccurrences(of: #"\s*\([^)]*\)"#, with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        append(withoutParenthetical)
+        append(withoutParenthetical.replacingOccurrences(of: "Savior", with: "Saviour", options: [.caseInsensitive]))
+        append(withoutParenthetical.replacingOccurrences(of: "Saviour", with: "Savior", options: [.caseInsensitive]))
+        return terms
+    }
+
+    private func addressSearchKey(_ address: String) -> String {
+        let firstLine = address.split(separator: ",", maxSplits: 1).first.map(String.init) ?? address
+        let parts = firstLine.trimmingCharacters(in: .whitespacesAndNewlines)
+            .split(separator: " ", maxSplits: 1, omittingEmptySubsequences: true)
+        guard parts.count == 2, Int(parts[0]) != nil else { return "" }
+        let street = streetCore(String(parts[1]))
+        guard !street.isEmpty else { return "" }
+        return "\(parts[0]) \(street)"
+    }
+
+    private func normalizedSchoolName(_ value: String) -> String {
+        value.htmlDecoded
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: Locale(identifier: "en_CA"))
+            .replacingOccurrences(of: #"(?i)^ecole\s+"#, with: "", options: .regularExpression)
+            .replacingOccurrences(of: #"[^a-z0-9]+"#, with: " ", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private func scoreSchoolDirectoryMatch(_ info: SchoolDirectoryInfo, schoolName: String, street: String) -> Int {
+        let candidateName = normalizedSchoolName(info.name)
+        var score = 0
+        if candidateName == schoolName { score += 100 }
+        if candidateName.contains(schoolName) || schoolName.contains(candidateName) { score += 30 }
+        if let address = info.address, streetCore(address) == street { score += 25 }
+        if info.address?.localizedCaseInsensitiveContains("Winnipeg") == true { score += 10 }
+        if info.division?.localizedCaseInsensitiveContains("Winnipeg") == true { score += 10 }
+        return score
+    }
+
+    private func formEncoded(_ value: String) -> String {
+        var allowed = CharacterSet.urlQueryAllowed
+        allowed.remove(charactersIn: "&+=?")
+        return value.addingPercentEncoding(withAllowedCharacters: allowed) ?? value
+    }
+
+    private func firstRegexCapture(pattern: String, in text: String) -> String? {
+        regexCaptures(pattern: pattern, in: text).first
+    }
+
+    private func regexCaptures(pattern: String, in text: String) -> [String] {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive, .dotMatchesLineSeparators]) else {
+            return []
+        }
+        let range = NSRange(text.startIndex..., in: text)
+        return regex.matches(in: text, range: range).compactMap { match in
+            guard match.numberOfRanges > 1,
+                  let captureRange = Range(match.range(at: 1), in: text) else { return nil }
+            return String(text[captureRange])
+        }
     }
 
     private func fetchCivicContext(address: NormalizedAddress, property: PropertyAssessment?) async -> AddressCivicContext? {
@@ -1304,18 +1803,21 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
     }
 
     private func fetchRecreation(property: PropertyAssessment?) async -> RecreationSummary? {
-        let complexes = await fetchNearbyRecreationComplexes(property: property)
+        async let complexesTask = fetchNearbyRecreationComplexes(property: property)
+        async let centresTask = fetchNearbyCommunityCentres(property: property)
+        let complexes = await complexesTask
+        let communityCentres = await centresTask
         let activities = await fetchLeisureActivities(for: complexes)
-        if complexes.isEmpty && activities.isEmpty { return nil }
-        return RecreationSummary(nearestComplex: complexes.first, complexes: complexes, activities: activities)
+        if complexes.isEmpty && activities.isEmpty && communityCentres.isEmpty { return nil }
+        return RecreationSummary(nearestComplex: complexes.first, complexes: complexes, activities: activities, communityCentres: communityCentres)
     }
 
     private func fetchNearbyRecreationComplexes(property: PropertyAssessment?, limit: Int = 8) async -> [RecreationComplex] {
         guard let dataset = datasets.recreationComplexes,
               let subject = property?.coordinate else { return [] }
         let rows = (try? await fetch(dataset, queryItems: [
-            URLQueryItem(name: "$select", value: "complex_name,address,location_1,skate_park,fitness_leisure_centre,outdoor_pool,indoor_pool,arena,community_centre,wading_pool,library,indoor_soccer,spray_pad"),
-            URLQueryItem(name: "$where", value: "within_circle(location_1,\(subject.latitude),\(subject.longitude),\(Int(nearbyRadiusMeters)))"),
+            URLQueryItem(name: "$select", value: "complex_name,address,location_1_geom,skate_park,fitness_leisure_centre,outdoor_pool,indoor_pool,arena,community_centre,wading_pool,library,indoor_soccer,spray_pad"),
+            URLQueryItem(name: "$where", value: "within_circle(location_1_geom,\(subject.latitude),\(subject.longitude),\(Int(nearbyRadiusMeters)))"),
             URLQueryItem(name: "$limit", value: "80")
         ])) ?? []
         let subjectLocation = CLLocation(latitude: subject.latitude, longitude: subject.longitude)
@@ -1342,6 +1844,34 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
                     address: row.string("address"),
                     distanceDescription: distanceDescription(meters: distance),
                     amenities: enabled,
+                    coordinate: coordinate
+                ),
+                distance
+            )
+        }
+        .sorted { $0.1 < $1.1 }
+        .prefix(limit)
+        .map(\.0)
+    }
+
+    private func fetchNearbyCommunityCentres(property: PropertyAssessment?, limit: Int = 5) async -> [CommunityCentre] {
+        guard let dataset = datasets.recreationComplexes,
+              let subject = property?.coordinate else { return [] }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "complex_name,address,location_1_geom"),
+            URLQueryItem(name: "$where", value: "within_circle(location_1_geom,\(subject.latitude),\(subject.longitude),1000) AND community_centre=true"),
+            URLQueryItem(name: "$limit", value: "80")
+        ])) ?? []
+        let subjectLocation = CLLocation(latitude: subject.latitude, longitude: subject.longitude)
+        return rows.compactMap { row -> (CommunityCentre, Double)? in
+            guard let name = row.string("complex_name"),
+                  let coordinate = parseCoordinate(row) else { return nil }
+            let distance = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude).distance(from: subjectLocation)
+            return (
+                CommunityCentre(
+                    name: name,
+                    address: row.string("address"),
+                    distanceDescription: distanceDescription(meters: distance),
                     coordinate: coordinate
                 ),
                 distance
@@ -2158,6 +2688,7 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         }
         async let erFacility = fetchNearestER(from: coordinate)
         async let walkInData = fetchNearestWalkIn(from: coordinate)
+        async let aedData = fetchNearbyAEDs(from: coordinate)
 
         var summary = PublicHealthSummary(
             yearlyEvents: mergedYears.keys.sorted().map { year in
@@ -2207,8 +2738,41 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         let wid = await walkInData
         summary.nearestWalkIn = wid.facility
         summary.walkInClinicsNearby = wid.count
-        if summary.yearlyEvents.isEmpty && summary.ageGroups.isEmpty && summary.substances.isEmpty { return nil }
+        let aeds = await aedData
+        summary.nearestAED = aeds.nearest
+        summary.aedsNearby = aeds.count
+        if summary.yearlyEvents.isEmpty && summary.ageGroups.isEmpty && summary.substances.isEmpty && summary.nearestER == nil && summary.nearestWalkIn == nil && summary.nearestAED == nil { return nil }
         return summary
+    }
+
+    private func fetchNearbyAEDs(from coordinate: CLLocationCoordinate2D?) async -> (nearest: DefibrillatorAccess?, count: Int) {
+        guard let dataset = datasets.publicAeds,
+              let coordinate else { return (nil, 0) }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "name,location_description,access,indoor,source,location"),
+            URLQueryItem(name: "$where", value: "within_circle(location,\(coordinate.latitude),\(coordinate.longitude),500)"),
+            URLQueryItem(name: "$limit", value: "50")
+        ])) ?? []
+        let subjectLocation = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        let matches = rows.compactMap { row -> (DefibrillatorAccess, Double)? in
+            guard let aedCoordinate = parseCoordinate(row) else { return nil }
+            let distance = CLLocation(latitude: aedCoordinate.latitude, longitude: aedCoordinate.longitude).distance(from: subjectLocation)
+            let access = row.string("access")
+            return (
+                DefibrillatorAccess(
+                    name: row.string("name") ?? "Public AED",
+                    locationDescription: row.string("location_description"),
+                    access: access,
+                    indoor: row.bool("indoor"),
+                    distanceDescription: distanceDescription(meters: distance),
+                    coordinate: aedCoordinate,
+                    source: row.string("source")
+                ),
+                distance
+            )
+        }
+        .sorted { $0.1 < $1.1 }
+        return (matches.first?.0, matches.count)
     }
 
     private func fetchNearestER(from coordinate: CLLocationCoordinate2D?) async -> HealthFacilityAccess? {
@@ -2900,13 +3464,15 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         async let fires = fetchVacantFireTrend()
         async let towing = fetchTowingNearby(coordinate: property.coordinate)
         async let parking = fetchPaidParkingNearby(coordinate: property.coordinate)
+        async let graffiti = fetchGraffitiCount(neighbourhood: property.neighbourhood)
 
         let roomingActivity = await rooming
         let fireTrend = await fires
         let towingCount = await towing
         let parkingInfo = await parking
+        let graffitiCount = await graffiti
 
-        if roomingActivity == nil && fireTrend.isEmpty && towingCount == 0 && parkingInfo.count == 0 {
+        if roomingActivity == nil && fireTrend.isEmpty && towingCount == 0 && parkingInfo.count == 0 && (graffitiCount ?? 0) == 0 {
             return nil
         }
         return NeighbourhoodRiskSummary(
@@ -2914,8 +3480,20 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             vacantFireTrend: fireTrend,
             towingNearby: towingCount,
             paidParkingNearby: parkingInfo.count,
-            nearestPaidParking: parkingInfo.nearest
+            nearestPaidParking: parkingInfo.nearest,
+            graffitiReports: graffitiCount
         )
+    }
+
+    private func fetchGraffitiCount(neighbourhood: String?) async -> Int? {
+        guard let neighbourhood, let dataset = datasets.serviceRequests else { return nil }
+        let whereClause = "\(serviceNeighbourhoodClause(neighbourhood)) AND type LIKE 'Graffiti%'"
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "count(*) as cnt"),
+            URLQueryItem(name: "$where", value: whereClause)
+        ])) ?? []
+        guard let count = rows.first?.int("cnt"), count > 0 else { return nil }
+        return count
     }
 
     private func fetchRoomingHouse(neighbourhood: String) async -> RoomingHouseActivity? {
@@ -3095,7 +3673,7 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
     }
 
     private func parseCoordinate(_ row: [String: Any]) -> CLLocationCoordinate2D? {
-        for key in ["geometry", "the_geom", "location", "point", "location_point", "location_1"] {
+        for key in ["geometry", "the_geom", "location", "point", "location_point", "location_1", "location_1_geom"] {
             if let point = row[key] as? [String: Any] {
                 if let coordinates = point["coordinates"] as? [Double], coordinates.count >= 2 {
                     return CLLocationCoordinate2D(latitude: coordinates[1], longitude: coordinates[0])
@@ -3193,6 +3771,22 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
 }
 
 private extension String {
+    var nilIfEmpty: String? {
+        isEmpty ? nil : self
+    }
+
+    var htmlDecoded: String {
+        self
+            .replacingOccurrences(of: "&nbsp;", with: " ")
+            .replacingOccurrences(of: "&#160;", with: " ")
+            .replacingOccurrences(of: "&amp;", with: "&")
+            .replacingOccurrences(of: "&quot;", with: "\"")
+            .replacingOccurrences(of: "&#39;", with: "'")
+            .replacingOccurrences(of: "&apos;", with: "'")
+            .replacingOccurrences(of: "&lt;", with: "<")
+            .replacingOccurrences(of: "&gt;", with: ">")
+    }
+
     /// The City of Winnipeg's School Zone Signage feed stores French civic names with their
     /// accented letters already destroyed into the Unicode replacement character (U+FFFD) at
     /// the source — e.g. "École Rivière-Rouge" arrives as "�cole Rivi�re-Rouge". The original

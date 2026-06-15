@@ -363,9 +363,17 @@ struct PropertyCompareView: View {
 
     private var schoolRows: [CompareRow] {
         [
+            CompareRow(label: "Assigned", values: reports.map { report in
+                report?.nearbySchools.first(where: \.isAssigned)?.name.nilIfEmpty
+            }, bestIndex: nil),
             CompareRow(label: "Nearest", values: reports.map { $0?.nearbySchools.first?.name.nilIfEmpty }, bestIndex: nil),
             CompareRow(label: "Distance", values: reports.map { $0?.nearbySchools.first?.distanceDescription.nilIfEmpty }, bestIndex: nil),
+            CompareRow(label: "Walk", values: reports.map { $0?.nearbySchools.first?.walkingTimeDescription?.nilIfEmpty }, bestIndex: nil),
             CompareRow(label: "Grades", values: reports.map { $0?.nearbySchools.first?.grades?.nilIfEmpty }, bestIndex: nil),
+            CompareRow(label: "Programs", values: reports.map { report in
+                guard let programs = report?.nearbySchools.first?.programs, !programs.isEmpty else { return nil }
+                return programs.prefix(2).joined(separator: ", ")
+            }, bestIndex: nil),
             CompareRow(
                 label: "Nearby",
                 values: reports.map { report in
