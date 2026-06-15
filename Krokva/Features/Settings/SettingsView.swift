@@ -175,17 +175,6 @@ struct SettingsView: View {
                 }
                 Divider().foregroundStyle(Color.cleanSep)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text("ERstat")
-                        .font(KrokvaTypography.body)
-                        .foregroundStyle(Color.cleanLabel)
-                    Text("Emergency-room closure and disruption data from ERstat (https://erstat.ca).")
-                        .font(KrokvaTypography.caption)
-                        .foregroundStyle(Color.cleanLabel2.opacity(0.68))
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 8)
-                Divider().foregroundStyle(Color.cleanSep)
-                VStack(alignment: .leading, spacing: 2) {
                     Text("Winnipeg Regional Health Authority")
                         .font(KrokvaTypography.body)
                         .foregroundStyle(Color.cleanLabel)

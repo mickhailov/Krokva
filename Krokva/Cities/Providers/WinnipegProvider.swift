@@ -2754,14 +2754,6 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             nearestER?.waitTimeUpdatedAt = waitTime.updatedAt
             nearestER?.waitTimeAttribution = "Emergency wait times from Winnipeg Regional Health Authority (wrha.mb.ca)."
         }
-        if let province = nearestER?.province,
-           let erstat = await fetchEmergencyRoomClosures(province: province) {
-            let statuses = erstat.closures.map(\.emergencyRoomStatus)
-            let nearestERName = nearestER?.name
-            nearestER?.liveStatus = matchEmergencyRoomStatus(for: nearestERName, statuses: statuses)
-            summary.emergencyRoomClosures = statuses
-            summary.emergencyRoomAttribution = erstat.attribution
-        }
         summary.nearestER = nearestER
         let wid = await walkInData
         summary.nearestWalkIn = wid.facility
@@ -2855,25 +2847,6 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             return normalizedTarget == normalizedWaitName
                 || normalizedTarget.contains(normalizedWaitName)
                 || normalizedWaitName.contains(normalizedTarget)
-        }
-    }
-
-    private func fetchEmergencyRoomClosures(province: String?) async -> ERstatClosuresResponse? {
-        do {
-            return try await ERstatClient().closures(province: province)
-        } catch {
-            return nil
-        }
-    }
-
-    private func matchEmergencyRoomStatus(for facilityName: String?, statuses: [EmergencyRoomStatus]) -> EmergencyRoomStatus? {
-        guard let facilityName else { return nil }
-        let normalizedTarget = normalizedFacilityName(facilityName)
-        return statuses.first { status in
-            let normalizedStatusName = normalizedFacilityName(status.name)
-            return normalizedTarget == normalizedStatusName
-                || normalizedTarget.contains(normalizedStatusName)
-                || normalizedStatusName.contains(normalizedTarget)
         }
     }
 

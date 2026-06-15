@@ -8,6 +8,7 @@ struct HeroPropertyCard: View {
     let report: AddressReport
     @State private var camera: MapCameraPosition
     @State private var permitVM = PermitHistoryViewModel()
+    @State private var selectedSection: ScoreSectionDetail?
     @Environment(\.modelContext) private var modelContext
 
     private var property: PropertyAssessment? { report.property }
@@ -36,6 +37,11 @@ struct HeroPropertyCard: View {
             }
         }
         .task { await permitVM.load(report: report, modelContext: modelContext) }
+        .sheet(item: $selectedSection) { detail in
+            ScoreBreakdownSheet(detail: detail)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
     }
 
     // MARK: - Map
@@ -146,16 +152,21 @@ struct HeroPropertyCard: View {
                         .foregroundStyle(Color.cleanLabel3)
                 }
                 Spacer()
-                Text("House score")
-                    .eyebrow(color: .cleanLabel3)
+                VStack(alignment: .trailing, spacing: 2) {
+                    Text("House score")
+                        .eyebrow(color: .cleanLabel3)
+                    Text("Tap a bar for why")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(Color.cleanLabel3)
+                }
             }
 
             VStack(spacing: 4) {
-                scorePillBar("Property",    score: r.property,    color: .cleanSky,            delay: 0.05)
-                scorePillBar("Safety",      score: r.safety,      color: .cleanAmber,           delay: 0.12)
-                scorePillBar("Mobility",    score: r.mobility,    color: .cleanGreen,           delay: 0.19)
-                scorePillBar("Liveability", score: r.liveability, color: .cleanIndigo,          delay: 0.26)
-                scorePillBar("Risk",        score: r.risk,        color: Color(hex: 0xEAB308),  delay: 0.33)
+                scorePillBar("Property",    score: r.property,    rating: r, color: .cleanSky,           delay: 0.05)
+                scorePillBar("Safety",      score: r.safety,      rating: r, color: .cleanAmber,         delay: 0.12)
+                scorePillBar("Mobility",    score: r.mobility,    rating: r, color: .cleanGreen,         delay: 0.19)
+                scorePillBar("Liveability", score: r.liveability, rating: r, color: .cleanIndigo,        delay: 0.26)
+                scorePillBar("Risk",        score: r.risk,        rating: r, color: Color(hex: 0xEAB308), delay: 0.33)
             }
 
             if permitVM.isLoading {
@@ -175,14 +186,30 @@ struct HeroPropertyCard: View {
     }
 
     @ViewBuilder
-    private func scorePillBar(_ label: String, score: ReportRating.SectionScore, color: Color, delay: Double) -> some View {
-        PillBar(
-            label: label,
-            value: score.isUnavailable ? 0 : Int(score.score.rounded()),
-            maxValue: 100,
-            color: score.isUnavailable ? Color.cleanTrack : color,
-            animationDelay: delay
-        )
+    private func scorePillBar(_ label: String, score: ReportRating.SectionScore, rating: ReportRating, color: Color, delay: Double) -> some View {
+        Button {
+            selectedSection = ScoreSectionDetail(
+                name: label,
+                color: color,
+                section: score,
+                effectiveWeight: rating.effectiveWeight(for: label)
+            )
+        } label: {
+            HStack(spacing: 8) {
+                PillBar(
+                    label: label,
+                    value: score.isUnavailable ? 0 : Int(score.score.rounded()),
+                    maxValue: 100,
+                    color: score.isUnavailable ? Color.cleanTrack : color,
+                    animationDelay: delay
+                )
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Color.cleanLabel3)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Derived

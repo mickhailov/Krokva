@@ -42,7 +42,7 @@ Each address Report is assembled by `WinnipegProvider.fetchReport` as a parallel
 Clean, Compare, Favorites, Health, Home, Map, Parks, PermitHistory, Report, Search, SelfInspection, Service311, Settings
 
 **Report cards** (`Krokva/Features/Report/Cards/`):
-ChartCards, CivicDataCards, HeroPropertyCard, HouseScoreCard, ListCards, NearbySchoolsCard, PropertyFactsCard, PropertyFinancialCard, ReportMapCard, SharedComponents
+ChartCards, CivicDataCards, HeroPropertyCard, ListCards, NearbySchoolsCard, PropertyFactsCard, PropertyFinancialCard, ReportMapCard, ScoreBreakdownSheet, SharedComponents
 
 **City providers** (`Krokva/Cities/Providers/`):
 CKANProvider, SocrataProvider, StubProviders, WinnipegProvider

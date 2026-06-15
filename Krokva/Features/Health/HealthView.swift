@@ -169,46 +169,13 @@ struct HealthView: View {
             } else if let avgWaitMinutes = facility.avgWaitMinutes {
                 statRow(label: "Avg. wait time", value: formattedWait(minutes: avgWaitMinutes))
             }
-            if let status = facility.liveStatus {
-                statusBlock(status)
-            } else if let closure = summary.emergencyRoomClosures.first {
-                statusBlock(closure)
-            }
             if let attribution = facility.waitTimeAttribution {
                 Text(attribution)
                     .font(.system(size: 10))
                     .foregroundStyle(Color.cleanLabel3)
                     .fixedSize(horizontal: false, vertical: true)
             }
-            if let attribution = summary.emergencyRoomAttribution {
-                Text(attribution)
-                    .font(.system(size: 10))
-                    .foregroundStyle(Color.cleanLabel3)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
         }
-    }
-
-    private func statusBlock(_ status: EmergencyRoomStatus) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 8) {
-                Text(status.statusLabel)
-                    .font(.system(size: 11, weight: .heavy))
-                    .textCase(.uppercase)
-                    .foregroundStyle(status.status.lowercased() == "closed" ? Color.cleanRed : Color.cleanAmber)
-                if let expectedReopen = status.expectedReopen {
-                    Text("Reopens \(expectedReopen.formatted(date: .omitted, time: .shortened))")
-                        .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(Color.cleanLabel2)
-                }
-            }
-            Text(status.message)
-                .font(.system(size: 12))
-                .foregroundStyle(Color.cleanLabel2)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(10)
-        .background((status.status.lowercased() == "closed" ? Color.cleanRed : Color.cleanAmber).opacity(0.10), in: RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 
     private func formattedWait(minutes: Int) -> String {

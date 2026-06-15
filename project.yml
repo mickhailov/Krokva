@@ -6,8 +6,8 @@ options:
 settings:
   base:
     SWIFT_VERSION: "5.9"
-    CURRENT_PROJECT_VERSION: "8"
-    MARKETING_VERSION: "0.2.7"
+    CURRENT_PROJECT_VERSION: "9"
+    MARKETING_VERSION: "0.2.8"
 targets:
   Krokva:
     type: application
@@ -27,14 +27,12 @@ targets:
         UIApplicationSceneManifest:
           UIApplicationSupportsMultipleScenes: false
         NSLocationWhenInUseUsageDescription: Krokva uses location only when you choose to search near you.
-        ERstatAPIKey: "$(esk_uL6OxzJHOAQzmR8q1SxaCtLG6wnGCo4HeEH9agp3)"
         UIUserInterfaceStyle: Light
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ca.krokva.app
-        ERSTAT_API_KEY: ""
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         TARGETED_DEVICE_FAMILY: "1"
         DEVELOPMENT_ASSET_PATHS: ""

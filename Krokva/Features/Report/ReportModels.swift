@@ -651,7 +651,6 @@ struct HealthFacilityAccess: Codable {
     var treatingPatients: Int? = nil
     var waitTimeUpdatedAt: String? = nil
     var waitTimeAttribution: String? = nil
-    var liveStatus: EmergencyRoomStatus? = nil
 }
 
 struct DefibrillatorAccess: Codable {
@@ -675,30 +674,6 @@ struct PublicHealthSummary: Codable {
     var walkInClinicsNearby: Int? = nil
     var nearestAED: DefibrillatorAccess? = nil
     var aedsNearby: Int? = nil
-    var emergencyRoomClosures: [EmergencyRoomStatus] = []
-    var emergencyRoomAttribution: String? = nil
-}
-
-struct EmergencyRoomStatus: Identifiable, Codable {
-    var id: Int
-    var name: String
-    var city: String
-    var province: String
-    var status: String
-    var message: String
-    var updatedAt: Date?
-    var expectedReopen: Date?
-
-    var statusLabel: String {
-        switch status.lowercased() {
-        case "closed":
-            return "Closed"
-        case "disruption":
-            return "Disruption"
-        default:
-            return status.capitalized
-        }
-    }
 }
 
 struct PublicHealthYear: Identifiable, Codable {

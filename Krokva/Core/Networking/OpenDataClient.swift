@@ -20,7 +20,11 @@ final class OpenDataClient {
     func getJSON(url: URL) async throws -> [[String: Any]] {
         do {
             return try await perform(url: url)
-        } catch {
+        } catch let error as URLError {
+            // Only transport-level failures (timeout, connection lost) are worth a
+            // single retry. HTTP error codes (badResponse) and decode errors will
+            // just fail again, so those propagate without a wasted second request.
+            guard error.code != .cancelled else { throw error }
             return try await perform(url: url)
         }
     }

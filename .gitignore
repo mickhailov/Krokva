@@ -8,3 +8,6 @@ DerivedData/
 
 # Xcode build output
 build/
+
+# Secrets / keys
+*.pem

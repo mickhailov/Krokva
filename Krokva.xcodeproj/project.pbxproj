@@ -17,7 +17,6 @@
 		38E9123063C3865B39593F08 /* WinnipegProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D0C497E36152CCF911EC480 /* WinnipegProvider.swift */; };
 		3D1CCB928EFD5980102E32DD /* RootTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6ED210E53D2D95220B4BCB0 /* RootTabView.swift */; };
 		3FD5B20A38138C0D34DD0AF6 /* CleanComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4DA22E3474964063FB88970 /* CleanComponents.swift */; };
-		40A44E826CD2D33787149848 /* HouseScoreCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4F9231F7D276A6657111B20 /* HouseScoreCard.swift */; };
 		40B3528742E8C22EDB646B6D /* PermitHistoryModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4377808D626DA37B8F05A13C /* PermitHistoryModels.swift */; };
 		42F81605EA559E3B33C3E963 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = B6E1A69646C041B3CFBD6ABE /* PrivacyInfo.xcprivacy */; };
 		45B46EFDAFBBB0AD84FDC77A /* ChartCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BD82335870EA3842809E034 /* ChartCards.swift */; };
@@ -30,6 +29,7 @@
 		65820CA94F778D8DCC95F45F /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F06B1C0B8AB5419FCF47087 /* SharedComponents.swift */; };
 		671939D3FAFF1ED9F7C34828 /* Branding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FECAABF841CF818A1E97C9C /* Branding.swift */; };
 		6E395B3B9662C042CD99AA13 /* ReportMapCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95D8B7D6288A5B2F15A10EFD /* ReportMapCard.swift */; };
+		7041520F8C1442911558548E /* ScoreBreakdownSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 274D2F33B340BF946C92C180 /* ScoreBreakdownSheet.swift */; };
 		70690205B017B435FB252D76 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC2CECAE53863D72727091C0 /* SearchView.swift */; };
 		73C34D9D820A005DF8EBB793 /* StackedRows.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8D60FB1667E3DD721883531F /* StackedRows.swift */; };
 		779DCB113CF02338059BD050 /* CivicDataCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = BDE0E1E37B1968A10CD9BE5C /* CivicDataCards.swift */; };
@@ -38,7 +38,6 @@
 		83A0D44A8E95083ACDC72938 /* CompareView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB695AF5864B7C93A970E471 /* CompareView.swift */; };
 		85B49D849175D70DCF3BE521 /* CKANProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F4B613E4DA165E2C23814C4 /* CKANProvider.swift */; };
 		8F5AC3F294BF612EF3DCB3F5 /* CityRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C43B172C331B2B173A02962 /* CityRegistry.swift */; };
-		94FC36F08FDE36337E9A6BF2 /* ERstatClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06E7850784CC851E7953DF39 /* ERstatClient.swift */; };
 		963690E787817552473D6254 /* CivicMapMarker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FC556B1A1AAF1F372A674EF /* CivicMapMarker.swift */; };
 		9F87814116496E208B96DF22 /* CityMapView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5FD01063519F80A7994FADD8 /* CityMapView.swift */; };
 		A00D4CBEA655169F82FE1A98 /* PropertyFinancialCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F77CD4C38DDC28AF44B35B7 /* PropertyFinancialCard.swift */; };
@@ -70,7 +69,6 @@
 /* Begin PBXFileReference section */
 		01A63E3487763FB58DEFEF96 /* SocrataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocrataProvider.swift; sourceTree = "<group>"; };
 		0458BEF8DC7227A7F0CF9B0C /* WRHAWaitTimesClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WRHAWaitTimesClient.swift; sourceTree = "<group>"; };
-		06E7850784CC851E7953DF39 /* ERstatClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ERstatClient.swift; sourceTree = "<group>"; };
 		0A76C3ED2C7C1E29CB05E3FC /* FavoritesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FavoritesView.swift; sourceTree = "<group>"; };
 		0A9D6487611030E636E3CF6B /* LocalModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalModels.swift; sourceTree = "<group>"; };
 		0C43B172C331B2B173A02962 /* CityRegistry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityRegistry.swift; sourceTree = "<group>"; };
@@ -83,6 +81,7 @@
 		1BD82335870EA3842809E034 /* ChartCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartCards.swift; sourceTree = "<group>"; };
 		1D0C497E36152CCF911EC480 /* WinnipegProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WinnipegProvider.swift; sourceTree = "<group>"; };
 		1E0136370803A2EFD49C117E /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
+		274D2F33B340BF946C92C180 /* ScoreBreakdownSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreBreakdownSheet.swift; sourceTree = "<group>"; };
 		2B8186D49089188A7387B1B2 /* ReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportView.swift; sourceTree = "<group>"; };
 		3F06B1C0B8AB5419FCF47087 /* SharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponents.swift; sourceTree = "<group>"; };
 		3F121150FE0C7BBD9EB3ED97 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -121,7 +120,6 @@
 		BC1194C7694F1F34C41D90AB /* KrokvaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KrokvaApp.swift; sourceTree = "<group>"; };
 		BDE0E1E37B1968A10CD9BE5C /* CivicDataCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CivicDataCards.swift; sourceTree = "<group>"; };
 		C4A8149ED5C1D566D32081FF /* AddressNormalizer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressNormalizer.swift; sourceTree = "<group>"; };
-		C4F9231F7D276A6657111B20 /* HouseScoreCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseScoreCard.swift; sourceTree = "<group>"; };
 		CA1C0CE8DECD1EB1777ACFF9 /* ReportModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportModels.swift; sourceTree = "<group>"; };
 		CCBA00D8FFB1CB1FCAF18D95 /* ReportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportService.swift; sourceTree = "<group>"; };
 		CE76B3963FF433DCF5CD7F4F /* PermitHistoryService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermitHistoryService.swift; sourceTree = "<group>"; };
@@ -282,7 +280,6 @@
 			children = (
 				8ACFA09CFFCB70198757DA6D /* DataSourceHealth.swift */,
 				79A15CC362BC7FAAE91D9207 /* DataStatusService.swift */,
-				06E7850784CC851E7953DF39 /* ERstatClient.swift */,
 				FBF242F3724ED06A3A624C9F /* OpenDataClient.swift */,
 				0458BEF8DC7227A7F0CF9B0C /* WRHAWaitTimesClient.swift */,
 			);
@@ -305,12 +302,12 @@
 				1BD82335870EA3842809E034 /* ChartCards.swift */,
 				BDE0E1E37B1968A10CD9BE5C /* CivicDataCards.swift */,
 				544C3AE7965538FD20DD57D3 /* HeroPropertyCard.swift */,
-				C4F9231F7D276A6657111B20 /* HouseScoreCard.swift */,
 				40AA1F1989F02FB958D27E1F /* ListCards.swift */,
 				9F0BB65C03381D7D248723D2 /* NearbySchoolsCard.swift */,
 				BB625FD5DEE14E21C60EFF75 /* PropertyFactsCard.swift */,
 				8F77CD4C38DDC28AF44B35B7 /* PropertyFinancialCard.swift */,
 				95D8B7D6288A5B2F15A10EFD /* ReportMapCard.swift */,
+				274D2F33B340BF946C92C180 /* ScoreBreakdownSheet.swift */,
 				3F06B1C0B8AB5419FCF47087 /* SharedComponents.swift */,
 			);
 			path = Cards;
@@ -495,7 +492,6 @@
 				83A0D44A8E95083ACDC72938 /* CompareView.swift in Sources */,
 				B8433B8AFDAD29A67D54A545 /* DataSourceHealth.swift in Sources */,
 				C2B39E1DB6BD77B2A02C5F29 /* DataStatusService.swift in Sources */,
-				94FC36F08FDE36337E9A6BF2 /* ERstatClient.swift in Sources */,
 				5FB2B2626CBF34527D129349 /* FavoritesView.swift in Sources */,
 				1F896D2A04E651490D6BA2ED /* GlassSurfaces.swift in Sources */,
 				F210088B5CF456FD773794CB /* HealthView.swift in Sources */,
@@ -503,7 +499,6 @@
 				51571B4D6E620BED0E65805D /* HeroPropertyCard.swift in Sources */,
 				D2525E6A4FCF9F28BA15DB71 /* HomeView+Editorial.swift in Sources */,
 				F833EBCAE2951A850402DAE2 /* HomeView.swift in Sources */,
-				40A44E826CD2D33787149848 /* HouseScoreCard.swift in Sources */,
 				FA9EF786D4F3BB149EA72B3C /* KrokvaApp.swift in Sources */,
 				A608292ABB71B2A32ADF523E /* ListCards.swift in Sources */,
 				C50E03509CA1167594372E68 /* LoadingScreenAnimation.swift in Sources */,
@@ -524,6 +519,7 @@
 				A25CA791D76A906EDBB479C4 /* ReportService.swift in Sources */,
 				22C7335DBAE46585FB320448 /* ReportView.swift in Sources */,
 				3D1CCB928EFD5980102E32DD /* RootTabView.swift in Sources */,
+				7041520F8C1442911558548E /* ScoreBreakdownSheet.swift in Sources */,
 				70690205B017B435FB252D76 /* SearchView.swift in Sources */,
 				45E7B46E942BC8BB65BD2007 /* SearchViewModel.swift in Sources */,
 				A986BB87F5A793D2B25BD270 /* SelfInspectionView.swift in Sources */,
@@ -589,7 +585,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
@@ -608,7 +604,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.2.7;
+				MARKETING_VERSION = 0.2.8;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -654,7 +650,7 @@
 				CLANG_WARN_UNREACHABLE_CODE = YES;
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 8;
+				CURRENT_PROJECT_VERSION = 9;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -667,7 +663,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 0.2.7;
+				MARKETING_VERSION = 0.2.8;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -685,7 +681,6 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				ERSTAT_API_KEY = "";
 				INFOPLIST_FILE = Krokva/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -704,7 +699,6 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				DEVELOPMENT_ASSET_PATHS = "";
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
-				ERSTAT_API_KEY = "";
 				INFOPLIST_FILE = Krokva/Resources/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
