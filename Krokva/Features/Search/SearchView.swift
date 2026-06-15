@@ -57,6 +57,7 @@ struct SearchView: View {
                     addressText: viewModel.query,
                     cityName: viewModel.detectedProvider?.displayName ?? "Winnipeg, MB",
                     stage: viewModel.loadingStage,
+                    subStageFraction: viewModel.loadingSubFraction,
                     onCancel: { cancelSearch() }
                 )
                 .ignoresSafeArea()

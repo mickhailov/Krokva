@@ -39,7 +39,7 @@ struct WinnipegAddressNormalizer: AddressNormalizer {
 
     func streetVariants(for address: NormalizedAddress) -> [String] {
         let base = address.streetName
-        let suffixPattern = #"(?i)\b(avenue|ave|av|street|st|road|rd|drive|dr|boulevard|blvd|crescent|cres|place|pl|way|lane|ln|court|crt|ct|trail|trl|close|bay|bv|terrace|terr|circle|cir|grove|grv|heights|hts|run|bend|glen|mews)\b"#
+        let suffixPattern = #"(?i)\b(avenue|ave|av|street|st|road|rd|drive|dr|boulevard|blvd|crescent|cres|place|pl|way|lane|ln|line|court|crt|ct|trail|trl|close|bay|bv|terrace|terr|circle|cir|grove|grv|heights|hts|run|bend|glen|mews)\b"#
         let upperNoSuffix = base
             .replacingOccurrences(of: suffixPattern, with: "", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)

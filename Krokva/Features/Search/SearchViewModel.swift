@@ -10,6 +10,7 @@ final class SearchViewModel {
     var detectedProvider: (any CityDataProvider)?
     var isLoading = false
     var loadingStage: ReportLoadingStage = .normalizing
+    var loadingSubFraction: Double = 0
     var errorMessage: String?
 
     private let completer = AddressCompleter()
@@ -47,17 +48,27 @@ final class SearchViewModel {
         errorMessage = nil
         defer { isLoading = false }
 
-        return await service.report(for: trimmed) { [weak self] stage in
+        return await service.report(for: trimmed, progress: { [weak self] stage in
             guard !Task.isCancelled else { return }
             await self?.setLoadingStage(stage)
-        }
+        }, subProgress: { [weak self] fraction in
+            guard !Task.isCancelled else { return }
+            await self?.setLoadingSubFraction(fraction)
+        })
     }
 
     private func setLoadingStage(_ stage: ReportLoadingStage) async {
         await MainActor.run {
             withAnimation(.easeInOut(duration: 0.28)) {
                 loadingStage = stage
+                loadingSubFraction = 0
             }
+        }
+    }
+
+    private func setLoadingSubFraction(_ fraction: Double) async {
+        await MainActor.run {
+            loadingSubFraction = fraction
         }
     }
 }

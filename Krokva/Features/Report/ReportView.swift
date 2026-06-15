@@ -446,6 +446,7 @@ struct SavedReportsView: View {
     @State private var loadingAddress: String?
     @State private var loadingCityName = "Winnipeg, MB"
     @State private var loadingStage: ReportLoadingStage = .normalizing
+    @State private var loadingSubFraction: Double = 0
     @State private var loadingTask: Task<Void, Never>?
     @State private var refreshingAddress: String?
 
@@ -516,6 +517,7 @@ struct SavedReportsView: View {
                     addressText: loadingAddress,
                     cityName: loadingCityName,
                     stage: loadingStage,
+                    subStageFraction: loadingSubFraction,
                     onCancel: { cancelLoadingReport() }
                 )
                 .transition(.opacity.combined(with: .scale(scale: 0.98)))
@@ -776,10 +778,13 @@ struct SavedReportsView: View {
             loadingTask = nil
         }
 
-        let report = await ReportService().report(for: address) { stage in
+        let report = await ReportService().report(for: address, progress: { stage in
             guard !Task.isCancelled else { return }
             await setLoadingStage(stage)
-        }
+        }, subProgress: { fraction in
+            guard !Task.isCancelled else { return }
+            await setLoadingSubFraction(fraction)
+        })
         guard !Task.isCancelled else { return }
         if let saved {
             saved.update(from: report)
@@ -805,7 +810,14 @@ struct SavedReportsView: View {
         await MainActor.run {
             withAnimation(.easeInOut(duration: 0.28)) {
                 loadingStage = stage
+                loadingSubFraction = 0
             }
+        }
+    }
+
+    private func setLoadingSubFraction(_ fraction: Double) async {
+        await MainActor.run {
+            loadingSubFraction = fraction
         }
     }
 

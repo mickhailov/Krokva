@@ -47,6 +47,15 @@ private struct CensusBoundaryCandidate {
     var displayName: String
 }
 
+// Aggregates geocode sub-progress from two parallel tasks into a single 0…1 value.
+private actor GeoProgressAggregator {
+    private var permits: Double = 0
+    private var vacants: Double = 0
+    var combined: Double { (permits + vacants) / 2 }
+    func setPermits(_ v: Double) { permits = v }
+    func setVacants(_ v: Double) { vacants = v }
+}
+
 final class WinnipegProvider: SocrataProvider, CityDataProvider {
     private static var policeCrimeCSVCache: String?
     private let nearbyRadiusMeters: Double = 500
@@ -147,7 +156,7 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
     }
 
     func fetchReport(for address: NormalizedAddress) async -> AddressReport {
-        await fetchReport(for: address, progress: nil)
+        await fetchReport(for: address, progress: nil, subProgress: nil)
     }
 
     /// Binds `ReportModuleContext.current` for the duration of a module fetch so any request
@@ -156,7 +165,7 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         await ReportModuleContext.$current.withValue(module, operation: operation)
     }
 
-    func fetchReport(for address: NormalizedAddress, progress: ReportService.ProgressHandler?) async -> AddressReport {
+    func fetchReport(for address: NormalizedAddress, progress: ReportService.ProgressHandler?, subProgress: ReportService.SubProgressHandler?) async -> AddressReport {
         await dataSourceHealth.reset()
 
         await progress?(.assessment)
@@ -204,8 +213,19 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         await progress?(.infrastructure)
         let infrastructureSummary = await infrastructure
         await progress?(.mapCoordinates)
-        let permits = await geocodePermits(await permitsRaw, subject: assessment?.coordinate)
-        let vacantOrders = await geocodeVacantOrders(await vacantOrdersRaw, subject: assessment?.coordinate)
+        let geoAgg = GeoProgressAggregator()
+        let permitsRawValue = await permitsRaw
+        let vacantOrdersRawValue = await vacantOrdersRaw
+        async let geocodedPermits = geocodePermits(permitsRawValue, subject: assessment?.coordinate) { fraction in
+            await geoAgg.setPermits(fraction)
+            await subProgress?(await geoAgg.combined)
+        }
+        async let geocodedVacantOrders = geocodeVacantOrders(vacantOrdersRawValue, subject: assessment?.coordinate) { fraction in
+            await geoAgg.setVacants(fraction)
+            await subProgress?(await geoAgg.combined)
+        }
+        let permits = await geocodedPermits
+        let vacantOrders = await geocodedVacantOrders
         await progress?(.comparables)
 
         let neighbourhoodValues = await values
@@ -292,9 +312,9 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         )
     }
 
-    private func geocodePermits(_ permits: [BuildingPermit], subject: CLLocationCoordinate2D?) async -> [BuildingPermit] {
+    private func geocodePermits(_ permits: [BuildingPermit], subject: CLLocationCoordinate2D?, onProgress: ((Double) async -> Void)? = nil) async -> [BuildingPermit] {
         guard !permits.isEmpty else { return permits }
-        let lookup = await geocode(addresses: permits.map(\.address))
+        let lookup = await geocode(addresses: permits.map(\.address), onProgress: onProgress)
         let subjectLocation = subject.map { CLLocation(latitude: $0.latitude, longitude: $0.longitude) }
         return permits.compactMap { p -> (BuildingPermit, Double)? in
             var copy = p
@@ -310,9 +330,9 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         .map(\.0)
     }
 
-    private func geocodeVacantOrders(_ orders: [VacantOrder], subject: CLLocationCoordinate2D?) async -> [VacantOrder] {
+    private func geocodeVacantOrders(_ orders: [VacantOrder], subject: CLLocationCoordinate2D?, onProgress: ((Double) async -> Void)? = nil) async -> [VacantOrder] {
         guard !orders.isEmpty else { return orders }
-        let lookup = await geocode(addresses: orders.map(\.address))
+        let lookup = await geocode(addresses: orders.map(\.address), onProgress: onProgress)
         let subjectLocation = subject.map { CLLocation(latitude: $0.latitude, longitude: $0.longitude) }
         return orders.compactMap { o -> (VacantOrder, Double)? in
             var copy = o
@@ -338,7 +358,7 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         return "\(num) \(street)"
     }
 
-    private func geocode(addresses: [String]) async -> [String: CLLocationCoordinate2D] {
+    private func geocode(addresses: [String], onProgress: ((Double) async -> Void)? = nil) async -> [String: CLLocationCoordinate2D] {
         guard let dataset = datasets.assessment else { return [:] }
         var byStreet: [String: Set<String>] = [:]
         for raw in addresses {
@@ -349,6 +369,8 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             guard !street.isEmpty else { continue }
             byStreet[street, default: []].insert(num)
         }
+        let total = byStreet.count
+        var completed = 0
         var result: [String: CLLocationCoordinate2D] = [:]
         await withTaskGroup(of: [(String, CLLocationCoordinate2D)].self) { group in
             for (street, nums) in byStreet {
@@ -372,6 +394,10 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             }
             for await pairs in group {
                 for (key, coord) in pairs where result[key] == nil { result[key] = coord }
+                completed += 1
+                if let onProgress, total > 0 {
+                    await onProgress(Double(completed) / Double(total))
+                }
             }
         }
         return result
@@ -509,7 +535,7 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         ])) ?? []
         if rows.isEmpty {
             let streetOnly = address.streetName
-                .replacingOccurrences(of: #"(?i)\b(avenue|ave|av|street|st|road|rd|drive|dr|boulevard|blvd|crescent|cres|place|pl|way|lane|ln|court|crt|ct|trail|trl|close|bay|bv|terrace|terr|circle|cir|grove|grv|heights|hts|bend|glen|mews|run)\b"#, with: "", options: .regularExpression)
+                .replacingOccurrences(of: #"(?i)\b(avenue|ave|av|street|st|road|rd|drive|dr|boulevard|blvd|crescent|cres|place|pl|way|lane|ln|line|court|crt|ct|trail|trl|close|bay|bv|terrace|terr|circle|cir|grove|grv|heights|hts|bend|glen|mews|run)\b"#, with: "", options: .regularExpression)
                 .trimmingCharacters(in: .whitespacesAndNewlines)
                 .uppercased()
             if !streetOnly.isEmpty {
@@ -789,7 +815,7 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
     }
 
     private func streetCore(_ name: String) -> String {
-        name.replacingOccurrences(of: #"(?i)\s+(avenue|ave|av|street|st|road|rd|drive|dr|boulevard|blvd|crescent|cres|place|pl|way|lane|ln|court|crt|ct|trail|trl|close|bay|bv|terrace|terr|circle|cir|grove|grv|heights|hts|bend|glen|mews|run)\.?$"#, with: "", options: .regularExpression)
+        name.replacingOccurrences(of: #"(?i)\s+(avenue|ave|av|street|st|road|rd|drive|dr|boulevard|blvd|crescent|cres|place|pl|way|lane|ln|line|court|crt|ct|trail|trl|close|bay|bv|terrace|terr|circle|cir|grove|grv|heights|hts|bend|glen|mews|run)\.?$"#, with: "", options: .regularExpression)
             .trimmingCharacters(in: .whitespacesAndNewlines)
             .uppercased()
     }
@@ -1817,7 +1843,7 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
               let subject = property?.coordinate else { return [] }
         let rows = (try? await fetch(dataset, queryItems: [
             URLQueryItem(name: "$select", value: "complex_name,address,location_1_geom,skate_park,fitness_leisure_centre,outdoor_pool,indoor_pool,arena,community_centre,wading_pool,library,indoor_soccer,spray_pad"),
-            URLQueryItem(name: "$where", value: "within_circle(location_1_geom,\(subject.latitude),\(subject.longitude),\(Int(nearbyRadiusMeters)))"),
+            URLQueryItem(name: "$where", value: "within_circle(location_1_geom,\(subject.latitude),\(subject.longitude),5000)"),
             URLQueryItem(name: "$limit", value: "80")
         ])) ?? []
         let subjectLocation = CLLocation(latitude: subject.latitude, longitude: subject.longitude)
@@ -1859,7 +1885,7 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
               let subject = property?.coordinate else { return [] }
         let rows = (try? await fetch(dataset, queryItems: [
             URLQueryItem(name: "$select", value: "complex_name,address,location_1_geom"),
-            URLQueryItem(name: "$where", value: "within_circle(location_1_geom,\(subject.latitude),\(subject.longitude),1000) AND community_centre=true"),
+            URLQueryItem(name: "$where", value: "within_circle(location_1_geom,\(subject.latitude),\(subject.longitude),3000) AND community_centre=true"),
             URLQueryItem(name: "$limit", value: "80")
         ])) ?? []
         let subjectLocation = CLLocation(latitude: subject.latitude, longitude: subject.longitude)
@@ -2346,7 +2372,8 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             URLQueryItem(name: "$select", value: "date_extract_y(\(timeField)) as year, neighbourhood, count(*) as cnt"),
             URLQueryItem(name: "$where", value: "\(timeField) >= '\(startYear)-01-01T00:00:00' AND neighbourhood IS NOT NULL"),
             URLQueryItem(name: "$group", value: "year, neighbourhood"),
-            URLQueryItem(name: "$order", value: "year")
+            URLQueryItem(name: "$order", value: "year"),
+            URLQueryItem(name: "$limit", value: "50000")
         ])) ?? []
     }
 
@@ -2563,7 +2590,8 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             URLQueryItem(name: "$select", value: "date_extract_y(dispatch_date) as year, neighbourhood, count(*) as cnt"),
             URLQueryItem(name: "$where", value: "dispatch_date >= '\(yearOffset(-6))-01-01T00:00:00' AND neighbourhood IS NOT NULL"),
             URLQueryItem(name: "$group", value: "year, neighbourhood"),
-            URLQueryItem(name: "$order", value: "year")
+            URLQueryItem(name: "$order", value: "year"),
+            URLQueryItem(name: "$limit", value: "50000")
         ])) ?? []
         let neighbourhoodYears: [[String: Any]]
         if let neighbourhood {

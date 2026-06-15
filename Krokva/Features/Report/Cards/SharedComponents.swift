@@ -162,14 +162,19 @@ struct HealthInlineContent: View {
                 if summary.nearestER != nil { Divider().foregroundStyle(Color.cleanSep) }
                 facilitySection(eyebrow: "WALK-IN CLINIC", icon: "stethoscope", iconColor: .cleanSky, facility: walkIn)
             }
+            if summary.nearestER != nil || summary.nearestWalkIn != nil { Divider().foregroundStyle(Color.cleanSep) }
             if let aed = summary.nearestAED {
-                if summary.nearestER != nil || summary.nearestWalkIn != nil { Divider().foregroundStyle(Color.cleanSep) }
                 aedSection(aed)
+            } else {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("PUBLIC AED").eyebrow(color: .cleanLabel3)
+                    Text("No AEDs within 500 m")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.cleanLabel2)
+                }
             }
             if !summary.ageGroups.isEmpty {
-                if summary.nearestER != nil || summary.nearestWalkIn != nil || summary.nearestAED != nil {
-                    Divider().foregroundStyle(Color.cleanSep)
-                }
+                Divider().foregroundStyle(Color.cleanSep)
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Age groups · \(neighbourhood)").eyebrow(color: .cleanLabel3)
                     let maxVal = summary.ageGroups.map(\.count).max() ?? 1

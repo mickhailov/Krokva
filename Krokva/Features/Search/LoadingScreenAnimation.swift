@@ -15,6 +15,7 @@ struct LoadingScreenAnimation: View {
     let addressText: String
     var cityName: String = "Winnipeg, MB"
     var stage: ReportLoadingStage = .normalizing
+    var subStageFraction: Double = 0
     var onCancel: (() -> Void)? = nil
 
     @State private var addressTyped = 0
@@ -22,6 +23,7 @@ struct LoadingScreenAnimation: View {
     @State private var iconScale: CGFloat = 0.8
     @State private var displayProgress: Double = 0   // smoothly eased 0...1
     @State private var targetProgress: Double = 0
+    @State private var driftCeiling: Double = 0      // cosmetic ceiling while waiting for data
     @State private var progressTimer: Timer?
     @State private var mapPosition: MapCameraPosition = .region(
         MKCoordinateRegion(
@@ -75,13 +77,20 @@ struct LoadingScreenAnimation: View {
             progressTimer = nil
         }
         .onChange(of: stage) { _, newStage in
-            targetProgress = Double(newStage.rawValue + 1) / Double(loadingStages.count)
+            let newTarget = Double(newStage.rawValue + 1) / Double(loadingStages.count)
+            targetProgress = newTarget
+            driftCeiling = newTarget + 0.5 / Double(loadingStages.count)
             withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) {
                 iconScale = 0.7
             }
             withAnimation(.spring(response: 0.4, dampingFraction: 0.72).delay(0.08)) {
                 iconScale = 1.0
             }
+        }
+        .onChange(of: subStageFraction) { _, fraction in
+            let stageBase = Double(idx + 1) / Double(loadingStages.count)
+            let stageEnd = Double(idx + 2) / Double(loadingStages.count)
+            targetProgress = stageBase + (stageEnd - stageBase) * fraction
         }
     }
 
@@ -336,9 +345,16 @@ struct LoadingScreenAnimation: View {
 
         // Smoothly ease the progress bar / percentage toward the current stage
         // target so it glides between values instead of jumping in 10% steps.
-        targetProgress = Double(idx + 1) / Double(loadingStages.count)
+        let initialTarget = Double(idx + 1) / Double(loadingStages.count)
+        targetProgress = initialTarget
+        driftCeiling = initialTarget + 0.5 / Double(loadingStages.count)
         progressTimer?.invalidate()
         progressTimer = Timer.scheduledTimer(withTimeInterval: 0.02, repeats: true) { _ in
+            // Cosmetic drift: while waiting for real data, creep toward driftCeiling
+            // at ~1 % per second so the bar never looks frozen.
+            if targetProgress < driftCeiling {
+                targetProgress = min(driftCeiling, targetProgress + 0.0002)
+            }
             let diff = targetProgress - displayProgress
             if diff > 0.0001 {
                 // Asymptotic ease-out with a small floor so the number keeps

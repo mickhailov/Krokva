@@ -6,6 +6,7 @@ struct PermitsCard: View {
     let permits: [BuildingPermit]
     var sourceFailed = false
     @State private var isExpanded = false
+    @State private var selectedPermit: BuildingPermit?
 
     var body: some View {
         CleanCard(padding: 0) {
@@ -17,6 +18,11 @@ struct PermitsCard: View {
                         .padding(18)
                 }
             }
+        }
+        .sheet(item: $selectedPermit) { permit in
+            BuildingPermitDetailSheet(permit: permit)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
     }
 
@@ -72,35 +78,45 @@ struct PermitsCard: View {
         } else {
             VStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(permits.enumerated()), id: \.offset) { index, permit in
-                    HStack(alignment: .top, spacing: 12) {
-                        Text(permit.issuedDate?.formatted(date: .abbreviated, time: .omitted) ?? "Date TBD")
-                            .font(KrokvaTypography.monoSmall)
-                            .foregroundStyle(Color.cleanLabel3)
-                            .frame(width: 50)
-
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(permit.address)
-                                .font(.system(size: 12.5, weight: permit.isAdjacentStructural ? .semibold : .regular))
-                                .foregroundStyle(permit.isAdjacentStructural ? Color.cleanAmber : Color.cleanLabel)
-                            Text([permit.type, permit.subType, permit.workType].compactMap { $0 }.joined(separator: " · "))
-                                .font(KrokvaTypography.caption)
-                                .foregroundStyle(Color.cleanLabel3)
-                        }
-
-                        Spacer(minLength: 0)
-
-                        if let status = permit.status {
-                            let color = permitStatusColor(status)
-                            Text(status)
+                    Button {
+                        selectedPermit = permit
+                    } label: {
+                        HStack(alignment: .top, spacing: 12) {
+                            Text(permit.issuedDate?.formatted(date: .abbreviated, time: .omitted) ?? "Date TBD")
                                 .font(KrokvaTypography.monoSmall)
-                                .foregroundStyle(color)
-                                .padding(.horizontal, 7)
-                                .padding(.vertical, 3)
-                                .background(color.opacity(0.10), in: Capsule())
-                                .overlay(Capsule().strokeBorder(color.opacity(0.35), lineWidth: 0.5))
+                                .foregroundStyle(Color.cleanLabel3)
+                                .frame(width: 50)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(permit.address)
+                                    .font(.system(size: 12.5, weight: permit.isAdjacentStructural ? .semibold : .regular))
+                                    .foregroundStyle(permit.isAdjacentStructural ? Color.cleanAmber : Color.cleanLabel)
+                                Text([permit.type, permit.subType, permit.workType].compactMap { $0 }.joined(separator: " · "))
+                                    .font(KrokvaTypography.caption)
+                                    .foregroundStyle(Color.cleanLabel3)
+                            }
+
+                            Spacer(minLength: 0)
+
+                            if let status = permit.status {
+                                let color = permitStatusColor(status)
+                                Text(status)
+                                    .font(KrokvaTypography.monoSmall)
+                                    .foregroundStyle(color)
+                                    .padding(.horizontal, 7)
+                                    .padding(.vertical, 3)
+                                    .background(color.opacity(0.10), in: Capsule())
+                                    .overlay(Capsule().strokeBorder(color.opacity(0.35), lineWidth: 0.5))
+                            }
+
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 10, weight: .semibold))
+                                .foregroundStyle(Color.cleanLabel3.opacity(0.5))
                         }
+                        .padding(.vertical, 9)
+                        .contentShape(Rectangle())
                     }
-                    .padding(.vertical, 9)
+                    .buttonStyle(.plain)
 
                     if index < permits.count - 1 {
                         Divider().foregroundStyle(Color.cleanSep)
@@ -715,6 +731,7 @@ struct PlanningContextCard: View {
     let summary: PlanningContextSummary?
     var sourceFailed = false
     @State private var isExpanded = false
+    @State private var selectedNotice: PublicNotice?
 
     var body: some View {
         CleanCard(padding: 0) {
@@ -726,6 +743,11 @@ struct PlanningContextCard: View {
                         .padding(18)
                 }
             }
+        }
+        .sheet(item: $selectedNotice) { notice in
+            PublicNoticeDetailSheet(notice: notice)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
     }
 
@@ -802,43 +824,53 @@ struct PlanningContextCard: View {
                     }
                     VStack(alignment: .leading, spacing: 0) {
                         ForEach(Array(summary.publicNotices.prefix(4).enumerated()), id: \.element.id) { index, notice in
-                            VStack(alignment: .leading, spacing: 4) {
-                                HStack(alignment: .firstTextBaseline) {
-                                    Text(notice.noticeType.capitalized)
-                                        .font(.system(size: 12.5, weight: .semibold))
-                                        .foregroundStyle(Color.cleanLabel)
-                                    Spacer(minLength: 8)
-                                    Text(notice.distanceDescription ?? "Nearby")
-                                        .font(KrokvaTypography.monoSmall)
-                                        .foregroundStyle(Color.cleanLabel3)
-                                }
-                                Text(notice.address.capitalized)
-                                    .font(KrokvaTypography.caption)
-                                    .foregroundStyle(Color.cleanLabel3)
-                                if let description = notice.description, !description.isEmpty {
-                                    Text(description)
-                                        .font(KrokvaTypography.bodySecondary)
-                                        .foregroundStyle(Color.cleanLabel2)
-                                        .lineLimit(3)
-                                }
-                                HStack(spacing: 8) {
-                                    if let date = notice.meetingDate {
-                                        Text("Meeting \(date.formatted(date: .abbreviated, time: .omitted))")
+                            Button {
+                                selectedNotice = notice
+                            } label: {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack(alignment: .firstTextBaseline) {
+                                        Text(notice.noticeType.capitalized)
+                                            .font(.system(size: 12.5, weight: .semibold))
+                                            .foregroundStyle(Color.cleanLabel)
+                                        Spacer(minLength: 8)
+                                        Text(notice.distanceDescription ?? "Nearby")
                                             .font(KrokvaTypography.monoSmall)
                                             .foregroundStyle(Color.cleanLabel3)
+                                        Image(systemName: "chevron.right")
+                                            .font(.system(size: 10, weight: .semibold))
+                                            .foregroundStyle(Color.cleanLabel3.opacity(0.5))
                                     }
-                                    if let decision = notice.decision, !decision.isEmpty {
-                                        let dcolor = planningDecisionColor(decision)
-                                        Text(decision.capitalized)
-                                            .font(KrokvaTypography.monoSmall)
-                                            .foregroundStyle(dcolor)
-                                            .padding(.horizontal, 6)
-                                            .padding(.vertical, 2)
-                                            .background(dcolor.opacity(0.10), in: Capsule())
+                                    Text(notice.address.capitalized)
+                                        .font(KrokvaTypography.caption)
+                                        .foregroundStyle(Color.cleanLabel3)
+                                    if let description = notice.description, !description.isEmpty {
+                                        Text(description)
+                                            .font(KrokvaTypography.bodySecondary)
+                                            .foregroundStyle(Color.cleanLabel2)
+                                            .lineLimit(2)
+                                    }
+                                    HStack(spacing: 8) {
+                                        if let date = notice.meetingDate {
+                                            Text("Meeting \(date.formatted(date: .abbreviated, time: .omitted))")
+                                                .font(KrokvaTypography.monoSmall)
+                                                .foregroundStyle(Color.cleanLabel3)
+                                        }
+                                        if let decision = notice.decision, !decision.isEmpty {
+                                            let dcolor = planningDecisionColor(decision)
+                                            Text(decision.capitalized)
+                                                .font(KrokvaTypography.monoSmall)
+                                                .foregroundStyle(dcolor)
+                                                .padding(.horizontal, 6)
+                                                .padding(.vertical, 2)
+                                                .background(dcolor.opacity(0.10), in: Capsule())
+                                        }
                                     }
                                 }
+                                .padding(.vertical, 8)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .contentShape(Rectangle())
                             }
-                            .padding(.vertical, 8)
+                            .buttonStyle(.plain)
 
                             if index < min(summary.publicNotices.count, 4) - 1 {
                                 Divider().foregroundStyle(Color.cleanSep)
@@ -1495,4 +1527,138 @@ private func infoTile(_ label: String, _ value: String) -> some View {
     }
     .frame(maxWidth: .infinity, alignment: .leading)
     .padding(.vertical, 8)
+}
+
+// MARK: - PublicNoticeDetailSheet
+
+struct PublicNoticeDetailSheet: View {
+    let notice: PublicNotice
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(notice.noticeType.uppercased())
+                        .eyebrow(color: .cleanLabel3)
+                    Text(notice.address.capitalized)
+                        .font(KrokvaTypography.h1)
+                        .foregroundStyle(Color.cleanLabel)
+                    if let dist = notice.distanceDescription {
+                        Text(dist)
+                            .font(KrokvaTypography.monoSmall)
+                            .foregroundStyle(Color.cleanLabel3)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(20)
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 16) {
+                    if let description = notice.description, !description.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Description")
+                                .eyebrow(color: .cleanLabel3)
+                            Text(description)
+                                .font(KrokvaTypography.body)
+                                .foregroundStyle(Color.cleanLabel)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+
+                    if let date = notice.meetingDate {
+                        KeyValueRow(key: "Meeting date", value: date.formatted(date: .long, time: .omitted))
+                    }
+
+                    if let decision = notice.decision, !decision.isEmpty {
+                        let dcolor = noticeDecisionColor(decision)
+                        HStack(alignment: .firstTextBaseline) {
+                            Text("Decision")
+                                .foregroundStyle(Color.cleanLabel2)
+                            Spacer(minLength: 16)
+                            Text(decision.capitalized)
+                                .font(KrokvaTypography.monoSmall)
+                                .foregroundStyle(dcolor)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(dcolor.opacity(0.10), in: Capsule())
+                        }
+                        .font(.subheadline)
+                    }
+                }
+                .padding(20)
+            }
+        }
+    }
+
+    private func noticeDecisionColor(_ decision: String) -> Color {
+        let lower = decision.lowercased()
+        if lower.contains("approv") || lower.contains("grant") { return .cleanGreen }
+        if lower.contains("refus") || lower.contains("deni") || lower.contains("reject") { return .cleanRed }
+        return .cleanLabel3
+    }
+}
+
+// MARK: - BuildingPermitDetailSheet
+
+struct BuildingPermitDetailSheet: View {
+    let permit: BuildingPermit
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Building Permit")
+                        .eyebrow(color: .cleanLabel3)
+                    Text(permit.address)
+                        .font(KrokvaTypography.h1)
+                        .foregroundStyle(Color.cleanLabel)
+                    if permit.isAdjacentStructural {
+                        Text("Adjacent structural work")
+                            .font(KrokvaTypography.monoSmall)
+                            .foregroundStyle(Color.cleanAmber)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(20)
+
+                Divider()
+
+                VStack(alignment: .leading, spacing: 12) {
+                    if let date = permit.issuedDate {
+                        KeyValueRow(key: "Issued", value: date.formatted(date: .long, time: .omitted))
+                    }
+                    let typeStr = [permit.type, permit.subType, permit.workType].compactMap { $0 }.joined(separator: " · ")
+                    if !typeStr.isEmpty {
+                        KeyValueRow(key: "Type", value: typeStr)
+                    }
+                    if let status = permit.status {
+                        let color = permitDetailStatusColor(status)
+                        HStack(alignment: .firstTextBaseline) {
+                            Text("Status")
+                                .foregroundStyle(Color.cleanLabel2)
+                            Spacer(minLength: 16)
+                            Text(status)
+                                .font(KrokvaTypography.monoSmall)
+                                .foregroundStyle(color)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(color.opacity(0.10), in: Capsule())
+                                .overlay(Capsule().strokeBorder(color.opacity(0.35), lineWidth: 0.5))
+                        }
+                        .font(.subheadline)
+                    }
+                }
+                .padding(20)
+            }
+        }
+    }
+
+    private func permitDetailStatusColor(_ status: String) -> Color {
+        let lower = status.lowercased()
+        if lower == "issued" || lower == "active" || lower == "open" { return .cleanAmber }
+        if lower.contains("complet") || lower.contains("closed") || lower.contains("final") { return .cleanGreen }
+        if lower.contains("cancel") || lower.contains("void") || lower.contains("expir") || lower.contains("refus") { return .cleanRed }
+        return .cleanLabel3
+    }
 }

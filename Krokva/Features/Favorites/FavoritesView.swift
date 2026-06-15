@@ -41,6 +41,7 @@ struct FavoritesView: View {
                         addressText: viewModel.query,
                         cityName: viewModel.detectedProvider?.displayName ?? "Winnipeg, MB",
                         stage: viewModel.loadingStage,
+                        subStageFraction: viewModel.loadingSubFraction,
                         onCancel: { cancelLoading() }
                     )
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))

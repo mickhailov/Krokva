@@ -54,6 +54,7 @@ struct HomeView: View {
                         addressText: viewModel.query,
                         cityName: viewModel.detectedProvider?.displayName ?? "Winnipeg, MB",
                         stage: viewModel.loadingStage,
+                        subStageFraction: viewModel.loadingSubFraction,
                         onCancel: { cancelSearch() }
                     )
                     .transition(.opacity.combined(with: .scale(scale: 0.98)))
