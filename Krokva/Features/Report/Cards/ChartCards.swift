@@ -128,10 +128,16 @@ struct EmergencyActivityCard: View {
                     StatTile(label: "Last 12 months", value: summary.totalLastYear.formatted())
                     StatTile(label: "Vehicle involved", value: summary.motorVehicleLastYear.formatted())
                 }
+                HStack(spacing: 10) {
+                    StatTile(label: "Avg. duration", value: summary.averageDurationMinutes.map { "\(Int($0.rounded())) min" } ?? "—")
+                    StatTile(label: "Rank", value: emergencyRank(summary))
+                }
                 yearlyChartSection(for: summary)
                 monthlyTrendSection(for: summary)
                 incidentTypesSection(for: summary)
                 breakdownGridSection(for: summary)
+                wardBreakdownSection(for: summary)
+                recentIncidentsSection(for: summary)
                 substanceSection
                 Text("WFPS calls are shown as \(summary.neighbourhood) municipal activity records, not as an address-level safety score.")
                     .font(KrokvaTypography.caption)
@@ -355,6 +361,65 @@ struct EmergencyActivityCard: View {
     }
 
     @ViewBuilder
+    private func wardBreakdownSection(for summary: EmergencySummary) -> some View {
+        if !summary.wardBreakdown.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Ward activity").eyebrow(color: .cleanLabel3)
+                ForEach(summary.wardBreakdown.prefix(5)) { item in
+                    HStack(alignment: .firstTextBaseline) {
+                        Text(item.incidentType)
+                            .font(KrokvaTypography.bodySecondary)
+                            .foregroundStyle(Color.cleanLabel2)
+                            .lineLimit(1)
+                        Spacer(minLength: 8)
+                        Text(item.count.formatted())
+                            .font(KrokvaTypography.monoBold)
+                            .foregroundStyle(Color.cleanLabel)
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func recentIncidentsSection(for summary: EmergencySummary) -> some View {
+        if !summary.recentIncidents.isEmpty {
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Recent incidents").eyebrow(color: .cleanLabel3)
+                ForEach(summary.recentIncidents.prefix(4)) { incident in
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(incident.incidentType)
+                                .font(.system(size: 12.5, weight: .semibold))
+                                .foregroundStyle(Color.cleanLabel)
+                                .lineLimit(1)
+                            Spacer(minLength: 8)
+                            if let duration = incident.durationMinutes {
+                                Text("\(duration) min")
+                                    .font(KrokvaTypography.monoSmall)
+                                    .foregroundStyle(Color.cleanLabel3)
+                            }
+                        }
+                        let meta = [
+                            incident.incidentNumber,
+                            incident.callTime.map { $0.formatted(date: .abbreviated, time: .shortened) },
+                            incident.motorVehicleIncident,
+                            incident.units,
+                            incident.ward
+                        ].compactMap { $0 }.joined(separator: " · ")
+                        if !meta.isEmpty {
+                            Text(meta)
+                                .font(KrokvaTypography.caption)
+                                .foregroundStyle(Color.cleanLabel3)
+                                .lineLimit(2)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
     private var substanceSection: some View {
         if !substances.isEmpty {
             let sortedSubstances = substances.sorted { $0.count > $1.count }
@@ -394,6 +459,16 @@ struct EmergencyActivityCard: View {
     private func chartMaxValue(for summary: EmergencySummary) -> Double {
         let values = summary.yearlyCalls.flatMap { [Double($0.count), $0.citywideAverage] }
         return max((values.max() ?? 1) * 1.18, 1)
+    }
+
+    private func emergencyRank(_ summary: EmergencySummary) -> String {
+        if let rank = summary.neighbourhoodRank, let count = summary.neighbourhoodCount {
+            return "\(rank)/\(count)"
+        }
+        if let median = summary.citywideMedian {
+            return "Median \(median)"
+        }
+        return "—"
     }
 
     private func year(at xLocation: CGFloat, in plotFrame: CGRect, years: [Int]) -> Int? {

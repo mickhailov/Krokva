@@ -37,3 +37,28 @@ targets:
         TARGETED_DEVICE_FAMILY: "1"
         DEVELOPMENT_ASSET_PATHS: ""
         ENABLE_USER_SCRIPT_SANDBOXING: true
+  KrokvaTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - KrokvaTests
+    dependencies:
+      - target: Krokva
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ca.krokva.tests
+        GENERATE_INFOPLIST_FILE: true
+schemes:
+  Krokva:
+    build:
+      targets:
+        Krokva: all
+        KrokvaTests: [test]
+    test:
+      targets:
+        - KrokvaTests
+      gatherCoverageData: true
+    run:
+      config: Debug
+    archive:
+      config: Release

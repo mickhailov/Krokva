@@ -327,7 +327,12 @@ struct TransitAccessCard: View {
                         infoTile("On time", percent(summary.onTimePercentage))
                         infoTile("Pass-ups", "\(summary.passUpsLastYear)")
                     }
-                    if let boardings = summary.averageDailyBoardings {
+                    if let deviation = summary.averageDeviationSeconds {
+                        GridRow {
+                            infoTile("Avg. schedule dev.", scheduleDeviation(deviation))
+                            infoTile("Avg. daily riders", summary.averageDailyBoardings.map { Int($0.rounded()).formatted() } ?? "—")
+                        }
+                    } else if let boardings = summary.averageDailyBoardings {
                         GridRow {
                             infoTile("Avg. daily riders", Int(boardings.rounded()).formatted())
                             infoTile("", "")
@@ -363,6 +368,15 @@ struct TransitAccessCard: View {
                 .font(KrokvaTypography.bodySecondary)
                 .foregroundStyle(Color.cleanLabel2)
         }
+    }
+
+    private func scheduleDeviation(_ seconds: Double) -> String {
+        let minutes = abs(seconds) / 60
+        if minutes < 1 {
+            return "\(Int(abs(seconds).rounded())) sec"
+        }
+        let suffix = seconds < 0 ? " early" : " late"
+        return "\(String(format: "%.1f", minutes)) min\(suffix)"
     }
 }
 
@@ -644,6 +658,18 @@ struct CivicAmenitiesCard: View {
                         amenityRow(tag: pool.kind, tagColor: .cleanSky, name: pool.name,
                                    distance: pool.distanceDescription,
                                    detail: pool.features.isEmpty ? nil : pool.features.joined(separator: " · "))
+                        if let website = pool.website, let url = URL(string: website) {
+                            Link(destination: url) {
+                                HStack(spacing: 6) {
+                                    Image(systemName: "link")
+                                    Text("Pool details")
+                                    Spacer(minLength: 0)
+                                    Image(systemName: "arrow.up.right")
+                                }
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(Color.cleanSky)
+                            }
+                        }
                     }
                     if aquatics.walkwaysNearby > 0 {
                         KeyValueRow(key: "Walkways within 600 m", value: "\(aquatics.walkwaysNearby)")
@@ -706,19 +732,28 @@ struct CivicAmenitiesCard: View {
     }
 
     private func libraryDetail(_ library: LibraryAmenity) -> String? {
-        let features = [
+        var features = [
             library.wifi ? "Wi-Fi" : nil,
             library.accessibility ? "Accessible" : nil,
             library.parkingLot ? "Parking" : nil,
             library.roomRentals ? "Rooms" : nil
         ].compactMap { $0 }
+        if let stalls = library.parkingStalls {
+            features.append("\(stalls) parking stalls")
+        }
+        if let notes = library.notes, !notes.isEmpty {
+            features.append(notes)
+        }
         return ([library.address] + features).joined(separator: " · ")
     }
 
     private func riverDetail(_ river: RiverGaugeSummary) -> String? {
         let pieces: [String?] = [
             river.jamesFeet.map { String(format: "James %.2f ft", $0) },
-            river.geodeticMetric.map { String(format: "Geodetic %.2f m", $0) }
+            river.geodeticFeet.map { String(format: "Geodetic %.2f ft", $0) },
+            river.geodeticMetric.map { String(format: "Geodetic %.2f m", $0) },
+            river.readingDate.map { "Read \($0.formatted(date: .abbreviated, time: .shortened))" },
+            river.notes
         ]
         let detail = pieces.compactMap { $0 }.joined(separator: " · ")
         return detail.isEmpty ? nil : detail
@@ -730,7 +765,7 @@ struct CivicAmenitiesCard: View {
 struct PlanningContextCard: View {
     let summary: PlanningContextSummary?
     var sourceFailed = false
-    @State private var isExpanded = false
+    @State private var isExpanded = true
     @State private var selectedNotice: PublicNotice?
 
     var body: some View {
@@ -768,11 +803,10 @@ struct PlanningContextCard: View {
                     Text("Planning notices")
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(Color.cleanLabel)
-                    if !isExpanded {
-                        Text(smallSummary)
-                            .font(.system(size: 13, weight: .semibold).monospacedDigit())
-                            .foregroundStyle(Color.cleanLabel2)
-                    }
+                    Text(smallSummary)
+                        .font(.system(size: 13, weight: .semibold).monospacedDigit())
+                        .foregroundStyle(Color.cleanLabel2)
+                        .lineLimit(2)
                 }
 
                 Spacer(minLength: 0)
@@ -792,11 +826,12 @@ struct PlanningContextCard: View {
         guard let summary else { return sourceFailed ? "Database error" : "Unavailable" }
         var parts: [String] = []
         if let code = summary.zoningCode { parts.append(code) }
-        let count = summary.publicNotices.count
-        if count > 0 {
-            parts.append("\(count) \(count == 1 ? "notice" : "notices")")
+        if let nearest = summary.publicNotices.first {
+            parts.append(nearest.noticeType.capitalized)
+            if let distance = nearest.distanceDescription { parts.append(distance) }
+            if let decision = nearest.decision, !decision.isEmpty { parts.append(decision.capitalized) }
         } else if parts.isEmpty {
-            return "No notices"
+            return "No nearby notices"
         }
         return parts.joined(separator: " · ")
     }
@@ -829,58 +864,21 @@ struct PlanningContextCard: View {
                     if summary.zoningCode != nil || summary.zoningDescription != nil {
                         Divider().foregroundStyle(Color.cleanSep)
                     }
-                    VStack(alignment: .leading, spacing: 0) {
+                    VStack(alignment: .leading, spacing: 10) {
                         ForEach(Array(summary.publicNotices.prefix(4).enumerated()), id: \.element.id) { index, notice in
                             Button {
                                 selectedNotice = notice
                             } label: {
-                                VStack(alignment: .leading, spacing: 4) {
-                                    HStack(alignment: .firstTextBaseline) {
-                                        Text(notice.noticeType.capitalized)
-                                            .font(.system(size: 12.5, weight: .semibold))
-                                            .foregroundStyle(Color.cleanLabel)
-                                        Spacer(minLength: 8)
-                                        Text(notice.distanceDescription ?? "Nearby")
-                                            .font(KrokvaTypography.monoSmall)
-                                            .foregroundStyle(Color.cleanLabel3)
-                                        Image(systemName: "chevron.right")
-                                            .font(.system(size: 10, weight: .semibold))
-                                            .foregroundStyle(Color.cleanLabel3.opacity(0.5))
-                                    }
-                                    Text(notice.address.capitalized)
-                                        .font(KrokvaTypography.caption)
-                                        .foregroundStyle(Color.cleanLabel3)
-                                    if let description = notice.description, !description.isEmpty {
-                                        Text(description)
-                                            .font(KrokvaTypography.bodySecondary)
-                                            .foregroundStyle(Color.cleanLabel2)
-                                            .lineLimit(2)
-                                    }
-                                    HStack(spacing: 8) {
-                                        if let date = notice.meetingDate {
-                                            Text("Meeting \(date.formatted(date: .abbreviated, time: .omitted))")
-                                                .font(KrokvaTypography.monoSmall)
-                                                .foregroundStyle(Color.cleanLabel3)
-                                        }
-                                        if let decision = notice.decision, !decision.isEmpty {
-                                            let dcolor = planningDecisionColor(decision)
-                                            Text(decision.capitalized)
-                                                .font(KrokvaTypography.monoSmall)
-                                                .foregroundStyle(dcolor)
-                                                .padding(.horizontal, 6)
-                                                .padding(.vertical, 2)
-                                                .background(dcolor.opacity(0.10), in: Capsule())
-                                        }
-                                    }
-                                }
-                                .padding(.vertical, 8)
+                                PublicNoticeSummaryRow(notice: notice, decisionColor: planningDecisionColor)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
 
                             if index < min(summary.publicNotices.count, 4) - 1 {
-                                Divider().foregroundStyle(Color.cleanSep)
+                                Divider()
+                                    .foregroundStyle(Color.cleanSep)
+                                    .padding(.leading, 46)
                             }
                         }
                     }
@@ -902,6 +900,77 @@ struct PlanningContextCard: View {
         if lower.contains("approv") || lower.contains("grant") { return .cleanGreen }
         if lower.contains("refus") || lower.contains("deni") || lower.contains("reject") { return .cleanRed }
         return .cleanLabel3
+    }
+}
+
+private struct PublicNoticeSummaryRow: View {
+    let notice: PublicNotice
+    let decisionColor: (String) -> Color
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "building.columns")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(width: 34, height: 34)
+                .background(Color.krokvaGold, in: Circle())
+
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(alignment: .firstTextBaseline, spacing: 8) {
+                    Text(notice.noticeType.capitalized)
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(Color.cleanLabel)
+                        .lineLimit(1)
+                    Spacer(minLength: 4)
+                    Text(notice.distanceDescription ?? "Nearby")
+                        .font(KrokvaTypography.monoSmall)
+                        .foregroundStyle(Color.cleanLabel3)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 10, weight: .semibold))
+                        .foregroundStyle(Color.cleanLabel3.opacity(0.55))
+                }
+
+                Text(notice.address.capitalized)
+                    .font(KrokvaTypography.caption)
+                    .foregroundStyle(Color.cleanLabel3)
+                    .lineLimit(1)
+
+                if let plainLanguage = notice.plainLanguage, !plainLanguage.isEmpty {
+                    Text(plainLanguage)
+                        .font(KrokvaTypography.bodySecondary)
+                        .foregroundStyle(Color.cleanLabel)
+                        .lineLimit(2)
+                } else if let description = notice.description, !description.isEmpty {
+                    Text(description)
+                        .font(KrokvaTypography.bodySecondary)
+                        .foregroundStyle(Color.cleanLabel2)
+                        .lineLimit(2)
+                }
+
+                HStack(spacing: 8) {
+                    if let date = notice.meetingDate {
+                        Text("Meeting \(date.formatted(date: .abbreviated, time: .omitted))")
+                            .font(KrokvaTypography.monoSmall)
+                            .foregroundStyle(Color.cleanLabel3)
+                    } else if let approvalType = notice.approvalType, !approvalType.isEmpty {
+                        Text(approvalType.capitalized)
+                            .font(KrokvaTypography.monoSmall)
+                            .foregroundStyle(Color.cleanLabel3)
+                    }
+
+                    if let decision = notice.decision, !decision.isEmpty {
+                        let dcolor = decisionColor(decision)
+                        Text(decision.capitalized)
+                            .font(KrokvaTypography.monoSmall)
+                            .foregroundStyle(dcolor)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 3)
+                            .background(dcolor.opacity(0.10), in: Capsule())
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 8)
     }
 }
 
@@ -1315,6 +1384,10 @@ struct RecreationCard: View {
                                     .foregroundStyle(Color.cleanLabel3)
                                 HStack(spacing: 6) {
                                     Text(activity.startDate?.formatted(date: .abbreviated, time: .omitted) ?? "Date TBD")
+                                    if let endDate = activity.endDate {
+                                        Text("to")
+                                        Text(endDate.formatted(date: .abbreviated, time: .omitted))
+                                    }
                                     if let openSpaces = activity.openSpaces {
                                         Text("·")
                                         Text("\(openSpaces) open")
@@ -1326,6 +1399,18 @@ struct RecreationCard: View {
                                 }
                                 .font(KrokvaTypography.monoSmall)
                                 .foregroundStyle(Color.cleanLabel3)
+                                if let publicURL = activity.publicURL, let url = URL(string: publicURL) {
+                                    Link(destination: url) {
+                                        HStack(spacing: 6) {
+                                            Image(systemName: "calendar.badge.plus")
+                                            Text("Program details")
+                                            Spacer(minLength: 0)
+                                            Image(systemName: "arrow.up.right")
+                                        }
+                                        .font(.system(size: 11, weight: .semibold))
+                                        .foregroundStyle(Color.cleanSky)
+                                    }
+                                }
                             }
                             .padding(.vertical, 8)
 
@@ -1562,6 +1647,21 @@ struct PublicNoticeDetailSheet: View {
                 Divider()
 
                 VStack(alignment: .leading, spacing: 16) {
+                    if let noticeID = notice.noticeID, !noticeID.isEmpty {
+                        KeyValueRow(key: "Notice ID", value: noticeID)
+                    }
+
+                    if let plainLanguage = notice.plainLanguage, !plainLanguage.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Plain language")
+                                .eyebrow(color: .cleanLabel3)
+                            Text(plainLanguage)
+                                .font(KrokvaTypography.body)
+                                .foregroundStyle(Color.cleanLabel)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+
                     if let description = notice.description, !description.isEmpty {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("Description")
@@ -1573,8 +1673,27 @@ struct PublicNoticeDetailSheet: View {
                         }
                     }
 
+                    if let conditions = notice.conditions, !conditions.isEmpty {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Conditions")
+                                .eyebrow(color: .cleanLabel3)
+                            Text(conditions)
+                                .font(KrokvaTypography.bodySecondary)
+                                .foregroundStyle(Color.cleanLabel)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+
+                    if let approvalType = notice.approvalType, !approvalType.isEmpty {
+                        KeyValueRow(key: "Approval type", value: approvalType.capitalized)
+                    }
+
                     if let date = notice.meetingDate {
                         KeyValueRow(key: "Meeting date", value: date.formatted(date: .long, time: .omitted))
+                    }
+
+                    if let appealDate = notice.appealDate {
+                        KeyValueRow(key: "Appeal date", value: appealDate.formatted(date: .long, time: .omitted))
                     }
 
                     if let decision = notice.decision, !decision.isEmpty {
@@ -1591,6 +1710,37 @@ struct PublicNoticeDetailSheet: View {
                                 .background(dcolor.opacity(0.10), in: Capsule())
                         }
                         .font(.subheadline)
+                    }
+
+                    if let community = notice.community, !community.isEmpty {
+                        KeyValueRow(key: "Community", value: community)
+                    }
+
+                    if let ward = notice.ward, !ward.isEmpty {
+                        KeyValueRow(key: "Ward", value: ward)
+                    }
+
+                    if let neighbourhood = notice.neighbourhood, !neighbourhood.isEmpty {
+                        KeyValueRow(key: "Neighbourhood", value: neighbourhood)
+                    }
+
+                    if let rollNumber = notice.rollNumber, !rollNumber.isEmpty {
+                        KeyValueRow(key: "Roll number", value: rollNumber)
+                    }
+
+                    if let reportPlanURL = notice.reportPlanURL {
+                        Link(destination: reportPlanURL) {
+                            HStack(spacing: 8) {
+                                Image(systemName: "doc.text.magnifyingglass")
+                                Text("Open report / plan")
+                                Spacer(minLength: 0)
+                                Image(systemName: "arrow.up.right")
+                                    .font(.system(size: 12, weight: .semibold))
+                            }
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.cleanSky)
+                            .padding(.vertical, 10)
+                        }
                     }
                 }
                 .padding(20)

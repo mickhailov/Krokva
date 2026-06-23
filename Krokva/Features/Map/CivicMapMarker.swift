@@ -236,12 +236,7 @@ struct CivicMapMarker: Identifiable {
                     title: notice.noticeType,
                     subtitle: "\(notice.address) · \(notice.distanceDescription ?? "Nearby")",
                     coordinate: coordinate,
-                    details: [
-                        CivicMapDetailRow(key: "Address", value: notice.address),
-                        CivicMapDetailRow(key: "Distance", value: notice.distanceDescription ?? "-"),
-                        CivicMapDetailRow(key: "Meeting", value: notice.meetingDate?.formatted(date: .abbreviated, time: .omitted) ?? "Date unavailable"),
-                        CivicMapDetailRow(key: "Decision", value: notice.decision ?? "-")
-                    ]
+                    details: notice.mapDetails
                 )
             } ?? [])
         }
@@ -287,6 +282,22 @@ struct CivicMapMarker: Identifiable {
 
     private static func yesNo(_ value: Bool) -> String {
         value ? "Yes" : "No"
+    }
+}
+
+private extension PublicNotice {
+    var mapDetails: [CivicMapDetailRow] {
+        [
+            CivicMapDetailRow(key: "Address", value: address),
+            CivicMapDetailRow(key: "Distance", value: distanceDescription ?? "-"),
+            noticeID.map { CivicMapDetailRow(key: "Notice ID", value: $0) },
+            approvalType.map { CivicMapDetailRow(key: "Approval", value: $0) },
+            CivicMapDetailRow(key: "Meeting", value: meetingDate?.formatted(date: .abbreviated, time: .omitted) ?? "Date unavailable"),
+            appealDate.map { CivicMapDetailRow(key: "Appeal", value: $0.formatted(date: .abbreviated, time: .omitted)) },
+            decision.map { CivicMapDetailRow(key: "Decision", value: $0) },
+            ward.map { CivicMapDetailRow(key: "Ward", value: $0) },
+            neighbourhood.map { CivicMapDetailRow(key: "Neighbourhood", value: $0) }
+        ].compactMap { $0 }
     }
 }
 

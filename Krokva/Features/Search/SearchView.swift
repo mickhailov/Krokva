@@ -408,7 +408,7 @@ struct SearchView: View {
         refreshingAddress = saved.address
         defer { refreshingAddress = nil }
         let service = ReportService()
-        let report = await service.report(for: saved.address)
+        let report = await service.report(for: saved.address, modelContext: modelContext, forceRefresh: true)
         saved.update(from: report)
         try? modelContext.save()
     }
@@ -432,7 +432,7 @@ struct SearchView: View {
         searchFocused = false
         searchTask?.cancel()
         searchTask = Task {
-            guard let report = await viewModel.fetchReport() else { return }
+            guard let report = await viewModel.fetchReport(modelContext: modelContext) else { return }
             if Task.isCancelled { return }
             selectedReport = report
             modelContext.insert(RecentSearch(address: report.address.displayAddress, cityID: report.providerID))

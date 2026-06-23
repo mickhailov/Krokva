@@ -109,6 +109,20 @@ struct PropertyFactsCard: View {
                 factRow("Pool", p.swimmingPool ?? "—")
                 factRow("Zoning", p.zoning ?? "—")
             }
+            GridRow {
+                factRow("Storeys", p.storeys ?? "—")
+                factRow("Postal code", p.postalCode ?? "—")
+            }
+            GridRow {
+                factRow("Roll number", p.rollNumber ?? "—")
+                factRow("Assessment year", p.assessmentYear.map(String.init) ?? "—")
+            }
+            if p.propertyTaxYear != nil {
+                GridRow {
+                    factRow("Tax year", p.propertyTaxYear.map(String.init) ?? "—")
+                    factRow("", "")
+                }
+            }
         }
         if p.propertyTaxIsEstimated {
             HStack(alignment: .top, spacing: 6) {
