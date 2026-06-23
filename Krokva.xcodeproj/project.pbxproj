@@ -7,13 +7,10 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		0E7C9F5AD5C0C5832446EC07 /* ReportCacheStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 28A614B1AE3B90B225C667BD /* ReportCacheStore.swift */; };
 		1538789F4E211E2464C2381E /* ReportRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 769D61AFF41D9C47FF63D345 /* ReportRouter.swift */; };
 		15F2BDC1EBAB68D02BB7361D /* NearbySchoolsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F0BB65C03381D7D248723D2 /* NearbySchoolsCard.swift */; };
 		1843931D9F1AE26EADC76E88 /* ReportRating.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6FEEAB4689ACCBBCFB2D67AD /* ReportRating.swift */; };
 		22C7335DBAE46585FB320448 /* ReportView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B8186D49089188A7387B1B2 /* ReportView.swift */; };
-		25507B473502D3F5DDDA6872 /* WinnipegProvider+Types.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5A65AE92BE5EB9623B2D5A95 /* WinnipegProvider+Types.swift */; };
-		28CC31BD2B0431FC46DD4318 /* WinnipegProvider+Schools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9772D2317612B4E51A6F5794 /* WinnipegProvider+Schools.swift */; };
 		2FBC4B01F16178AF8DDFFB46 /* PermitHistoryService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CE76B3963FF433DCF5CD7F4F /* PermitHistoryService.swift */; };
 		32AFE0E08E6F02D413C1A7CC /* LocalModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0A9D6487611030E636E3CF6B /* LocalModels.swift */; };
 		38E9123063C3865B39593F08 /* WinnipegProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1D0C497E36152CCF911EC480 /* WinnipegProvider.swift */; };
@@ -45,7 +42,6 @@
 		A608292ABB71B2A32ADF523E /* ListCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40AA1F1989F02FB958D27E1F /* ListCards.swift */; };
 		A6A3114D6C5DE80D48A598EB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3F121150FE0C7BBD9EB3ED97 /* Assets.xcassets */; };
 		A70A053EFACEC934B66930A7 /* PropertyPermitHistoryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BCDE0923D5C280EDDC76993 /* PropertyPermitHistoryCard.swift */; };
-		AAC63616CD9F47BED58F82E8 /* KrokvaBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4E636DD214450B69679DE26E /* KrokvaBackend.swift */; };
 		B8433B8AFDAD29A67D54A545 /* DataSourceHealth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ACFA09CFFCB70198757DA6D /* DataSourceHealth.swift */; };
 		C2B39E1DB6BD77B2A02C5F29 /* DataStatusService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79A15CC362BC7FAAE91D9207 /* DataStatusService.swift */; };
 		C50E03509CA1167594372E68 /* LoadingScreenAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 189159582EB5E4F5FF4C6FD2 /* LoadingScreenAnimation.swift */; };
@@ -53,26 +49,12 @@
 		CB53429D374C4CC30CB3E734 /* WRHAWaitTimesClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0458BEF8DC7227A7F0CF9B0C /* WRHAWaitTimesClient.swift */; };
 		CBF2D6736133493CFE073ECC /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB389CA7F436647F57835984 /* SettingsView.swift */; };
 		CDEAE12DFF8F3AFBA5D90C84 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 31E85998790F6BB49E8E368F /* Localizable.strings */; };
-		D44443CBA3A9470A5A5773B5 /* ReportRatingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8DEA407B88344C6D235A0211 /* ReportRatingTests.swift */; };
-		DA55073337D83F1566725258 /* KrokvaBackendTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 96389DD0AF792E31572310FC /* KrokvaBackendTests.swift */; };
-		E1893230A1FC8ABFC055006A /* AddressNormalizerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EED2C55B3F0143A3D8CC8ACB /* AddressNormalizerTests.swift */; };
 		E5EB0CB93846CF68B7E9DA96 /* ReportModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1C0CE8DECD1EB1777ACFF9 /* ReportModels.swift */; };
 		F122744F9415E55F7CBA7290 /* SocrataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01A63E3487763FB58DEFEF96 /* SocrataProvider.swift */; };
 		F833EBCAE2951A850402DAE2 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B03FA5D861E3F28FA66EA5D /* HomeView.swift */; };
-		F8EE7ED44CB475DA5C4E58FC /* OpenDataParsingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9F6517A9B88F913FAFB2B9C1 /* OpenDataParsingTests.swift */; };
 		FA9EF786D4F3BB149EA72B3C /* KrokvaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC1194C7694F1F34C41D90AB /* KrokvaApp.swift */; };
 		FEC0756F0BF43253A455DC93 /* PropertyCompareView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5919826963BC2623D95BC970 /* PropertyCompareView.swift */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		B6DD7C4A1A5291E726CE319D /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 8CD48AADDCEECFD1CB476A67 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 01CF8B69ED3099C445350413;
-			remoteInfo = Krokva;
-		};
-/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		01A63E3487763FB58DEFEF96 /* SocrataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocrataProvider.swift; sourceTree = "<group>"; };
@@ -87,35 +69,27 @@
 		1D0C497E36152CCF911EC480 /* WinnipegProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WinnipegProvider.swift; sourceTree = "<group>"; };
 		1E0136370803A2EFD49C117E /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
 		274D2F33B340BF946C92C180 /* ScoreBreakdownSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreBreakdownSheet.swift; sourceTree = "<group>"; };
-		28A614B1AE3B90B225C667BD /* ReportCacheStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportCacheStore.swift; sourceTree = "<group>"; };
 		2B8186D49089188A7387B1B2 /* ReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportView.swift; sourceTree = "<group>"; };
 		3F06B1C0B8AB5419FCF47087 /* SharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponents.swift; sourceTree = "<group>"; };
 		3F121150FE0C7BBD9EB3ED97 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3FC556B1A1AAF1F372A674EF /* CivicMapMarker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CivicMapMarker.swift; sourceTree = "<group>"; };
 		40AA1F1989F02FB958D27E1F /* ListCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListCards.swift; sourceTree = "<group>"; };
 		4377808D626DA37B8F05A13C /* PermitHistoryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermitHistoryModels.swift; sourceTree = "<group>"; };
-		4E636DD214450B69679DE26E /* KrokvaBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KrokvaBackend.swift; sourceTree = "<group>"; };
 		544C3AE7965538FD20DD57D3 /* HeroPropertyCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroPropertyCard.swift; sourceTree = "<group>"; };
 		5919826963BC2623D95BC970 /* PropertyCompareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PropertyCompareView.swift; sourceTree = "<group>"; };
-		5A65AE92BE5EB9623B2D5A95 /* WinnipegProvider+Types.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WinnipegProvider+Types.swift"; sourceTree = "<group>"; };
 		6FEEAB4689ACCBBCFB2D67AD /* ReportRating.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportRating.swift; sourceTree = "<group>"; };
 		74B574BD6B938B415BCED4E4 /* Krokva.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Krokva.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		769D61AFF41D9C47FF63D345 /* ReportRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportRouter.swift; sourceTree = "<group>"; };
-		76DE91886B2D94BEC68C36B1 /* KrokvaTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = KrokvaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		79A15CC362BC7FAAE91D9207 /* DataStatusService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStatusService.swift; sourceTree = "<group>"; };
 		7A7885B55E9CFB81A846104D /* uk */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = uk; path = uk.lproj/Localizable.strings; sourceTree = "<group>"; };
 		8ACFA09CFFCB70198757DA6D /* DataSourceHealth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataSourceHealth.swift; sourceTree = "<group>"; };
 		8B03FA5D861E3F28FA66EA5D /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
-		8DEA407B88344C6D235A0211 /* ReportRatingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportRatingTests.swift; sourceTree = "<group>"; };
 		8F4B613E4DA165E2C23814C4 /* CKANProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CKANProvider.swift; sourceTree = "<group>"; };
 		8F77CD4C38DDC28AF44B35B7 /* PropertyFinancialCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PropertyFinancialCard.swift; sourceTree = "<group>"; };
 		8FECAABF841CF818A1E97C9C /* Branding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Branding.swift; sourceTree = "<group>"; };
 		95D8B7D6288A5B2F15A10EFD /* ReportMapCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportMapCard.swift; sourceTree = "<group>"; };
-		96389DD0AF792E31572310FC /* KrokvaBackendTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KrokvaBackendTests.swift; sourceTree = "<group>"; };
-		9772D2317612B4E51A6F5794 /* WinnipegProvider+Schools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "WinnipegProvider+Schools.swift"; sourceTree = "<group>"; };
 		98289983C0C4C167469AF07D /* StubProviders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StubProviders.swift; sourceTree = "<group>"; };
 		9F0BB65C03381D7D248723D2 /* NearbySchoolsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NearbySchoolsCard.swift; sourceTree = "<group>"; };
-		9F6517A9B88F913FAFB2B9C1 /* OpenDataParsingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenDataParsingTests.swift; sourceTree = "<group>"; };
 		AA022CB7A47C4C9260F5D6B2 /* CityDataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityDataProvider.swift; sourceTree = "<group>"; };
 		B2721C378AB3D61C4A836A13 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
 		B6E1A69646C041B3CFBD6ABE /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
@@ -133,7 +107,6 @@
 		DE55B8FEBE6C7B4873572249 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/Localizable.strings; sourceTree = "<group>"; };
 		EC2CECAE53863D72727091C0 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		EE4746F1695870DC4B351429 /* AnalyticsCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsCards.swift; sourceTree = "<group>"; };
-		EED2C55B3F0143A3D8CC8ACB /* AddressNormalizerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressNormalizerTests.swift; sourceTree = "<group>"; };
 		F6ED210E53D2D95220B4BCB0 /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
 		FBF242F3724ED06A3A624C9F /* OpenDataClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenDataClient.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -154,8 +127,6 @@
 				01A63E3487763FB58DEFEF96 /* SocrataProvider.swift */,
 				98289983C0C4C167469AF07D /* StubProviders.swift */,
 				1D0C497E36152CCF911EC480 /* WinnipegProvider.swift */,
-				9772D2317612B4E51A6F5794 /* WinnipegProvider+Schools.swift */,
-				5A65AE92BE5EB9623B2D5A95 /* WinnipegProvider+Types.swift */,
 			);
 			path = Providers;
 			sourceTree = "<group>";
@@ -164,7 +135,6 @@
 			isa = PBXGroup;
 			children = (
 				BFEC2737697898108E64C912 /* ReportAnalytics.swift */,
-				28A614B1AE3B90B225C667BD /* ReportCacheStore.swift */,
 				CA1C0CE8DECD1EB1777ACFF9 /* ReportModels.swift */,
 				6FEEAB4689ACCBBCFB2D67AD /* ReportRating.swift */,
 				CCBA00D8FFB1CB1FCAF18D95 /* ReportService.swift */,
@@ -172,17 +142,6 @@
 				8D59B0E02F58D016CC3642C4 /* Cards */,
 			);
 			path = Report;
-			sourceTree = "<group>";
-		};
-		18D1AD09F1897D7987684E2E /* KrokvaTests */ = {
-			isa = PBXGroup;
-			children = (
-				EED2C55B3F0143A3D8CC8ACB /* AddressNormalizerTests.swift */,
-				96389DD0AF792E31572310FC /* KrokvaBackendTests.swift */,
-				9F6517A9B88F913FAFB2B9C1 /* OpenDataParsingTests.swift */,
-				8DEA407B88344C6D235A0211 /* ReportRatingTests.swift */,
-			);
-			path = KrokvaTests;
 			sourceTree = "<group>";
 		};
 		22492495C5A4F5C8DBA7ED13 /* Editorial */ = {
@@ -213,7 +172,6 @@
 			isa = PBXGroup;
 			children = (
 				74B574BD6B938B415BCED4E4 /* Krokva.app */,
-				76DE91886B2D94BEC68C36B1 /* KrokvaTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -230,7 +188,6 @@
 			isa = PBXGroup;
 			children = (
 				5ABDB52A8847E8DEDDDBF6D1 /* Krokva */,
-				18D1AD09F1897D7987684E2E /* KrokvaTests */,
 				3ACE2E7712CC95A4F59F5192 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -282,7 +239,6 @@
 			children = (
 				8ACFA09CFFCB70198757DA6D /* DataSourceHealth.swift */,
 				79A15CC362BC7FAAE91D9207 /* DataStatusService.swift */,
-				4E636DD214450B69679DE26E /* KrokvaBackend.swift */,
 				FBF242F3724ED06A3A624C9F /* OpenDataClient.swift */,
 				0458BEF8DC7227A7F0CF9B0C /* WRHAWaitTimesClient.swift */,
 			);
@@ -400,24 +356,6 @@
 			productReference = 74B574BD6B938B415BCED4E4 /* Krokva.app */;
 			productType = "com.apple.product-type.application";
 		};
-		EE011EB10E7C1D28858707A1 /* KrokvaTests */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = C1611981C6768A8BED3155D4 /* Build configuration list for PBXNativeTarget "KrokvaTests" */;
-			buildPhases = (
-				7852FBCA12B6FAA78FE5F578 /* Sources */,
-			);
-			buildRules = (
-			);
-			dependencies = (
-				F0DE3690BC5705AB6BEE8012 /* PBXTargetDependency */,
-			);
-			name = KrokvaTests;
-			packageProductDependencies = (
-			);
-			productName = KrokvaTests;
-			productReference = 76DE91886B2D94BEC68C36B1 /* KrokvaTests.xctest */;
-			productType = "com.apple.product-type.bundle.unit-test";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -447,7 +385,6 @@
 			projectRoot = "";
 			targets = (
 				01CF8B69ED3099C445350413 /* Krokva */,
-				EE011EB10E7C1D28858707A1 /* KrokvaTests */,
 			);
 		};
 /* End PBXProject section */
@@ -486,7 +423,6 @@
 				51571B4D6E620BED0E65805D /* HeroPropertyCard.swift in Sources */,
 				F833EBCAE2951A850402DAE2 /* HomeView.swift in Sources */,
 				FA9EF786D4F3BB149EA72B3C /* KrokvaApp.swift in Sources */,
-				AAC63616CD9F47BED58F82E8 /* KrokvaBackend.swift in Sources */,
 				A608292ABB71B2A32ADF523E /* ListCards.swift in Sources */,
 				C50E03509CA1167594372E68 /* LoadingScreenAnimation.swift in Sources */,
 				32AFE0E08E6F02D413C1A7CC /* LocalModels.swift in Sources */,
@@ -499,7 +435,6 @@
 				A00D4CBEA655169F82FE1A98 /* PropertyFinancialCard.swift in Sources */,
 				A70A053EFACEC934B66930A7 /* PropertyPermitHistoryCard.swift in Sources */,
 				89616A386D2B132E0F7BBA27 /* ReportAnalytics.swift in Sources */,
-				0E7C9F5AD5C0C5832446EC07 /* ReportCacheStore.swift in Sources */,
 				6E395B3B9662C042CD99AA13 /* ReportMapCard.swift in Sources */,
 				E5EB0CB93846CF68B7E9DA96 /* ReportModels.swift in Sources */,
 				1843931D9F1AE26EADC76E88 /* ReportRating.swift in Sources */,
@@ -515,32 +450,11 @@
 				F122744F9415E55F7CBA7290 /* SocrataProvider.swift in Sources */,
 				A3CC867E76D177F67DAC0BB6 /* StubProviders.swift in Sources */,
 				CB53429D374C4CC30CB3E734 /* WRHAWaitTimesClient.swift in Sources */,
-				28CC31BD2B0431FC46DD4318 /* WinnipegProvider+Schools.swift in Sources */,
-				25507B473502D3F5DDDA6872 /* WinnipegProvider+Types.swift in Sources */,
 				38E9123063C3865B39593F08 /* WinnipegProvider.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
-		7852FBCA12B6FAA78FE5F578 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				E1893230A1FC8ABFC055006A /* AddressNormalizerTests.swift in Sources */,
-				DA55073337D83F1566725258 /* KrokvaBackendTests.swift in Sources */,
-				F8EE7ED44CB475DA5C4E58FC /* OpenDataParsingTests.swift in Sources */,
-				D44443CBA3A9470A5A5773B5 /* ReportRatingTests.swift in Sources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		F0DE3690BC5705AB6BEE8012 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 01CF8B69ED3099C445350413 /* Krokva */;
-			targetProxy = B6DD7C4A1A5291E726CE319D /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin PBXVariantGroup section */
 		31E85998790F6BB49E8E368F /* Localizable.strings */ = {
@@ -680,23 +594,6 @@
 			};
 			name = Release;
 		};
-		5590CB6EF0D06630D0C57051 /* Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = ca.krokva.tests;
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Krokva.app/Krokva";
-			};
-			name = Release;
-		};
 		D78041B39320D671F08E85F1 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -733,23 +630,6 @@
 			};
 			name = Debug;
 		};
-		FC03160F6142D7DE2C5CF2F4 /* Debug */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				BUNDLE_LOADER = "$(TEST_HOST)";
-				GENERATE_INFOPLIST_FILE = YES;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@loader_path/Frameworks",
-				);
-				PRODUCT_BUNDLE_IDENTIFIER = ca.krokva.tests;
-				SDKROOT = iphoneos;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Krokva.app/Krokva";
-			};
-			name = Debug;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -758,15 +638,6 @@
 			buildConfigurations = (
 				EBA656FA8DED2FEF8637BBD9 /* Debug */,
 				D78041B39320D671F08E85F1 /* Release */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = Debug;
-		};
-		C1611981C6768A8BED3155D4 /* Build configuration list for PBXNativeTarget "KrokvaTests" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				FC03160F6142D7DE2C5CF2F4 /* Debug */,
-				5590CB6EF0D06630D0C57051 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;

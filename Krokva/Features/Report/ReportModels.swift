@@ -528,40 +528,20 @@ struct PlanningContextSummary: Codable {
 struct PublicNotice: Identifiable, Codable {
     let id: UUID
     var noticeType: String
-    var noticeID: String?
     var address: String
     var description: String?
-    var plainLanguage: String?
-    var conditions: String?
-    var approvalType: String?
     var decision: String?
     var meetingDate: Date?
-    var appealDate: Date?
-    var community: String?
-    var ward: String?
-    var neighbourhood: String?
-    var rollNumber: String?
-    var reportPlanURL: URL?
     var distanceDescription: String?
     var coordinate: CLLocationCoordinate2D?
 
-    init(id: UUID = UUID(), noticeType: String, noticeID: String? = nil, address: String, description: String? = nil, plainLanguage: String? = nil, conditions: String? = nil, approvalType: String? = nil, decision: String? = nil, meetingDate: Date? = nil, appealDate: Date? = nil, community: String? = nil, ward: String? = nil, neighbourhood: String? = nil, rollNumber: String? = nil, reportPlanURL: URL? = nil, distanceDescription: String? = nil, coordinate: CLLocationCoordinate2D? = nil) {
+    init(id: UUID = UUID(), noticeType: String, address: String, description: String? = nil, decision: String? = nil, meetingDate: Date? = nil, distanceDescription: String? = nil, coordinate: CLLocationCoordinate2D? = nil) {
         self.id = id
         self.noticeType = noticeType
-        self.noticeID = noticeID
         self.address = address
         self.description = description
-        self.plainLanguage = plainLanguage
-        self.conditions = conditions
-        self.approvalType = approvalType
         self.decision = decision
         self.meetingDate = meetingDate
-        self.appealDate = appealDate
-        self.community = community
-        self.ward = ward
-        self.neighbourhood = neighbourhood
-        self.rollNumber = rollNumber
-        self.reportPlanURL = reportPlanURL
         self.distanceDescription = distanceDescription
         self.coordinate = coordinate
     }

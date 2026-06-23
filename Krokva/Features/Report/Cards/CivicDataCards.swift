@@ -357,7 +357,7 @@ struct TrafficCard: View {
 
     private var hasTrafficCounts: Bool {
         guard let summary else { return false }
-        return summary.streetStudy != nil || summary.nearestPermanentStation != nil
+        return summary.streetStudy != nil
     }
     private var hasParkingSignals: Bool {
         guard let risk else { return false }
@@ -443,15 +443,8 @@ struct TrafficCard: View {
                 studySection(eyebrow: "ON THIS STREET", study: study)
             }
 
-            if let station = summary?.nearestPermanentStation {
-                if summary?.streetStudy != nil { Divider().foregroundStyle(Color.cleanSep) }
-                studySection(eyebrow: "NEAREST PERMANENT COUNTER", study: station)
-            }
-
-            if hasTrafficCounts,
-               summary?.streetStudy?.countNote == nil,
-               summary?.nearestPermanentStation?.countNote == nil {
-                Text("Traffic counts reflect the latest available observation from the source dataset.")
+            if hasTrafficCounts {
+                Text(summary?.streetStudy?.countNote ?? "Traffic counts reflect the latest available observation from the source dataset.")
                     .font(.system(size: 10))
                     .foregroundStyle(Color.cleanLabel3)
             }
@@ -498,15 +491,6 @@ struct TrafficCard: View {
             }
             if let distance = study.distanceDescription {
                 KeyValueRow(key: "Distance", value: distance)
-            }
-            if let unit = study.countSummaryUnit, !unit.isEmpty {
-                KeyValueRow(key: "Unit", value: unit)
-            }
-            if let note = study.countNote, !note.isEmpty {
-                Text(note)
-                    .font(.system(size: 10))
-                    .foregroundStyle(Color.cleanLabel3)
-                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -880,12 +864,6 @@ struct CapitalWorksCard: View {
                                     .font(.system(size: 10, weight: .bold))
                                     .foregroundStyle(Color.cleanAmber)
                             }
-                            if let detail = project.detail, !detail.isEmpty {
-                                Text(detail)
-                                    .font(.system(size: 11))
-                                    .foregroundStyle(Color.cleanLabel2)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
                         }
                     }
                 }
@@ -934,11 +912,6 @@ struct FacilityClosuresCard: View {
                                     Text("Closed \(date.formatted(date: .abbreviated, time: .omitted))")
                                         .font(.system(size: 10, weight: .semibold))
                                         .foregroundStyle(closure.reopenDate == nil ? Color.cleanRed : Color.cleanLabel3)
-                                }
-                                if let reopen = closure.reopenDate {
-                                    Text("Reopened \(reopen.formatted(date: .abbreviated, time: .omitted))")
-                                        .font(.system(size: 10, weight: .semibold))
-                                        .foregroundStyle(Color.cleanGreen)
                                 }
                             }
                         }

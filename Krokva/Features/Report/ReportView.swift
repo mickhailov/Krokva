@@ -30,7 +30,7 @@ struct ReportView: View {
         guard !isRetrying else { return }
         isRetrying = true
         defer { isRetrying = false }
-        let refreshed = await ReportService().report(for: currentReport.address.raw, modelContext: modelContext, forceRefresh: true)
+        let refreshed = await ReportService().report(for: currentReport.address.raw)
         currentReport = refreshed
         permitHistoryRefreshToken = UUID()
     }
@@ -94,7 +94,6 @@ struct ReportView: View {
                     // ── A. Property & valuation ──────────────────────────────
                     // Identity first: what is this place, what does it cost, key facts.
                     HeroPropertyCard(report: report)
-                    PlanningContextCard(summary: report.planning, sourceFailed: report.moduleFailed(.planning))
 
                     // Analytics band: composite indices, year-over-year trends,
                     // and comparative percentiles derived from the report data.
@@ -167,6 +166,7 @@ struct ReportView: View {
                     PermitActivityCard(activity: report.permitActivity, sourceFailed: report.moduleFailed(.permitActivity))
                     VacantOrdersCard(orders: report.vacantOrders, sourceFailed: report.moduleFailed(.vacantOrders))
                     DevelopmentContextCard(summary: report.development, sourceFailed: report.moduleFailed(.development))
+                    PlanningContextCard(summary: report.planning, sourceFailed: report.moduleFailed(.planning))
                     HeritageCard(summary: report.heritage, sourceFailed: report.moduleFailed(.heritage))
                     ShortTermRentalsCard(summary: report.shortTermRentals, sourceFailed: report.moduleFailed(.shortTermRentals))
                     BylawInvestigationsCard(summary: report.bylaw, sourceFailed: report.moduleFailed(.bylaw))

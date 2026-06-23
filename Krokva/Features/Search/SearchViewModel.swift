@@ -1,10 +1,8 @@
 import Foundation
 import MapKit
 import Observation
-import SwiftData
 import SwiftUI
 
-@MainActor
 @Observable
 final class SearchViewModel {
     var query = ""
@@ -42,21 +40,15 @@ final class SearchViewModel {
         loadingStage = .normalizing
     }
 
-    func fetchReport(modelContext: ModelContext? = nil, forceRefresh: Bool = false) async -> AddressReport? {
+    func fetchReport() async -> AddressReport? {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return nil }
-
-        // Warm cache hit: open instantly, skipping the loading animation entirely.
-        if !forceRefresh, let modelContext, let cached = service.cachedReport(for: trimmed, modelContext: modelContext) {
-            return cached
-        }
-
         isLoading = true
         loadingStage = .normalizing
         errorMessage = nil
         defer { isLoading = false }
 
-        return await service.report(for: trimmed, modelContext: modelContext, forceRefresh: forceRefresh, progress: { [weak self] stage in
+        return await service.report(for: trimmed, progress: { [weak self] stage in
             guard !Task.isCancelled else { return }
             await self?.setLoadingStage(stage)
         }, subProgress: { [weak self] fraction in

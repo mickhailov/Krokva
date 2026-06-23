@@ -45,9 +45,9 @@ Clean, Compare, Home, Map, PermitHistory, Report, Search, Settings
 AnalyticsCards, ChartCards, CivicDataCards, HeroPropertyCard, ListCards, NearbySchoolsCard, PropertyFactsCard, PropertyFinancialCard, ReportMapCard, ScoreBreakdownSheet, SharedComponents
 
 **City providers** (`Krokva/Cities/Providers/`):
-CKANProvider, SocrataProvider, StubProviders, WinnipegProvider, WinnipegProvider+Schools, WinnipegProvider+Types
+CKANProvider, SocrataProvider, StubProviders, WinnipegProvider
 
 ## Persistent memory (read on demand)
-- `memory/project-myhata-spinoff.md` — MyHata — homeowner spin-off of Krokva with a push backend (separate folders)
+_memory dir not found_
 
 <!-- AUTOGEN:END -->

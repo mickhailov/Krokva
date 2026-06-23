@@ -74,45 +74,6 @@ enum KrokvaTypography {
     static let eyebrow       = Font.system(size: 9.5, weight: .medium, design: .monospaced)
 }
 
-// MARK: - Dynamic Type scaling
-//
-// The design uses tuned fixed point sizes, but `Font.system(size:)` does not respond to the
-// user's Dynamic Type setting. `scaledFont` keeps the exact design size at the default text
-// size while letting it grow/shrink with accessibility text sizes via `@ScaledMetric`
-// (scaled relative to `.body` by default). Drop-in replacement for `.font(.system(size:…))`.
-
-private struct ScaledSystemFont: ViewModifier {
-    @ScaledMetric private var scaledSize: CGFloat
-    private let weight: Font.Weight
-    private let design: Font.Design
-    private let monospacedDigit: Bool
-
-    init(size: CGFloat, weight: Font.Weight, design: Font.Design, monospacedDigit: Bool, relativeTo textStyle: Font.TextStyle) {
-        _scaledSize = ScaledMetric(wrappedValue: size, relativeTo: textStyle)
-        self.weight = weight
-        self.design = design
-        self.monospacedDigit = monospacedDigit
-    }
-
-    func body(content: Content) -> some View {
-        let font = Font.system(size: scaledSize, weight: weight, design: design)
-        return content.font(monospacedDigit ? font.monospacedDigit() : font)
-    }
-}
-
-extension View {
-    /// Dynamic-Type-aware replacement for `.font(.system(size:weight:design:))`.
-    func scaledFont(
-        _ size: CGFloat,
-        weight: Font.Weight = .regular,
-        design: Font.Design = .default,
-        monospacedDigit: Bool = false,
-        relativeTo textStyle: Font.TextStyle = .body
-    ) -> some View {
-        modifier(ScaledSystemFont(size: size, weight: weight, design: design, monospacedDigit: monospacedDigit, relativeTo: textStyle))
-    }
-}
-
 // MARK: - Eyebrow modifier
 //
 // Use everywhere a small uppercase mono label is needed:
@@ -121,7 +82,7 @@ extension View {
 extension View {
     func eyebrow(color: Color = .krokvaInk3) -> some View {
         self
-            .scaledFont(10, weight: .heavy)
+            .font(.system(size: 10, weight: .heavy))
             .tracking(0.8)
             .textCase(.uppercase)
             .foregroundStyle(color)

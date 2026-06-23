@@ -2,33 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-  <!--
-    Krokva has no account, no analytics/tracking SDK, and no advertising. It does not
-    collect data linked to a user's identity, so NSPrivacyCollectedDataTypes is empty.
-    Searched addresses are sent transiently to an open-data backend for the lookup and
-    are not stored or linked to the user.
-  -->
   <key>NSPrivacyCollectedDataTypes</key>
   <array/>
   <key>NSPrivacyTracking</key>
   <false/>
   <key>NSPrivacyTrackingDomains</key>
   <array/>
-  <!--
-    Required-reason API declarations (Apple, since spring 2024). UserDefaults is used to
-    remember the user's down-payment input on the property financial card; the data never
-    leaves the device, so reason CA92.1 ("access info from the app itself") applies.
-  -->
-  <key>NSPrivacyAccessedAPITypes</key>
-  <array>
-    <dict>
-      <key>NSPrivacyAccessedAPIType</key>
-      <string>NSPrivacyAccessedAPICategoryUserDefaults</string>
-      <key>NSPrivacyAccessedAPITypeReasons</key>
-      <array>
-        <string>CA92.1</string>
-      </array>
-    </dict>
-  </array>
 </dict>
 </plist>

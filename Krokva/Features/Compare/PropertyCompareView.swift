@@ -710,4 +710,8 @@ struct PropertyCompareView: View {
     }
 }
 
-// `String.nilIfEmpty` is shared from the Winnipeg provider's String helpers (internal).
+// MARK: - String nilIfEmpty
+
+private extension String {
+    var nilIfEmpty: String? { isEmpty ? nil : self }
+}

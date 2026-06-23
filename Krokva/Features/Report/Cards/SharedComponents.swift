@@ -370,54 +370,6 @@ struct Service311InlineContent: View {
                 }
             }
 
-            if !summary.topSubjects.isEmpty || !summary.topTypes.isEmpty {
-                Divider().foregroundStyle(Color.cleanSep)
-                VStack(alignment: .leading, spacing: 8) {
-                    if !summary.topSubjects.isEmpty {
-                        Text("Top subjects").eyebrow(color: .cleanLabel3)
-                        ForEach(summary.topSubjects.prefix(4)) { item in
-                            compactBreakdownRow(item)
-                        }
-                    }
-                    if !summary.topTypes.isEmpty {
-                        Text("Top request types").eyebrow(color: .cleanLabel3)
-                            .padding(.top, summary.topSubjects.isEmpty ? 0 : 4)
-                        ForEach(summary.topTypes.prefix(4)) { item in
-                            compactBreakdownRow(item)
-                        }
-                    }
-                }
-            }
-
-            if !summary.statusBreakdown.isEmpty || !summary.channelBreakdown.isEmpty {
-                Divider().foregroundStyle(Color.cleanSep)
-                VStack(alignment: .leading, spacing: 8) {
-                    if !summary.statusBreakdown.isEmpty {
-                        Text("Status").eyebrow(color: .cleanLabel3)
-                        ForEach(summary.statusBreakdown.prefix(4)) { item in
-                            compactBreakdownRow(item)
-                        }
-                    }
-                    if !summary.channelBreakdown.isEmpty {
-                        Text("Channels").eyebrow(color: .cleanLabel3)
-                            .padding(.top, summary.statusBreakdown.isEmpty ? 0 : 4)
-                        ForEach(summary.channelBreakdown.prefix(4)) { item in
-                            compactBreakdownRow(item)
-                        }
-                    }
-                }
-            }
-
-            if !summary.recentRequests.isEmpty {
-                Divider().foregroundStyle(Color.cleanSep)
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("Recent nearby requests").eyebrow(color: .cleanLabel3)
-                    ForEach(summary.recentRequests.prefix(4)) { request in
-                        recentRequestRow(request)
-                    }
-                }
-            }
-
             Text("311 locations are privacy-adjusted · shown as \(summary.neighbourhood) context only.")
                 .font(.system(size: 10))
                 .foregroundStyle(Color.cleanLabel3)
@@ -432,49 +384,6 @@ struct Service311InlineContent: View {
                 .foregroundStyle(Color.cleanLabel2)
         }
         .frame(maxWidth: .infinity)
-    }
-
-    private func compactBreakdownRow(_ item: IncidentBreakdown) -> some View {
-        HStack {
-            Text(item.incidentType)
-                .font(.system(size: 12.5, weight: .medium))
-                .foregroundStyle(Color.cleanLabel2)
-                .lineLimit(1)
-            Spacer(minLength: 8)
-            Text(item.count.formatted())
-                .font(.system(size: 12, weight: .semibold).monospacedDigit())
-                .foregroundStyle(Color.cleanLabel)
-        }
-    }
-
-    private func recentRequestRow(_ request: ServiceRequestRecord) -> some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(request.subject ?? request.reason ?? request.type ?? "311 request")
-                    .font(.system(size: 12.5, weight: .semibold))
-                    .foregroundStyle(Color.cleanLabel)
-                    .lineLimit(1)
-                Spacer(minLength: 8)
-                if let status = request.status {
-                    Text(status)
-                        .font(.system(size: 10, weight: .semibold))
-                        .foregroundStyle(Color.cleanLabel3)
-                }
-            }
-            let meta = [
-                request.reason,
-                request.type,
-                request.channel,
-                request.ward,
-                request.openDate.map { $0.formatted(date: .abbreviated, time: .omitted) }
-            ].compactMap { $0 }.joined(separator: " · ")
-            if !meta.isEmpty {
-                Text(meta)
-                    .font(.system(size: 11))
-                    .foregroundStyle(Color.cleanLabel3)
-                    .lineLimit(2)
-            }
-        }
     }
 }
 
