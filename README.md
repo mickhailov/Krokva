@@ -94,18 +94,19 @@ project.yml                # XcodeGen project definition
 The iOS app reads Winnipeg data from the self-hosted Socrata-compatible mirror:
 
 ```text
-http://3.99.123.190:8889/resource/{dataset}.json
+http://krokva.144.217.5.174.sslip.io/resource/{dataset}.json
 ```
 
-The mirror lives on AWS Lightsail and serves City of Winnipeg Open Data from local
-PostgreSQL 16 + PostGIS tables. This avoids hitting `data.winnipeg.ca` during every
-report build and keeps address reports responsive even when the upstream portal is
-slow or temporarily returns `503`.
+The mirror lives on the shared OVH VPS (`144.217.5.174`) and serves City of Winnipeg
+Open Data from local PostgreSQL 16 + PostGIS tables via the `krokva` nginx vhost
+(proxying to gunicorn on `127.0.0.1:8889` — not exposed directly on that port). This
+avoids hitting `data.winnipeg.ca` during every report build and keeps address reports
+responsive even when the upstream portal is slow or temporarily returns `503`.
 
 Runtime wiring:
 
-- `WinnipegProvider` points Socrata reads at `3.99.123.190:8889`.
-- `DataStatusService` reads `http://3.99.123.190:8889/api/status`.
+- `WinnipegProvider` points Socrata reads at `krokva.144.217.5.174.sslip.io`.
+- `DataStatusService` reads `http://krokva.144.217.5.174.sslip.io/api/status`.
 - `OpenDataClient` uses a 30-second timeout because some aggregate/geospatial mirror
   queries can be slower during cold cache or maintenance windows.
 - Report cards distinguish empty data from fetch failures through `DataSourceHealth`.

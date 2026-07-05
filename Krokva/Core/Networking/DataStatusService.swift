@@ -10,7 +10,7 @@ struct DataStatus: Sendable, Equatable {
 final class DataStatusService: ObservableObject {
     @Published var status: DataStatus?
 
-    private static let url = URL(string: "http://3.99.123.190:8889/api/status")!
+    private static let url = URL(string: "http://krokva.144.217.5.174.sslip.io/api/status")!
 
     func refresh() {
         Task {

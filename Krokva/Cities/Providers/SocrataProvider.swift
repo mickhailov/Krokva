@@ -18,7 +18,7 @@ class SocrataProvider {
     func resourceURL(_ datasetID: String, queryItems: [URLQueryItem] = []) throws -> URL {
         var components = URLComponents()
         components.scheme = scheme
-        // Split host and port if present (e.g. "16.52.129.61:8889")
+        // Split host and port if present (e.g. "example.com:8889")
         let parts = domain.split(separator: ":", maxSplits: 1)
         components.host = String(parts[0])
         if parts.count == 2, let port = Int(parts[1]) { components.port = port }
