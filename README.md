@@ -1,5 +1,18 @@
 # Krokva
 
+> **Status (2026-07-05): data backend decommissioned.** The self-hosted Socrata
+> mirror this app pointed at (`krokva.144.217.5.174.sslip.io`, gunicorn :8889,
+> `wnpg_*` tables) was shut down on 2026-07-05 — all data cards except permit
+> history (which hits `data.winnipeg.ca` directly) are empty. The mirror docs
+> below are historical. To revive the app: point `SocrataProvider` at the CDS
+> Socrata facade (`civic.144.217.5.174.sslip.io/resource/{id}.json`, same SoQL
+> dialect — see `~/Documents/CivicData/docs/API.md`) and widen CDS retention
+> windows per dataset where deep history is needed; or query `data.winnipeg.ca`
+> directly for the long-tail history. A pre-decommission DB backup lives at
+> `~/backups/winnipeg_pre_decommission_20260705.dump` on the OVH host.
+> The krokva.com landing + email-subscribe service (:8891) are separate and
+> still running.
+
 Krokva is a native SwiftUI iOS app for Canadian civic address dossiers. The name comes from Ukrainian *krokva* (кро́ква) — the rafter beam that holds up a roof. The brand promise is the structural truth about an address, drawn from municipal open data.
 
 ## Requirements
