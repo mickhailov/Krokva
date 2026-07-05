@@ -48,6 +48,8 @@ ChartCards, CivicDataCards, HeroPropertyCard, ListCards, NearbySchoolsCard, Prop
 CKANProvider, SocrataProvider, StubProviders, WinnipegProvider
 
 ## Persistent memory (read on demand)
-_memory dir not found_
+- `memory/feature-report-pdf-export.md` — PDF export of Reports — card changes MUST flow into the PDF; ReportCardCatalog is the single source of truth
+- `memory/infra-ovh-krokva-web.md` — "OVH/Lightsail shared host — SSH access, nginx site layout, and how krokva.com landing is deployed"
+- `memory/project-myhata-spinoff.md` — MyHata — homeowner spin-off of Krokva with a push backend (separate folders)
 
 <!-- AUTOGEN:END -->
