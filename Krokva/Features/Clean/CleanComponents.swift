@@ -70,6 +70,9 @@ struct ScoreRing: View {
     var showLabel: Bool = true
 
     @State private var progress: Double = 0
+    // Offscreen PDF rendering never runs onAppear animations, so draw final state.
+    @Environment(\.reportPDFRender) private var pdfRender
+    private var effectiveProgress: Double { pdfRender ? 1 : progress }
 
     var ringColor: Color {
         if score >= 80 { return .cleanSky }
@@ -82,7 +85,7 @@ struct ScoreRing: View {
             Circle()
                 .stroke(Color.cleanTrack, lineWidth: strokeWidth)
             Circle()
-                .trim(from: 0, to: progress * Double(score) / 100)
+                .trim(from: 0, to: effectiveProgress * Double(score) / 100)
                 .stroke(ringColor, style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             if showLabel {
@@ -112,6 +115,8 @@ struct DonutRing: View {
     var centerSub: String? = nil
 
     @State private var progress: Double = 0
+    @Environment(\.reportPDFRender) private var pdfRender
+    private var effectiveProgress: Double { pdfRender ? 1 : progress }
 
     private var fraction: Double {
         maxValue > 0 ? min(Double(value) / Double(maxValue), 1) : 0
@@ -122,7 +127,7 @@ struct DonutRing: View {
             Circle()
                 .stroke(Color.cleanTrack, lineWidth: strokeWidth)
             Circle()
-                .trim(from: 0, to: progress * fraction)
+                .trim(from: 0, to: effectiveProgress * fraction)
                 .stroke(color, style: StrokeStyle(lineWidth: strokeWidth, lineCap: .round))
                 .rotationEffect(.degrees(-90))
             VStack(spacing: 1) {
@@ -156,6 +161,8 @@ struct PillBar: View {
     var animationDelay: Double = 0.15
 
     @State private var progress: Double = 0
+    @Environment(\.reportPDFRender) private var pdfRender
+    private var effectiveProgress: Double { pdfRender ? 1 : progress }
 
     var body: some View {
         HStack(spacing: 10) {
@@ -171,7 +178,7 @@ struct PillBar: View {
                     Capsule().fill(Color.cleanTrack)
                     Capsule().fill(color)
                         .frame(width: maxValue > 0
-                               ? geo.size.width * CGFloat(progress) * CGFloat(value) / CGFloat(maxValue)
+                               ? geo.size.width * CGFloat(effectiveProgress) * CGFloat(value) / CGFloat(maxValue)
                                : 0)
                 }
             }

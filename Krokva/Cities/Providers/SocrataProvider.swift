@@ -33,8 +33,12 @@ class SocrataProvider {
             return try await client.getJSON(url: resourceURL(datasetID, queryItems: queryItems))
         } catch {
             // A thrown request is a transport/HTTP failure (an empty result returns []), so
-            // attribute it to the module currently being fetched before rethrowing.
-            await dataSourceHealth.recordCurrentModuleFailure()
+            // attribute it to the module currently being fetched before rethrowing. A
+            // cancellation, however, is the report's 10-second timeout cutting the module
+            // off — not a source error — so that module degrades to "no data", not an error.
+            if !Task.isCancelled {
+                await dataSourceHealth.recordCurrentModuleFailure()
+            }
             throw error
         }
     }

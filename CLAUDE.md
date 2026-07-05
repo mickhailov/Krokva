@@ -14,7 +14,7 @@ Add a new `.swift` file → it's picked up automatically (sources glob `Krokva/`
 - Design system is **Civic Modernist**: wrap content in `KrokvaCard` with an eyebrow label; use paper/surface tokens from `App/Branding/`. Details in memory `project-krokva-design.md`.
 - Numeric model fields are **`Double`** (not Int/Float).
 - The core flow is **`Features/Report/`** (`ReportView` / `ReportService` / `ReportModels` / `ReportRating`); each dossier card lives in `Report/Cards/`.
-- Adding a Report card → create it in `Features/Report/Cards/`, insert into `ReportView`'s stack.
+- Adding a Report card → create it in `Features/Report/Cards/`, register it in `ReportCardCatalog` (`Features/Report/ReportPDF/`). The catalog drives both `ReportView`'s stack **and** the PDF export — never add cards inline in `ReportView`. Collapsible cards gate content with `if isExpanded || pdfRender` (see memory `feature-report-pdf-export.md`).
 - Adding a city → implement `CityDataProvider`, register in `CityRegistry`.
 - SwiftData models live in `Core/Cache/LocalModels.swift`; networking in `Core/Networking/`.
 - **Empty vs error states**: distinguish the two. When a card's database/source loaded successfully but returned nothing for this address, render a "No data" label (`EmptyCardState`). When the fetch itself failed (network/DB error), render a "Database error" label. Never silently hide a card on error — only the loaded-but-empty case degrades quietly.
@@ -39,10 +39,10 @@ Each address Report is assembled by `WinnipegProvider.fetchReport` as a parallel
 - `Features/`
 
 **Features** (`Krokva/Features/`):
-Clean, Compare, Favorites, Health, Home, Map, Parks, PermitHistory, Report, Search, SelfInspection, Service311, Settings
+Clean, Compare, Home, Map, PermitHistory, Report, Search, Settings
 
 **Report cards** (`Krokva/Features/Report/Cards/`):
-ChartCards, CivicDataCards, HeroPropertyCard, ListCards, NearbySchoolsCard, PropertyFactsCard, PropertyFinancialCard, ReportMapCard, ScoreBreakdownSheet, SharedComponents
+AnalyticsCards, ChartCards, CivicDataCards, HeroPropertyCard, ListCards, NearbySchoolsCard, PropertyFactsCard, PropertyFinancialCard, ReportMapCard, ScoreBreakdownSheet, SharedComponents
 
 **City providers** (`Krokva/Cities/Providers/`):
 CKANProvider, SocrataProvider, StubProviders, WinnipegProvider

@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1200px;height:630px;overflow:hidden}
+  body{
+    background:#EDE7D6;
+    background-image:radial-gradient(90% 70% at 50% -8%, rgba(184,148,85,.16), transparent 60%);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Helvetica Neue",Arial,sans-serif;
+    color:#1B1E25; display:flex; flex-direction:column; justify-content:center;
+    padding:0 96px; position:relative;
+  }
+  .eyebrow{font-family:ui-monospace,"SF Mono",Menlo,monospace; font-size:20px; font-weight:700;
+    letter-spacing:.16em; text-transform:uppercase; color:#6E727C; margin-bottom:34px}
+  .row{display:flex; align-items:center; gap:26px; margin-bottom:30px}
+  .mark{width:82px; height:82px}
+  .wordmark{font-size:76px; font-weight:700; letter-spacing:.01em}
+  h1{font-size:66px; font-weight:700; line-height:1.04; letter-spacing:-.02em; max-width:15ch}
+  h1 .accent{color:#937539}
+  .tag{margin-top:30px; font-size:28px; color:#2A2E37}
+  .foot{position:absolute; left:96px; bottom:52px; display:flex; align-items:center; gap:16px;
+    font-family:ui-monospace,"SF Mono",Menlo,monospace; font-size:19px; color:#6E727C; letter-spacing:.04em}
+  .pill{display:inline-flex; align-items:center; gap:9px; padding:8px 16px; border:1px solid #D8D0BD;
+    border-radius:999px; background:#E5D6B0; color:#937539; font-weight:700; font-size:17px; letter-spacing:.08em; text-transform:uppercase}
+  .dot{width:9px; height:9px; border-radius:50%; background:#B89455}
+  .sep{color:#D8D0BD}
+</style></head>
+<body>
+  <div class="row">
+    <svg class="mark" viewBox="0 0 32 32">
+      <path d="M6 25 L16 7 L26 25" fill="none" stroke="#B89455" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="16" cy="18" r="1.7" fill="#B89455"/>
+    </svg>
+    <span class="wordmark">Krokva</span>
+  </div>
+  <h1>The foundation of<br>every <span class="accent">address</span>.</h1>
+  <div class="foot">
+    <span class="pill"><span class="dot"></span>In development</span>
+    <span class="sep">/</span>
+    <span>Winnipeg 2026</span>
+    <span class="sep">/</span>
+    <span>krokva.com</span>
+  </div>
+</body></html>

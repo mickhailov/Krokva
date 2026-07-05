@@ -202,6 +202,18 @@ struct SettingsView: View {
 
             Divider().foregroundStyle(Color.cleanSep)
 
+            NavigationLink {
+                ReportView(report: SampleReportData.report)
+            } label: {
+                Text("Preview sample report")
+                    .font(KrokvaTypography.body)
+                    .foregroundStyle(Color.cleanSky)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.vertical, 10)
+
+            Divider().foregroundStyle(Color.cleanSep)
+
             Link(destination: URL(string: "mailto:feedback@krokva.ca")!) {
                 HStack {
                     Text("Send feedback")

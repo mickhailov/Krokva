@@ -11,6 +11,8 @@ struct NearbySchoolsCard: View {
 
     @State private var isExpanded = false
 
+    @Environment(\.reportPDFRender) private var pdfRender
+
     // Estimated school division levy from the property's assessed value.
     // Uses Winnipeg's 2026 average combined residential mill rate of 27.405 mills
     // applied to the portioned value (45% of assessed).
@@ -23,7 +25,7 @@ struct NearbySchoolsCard: View {
         CleanCard(padding: 0) {
             VStack(spacing: 0) {
                 headerButton
-                if isExpanded {
+                if isExpanded || pdfRender {
                     Divider()
                     fullContent
                         .padding(18)

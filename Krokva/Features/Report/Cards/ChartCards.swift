@@ -45,6 +45,7 @@ struct EmergencyActivityCard: View {
     var substances: [IncidentBreakdown] = []
     var sourceFailed = false
     @State private var isExpanded = false
+    @Environment(\.reportPDFRender) private var pdfRender
     @State private var selectedYear: Int?
 
     private func activeYear(for summary: EmergencySummary) -> Int? {
@@ -58,7 +59,7 @@ struct EmergencyActivityCard: View {
         CleanCard(padding: 0) {
             VStack(spacing: 0) {
                 headerButton
-                if isExpanded {
+                if isExpanded || pdfRender {
                     Divider()
                     fullContent
                         .padding(18)
@@ -440,6 +441,7 @@ struct PoliceCrimeCard: View {
     let summary: PoliceCrimeSummary?
     var sourceFailed = false
     @State private var isExpanded = false
+    @Environment(\.reportPDFRender) private var pdfRender
     @State private var selectedYearValue: Int?
 
     private var activeYear: Int? {
@@ -454,7 +456,7 @@ struct PoliceCrimeCard: View {
         CleanCard(padding: 0) {
             VStack(spacing: 0) {
                 headerButton
-                if isExpanded {
+                if isExpanded || pdfRender {
                     Divider()
                     fullContent
                         .padding(18)

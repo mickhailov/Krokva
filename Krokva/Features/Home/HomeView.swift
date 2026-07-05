@@ -113,23 +113,32 @@ struct HomeView: View {
     @ViewBuilder
     private var dataStatusBadge: some View {
         if let s = dataStatus.status {
-            VStack(spacing: 4) {
-                HStack(spacing: 0) {
-                    Text("Database contain ")
-                    AnimatedNumber(value: animatedRows)
-                        .fontWeight(.semibold)
-                    Text(" records in ")
-                    AnimatedNumber(value: animatedTables)
-                        .fontWeight(.semibold)
-                    Text(" databases.")
+            VStack(spacing: 5) {
+                HStack(spacing: 6) {
+                    Image(systemName: "cylinder.split.1x2")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(Color.cleanSky)
+
+                    HStack(spacing: 0) {
+                        AnimatedNumber(value: animatedRows)
+                            .fontWeight(.semibold)
+                        Text(" records across ")
+                        AnimatedNumber(value: animatedTables)
+                            .fontWeight(.semibold)
+                        Text(" databases")
+                    }
+                    .font(.system(size: 13, weight: .regular))
+                    .foregroundStyle(Color.cleanLabel.opacity(0.55))
                 }
-                .font(.system(size: 13, weight: .regular))
-                .foregroundStyle(Color.cleanLabel.opacity(0.55))
 
                 if let date = s.lastUpdated {
-                    Text("Last update on \(statusDateString(date)).")
-                        .font(.system(size: 11, weight: .regular))
-                        .foregroundStyle(Color.cleanLabel.opacity(0.35))
+                    HStack(spacing: 5) {
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .font(.system(size: 10, weight: .semibold))
+                        Text("Updated \(statusDateString(date))")
+                    }
+                    .font(.system(size: 11, weight: .regular))
+                    .foregroundStyle(Color.cleanLabel.opacity(0.35))
                 }
             }
             .multilineTextAlignment(.center)

@@ -56,8 +56,129 @@ private actor GeoProgressAggregator {
     func setVacants(_ v: Double) { vacants = v }
 }
 
+// MARK: - Police crime aggregates
+
+/// Pre-aggregated crime counts for one neighbourhood of the city-wide WPS CSV.
+private struct PoliceCrimeNeighbourhoodSlice {
+    var yearly: [Int: Int] = [:]
+    var crimeTypes: [String: Int] = [:]
+    var crimeTypesByYear: [Int: [String: Int]] = [:]
+    var offenceTypes: [String: Int] = [:]
+    var offenceTypesByYear: [Int: [String: Int]] = [:]
+}
+
+private struct PoliceCrimeAggregates {
+    var slices: [String: PoliceCrimeNeighbourhoodSlice] = [:]
+    var yearlyCityTotals: [Int: Int] = [:]
+    var cityCrimeTypes: [String: Int] = [:]
+    var cityCrimeTypesByYear: [Int: [String: Int]] = [:]
+    var cityOffenceTypes: [String: Int] = [:]
+    var cityOffenceTypesByYear: [Int: [String: Int]] = [:]
+    var latestMonth: PoliceCrimeMonth?
+    var neighbourhoodCount: Int { slices.count }
+
+    /// Case- and diacritic-insensitive slice key, mirroring how report
+    /// neighbourhood names were previously compared against CSV rows.
+    static func key(_ name: String) -> String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
+    }
+}
+
+/// Downloads and parses the city-wide WPS crime CSV at most once per app run and
+/// serves pre-aggregated per-neighbourhood slices. Actor isolation replaces the
+/// old unsynchronised `static var` cache, and holding aggregates rather than the
+/// raw multi-megabyte CSV string avoids re-parsing the file for every report.
+private actor PoliceCrimeStore {
+    static let shared = PoliceCrimeStore()
+
+    private var cached: PoliceCrimeAggregates?
+    private var inFlight: Task<PoliceCrimeAggregates?, Never>?
+
+    func aggregates(from url: URL) async -> PoliceCrimeAggregates? {
+        if let cached { return cached }
+        if let inFlight { return await inFlight.value }
+        let task = Task { () -> PoliceCrimeAggregates? in
+            guard let (data, response) = try? await URLSession.shared.data(from: url),
+                  let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode,
+                  let csv = String(data: data, encoding: .utf8) else { return nil }
+            return Self.parse(csv)
+        }
+        inFlight = task
+        // A nil result (failed download) is not kept, so the next report retries.
+        cached = await task.value
+        inFlight = nil
+        return cached
+    }
+
+    private static func parse(_ csv: String) -> PoliceCrimeAggregates {
+        var agg = PoliceCrimeAggregates()
+        for rawLine in csv.split(whereSeparator: \.isNewline).dropFirst() {
+            let columns = parseCSVLine(String(rawLine))
+            guard columns.count >= 7,
+                  let year = Int(columns[0]),
+                  let month = Int(columns[1]),
+                  let count = Int(columns[4]) else { continue }
+            let neighbourhood = columns[2].trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !neighbourhood.isEmpty, neighbourhood.uppercased() != "NA" else { continue }
+
+            agg.yearlyCityTotals[year, default: 0] += count
+            if agg.latestMonth == nil || year > agg.latestMonth!.year
+                || (year == agg.latestMonth!.year && month > agg.latestMonth!.month) {
+                agg.latestMonth = PoliceCrimeMonth(year: year, month: month)
+            }
+
+            let crimeType = columns[5].trimmingCharacters(in: .whitespacesAndNewlines)
+            let offenceType = columns[6].trimmingCharacters(in: .whitespacesAndNewlines)
+            let key = PoliceCrimeAggregates.key(neighbourhood)
+            agg.slices[key, default: .init()].yearly[year, default: 0] += count
+
+            if !crimeType.isEmpty {
+                agg.cityCrimeTypes[crimeType, default: 0] += count
+                agg.cityCrimeTypesByYear[year, default: [:]][crimeType, default: 0] += count
+                agg.slices[key, default: .init()].crimeTypes[crimeType, default: 0] += count
+                agg.slices[key, default: .init()].crimeTypesByYear[year, default: [:]][crimeType, default: 0] += count
+            }
+            if !offenceType.isEmpty {
+                agg.cityOffenceTypes[offenceType, default: 0] += count
+                agg.cityOffenceTypesByYear[year, default: [:]][offenceType, default: 0] += count
+                agg.slices[key, default: .init()].offenceTypes[offenceType, default: 0] += count
+                agg.slices[key, default: .init()].offenceTypesByYear[year, default: [:]][offenceType, default: 0] += count
+            }
+        }
+        return agg
+    }
+
+    private static func parseCSVLine(_ line: String) -> [String] {
+        var fields: [String] = []
+        var current = ""
+        var isQuoted = false
+        var index = line.startIndex
+
+        while index < line.endIndex {
+            let character = line[index]
+            if character == "\"" {
+                let nextIndex = line.index(after: index)
+                if isQuoted, nextIndex < line.endIndex, line[nextIndex] == "\"" {
+                    current.append("\"")
+                    index = nextIndex
+                } else {
+                    isQuoted.toggle()
+                }
+            } else if character == "," && !isQuoted {
+                fields.append(current)
+                current = ""
+            } else {
+                current.append(character)
+            }
+            index = line.index(after: index)
+        }
+        fields.append(current)
+        return fields
+    }
+}
+
 final class WinnipegProvider: SocrataProvider, CityDataProvider {
-    private static var policeCrimeCSVCache: String?
     private let nearbyRadiusMeters: Double = 500
 
     let cityID = "winnipeg"
@@ -132,7 +253,9 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         paidParking: "rmsh-97k4",
         capitalProjects: "9xar-v8xm",
         infrastructureFunding: "rwrz-d7hc",
-        facilityClosures: "fxcw-yyy2"
+        facilityClosures: "fxcw-yyy2",
+        heritage: "ptpx-kgiu",
+        mosquitoTraps: "du7c-8488"
     )
     let fieldMappings = FieldMappings(
         assessment: [
@@ -209,6 +332,8 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         async let waterQuality = inModule(.waterQuality) { await self.fetchWaterQuality() }
         async let capitalWorks = inModule(.capitalWorks) { await self.fetchCapitalWorks(address: address, property: assessment) }
         async let facilityClosures = inModule(.facilityClosures) { await self.fetchFacilityClosures(address: address, property: assessment) }
+        async let heritage = inModule(.heritage) { await self.fetchHeritage(address: address, property: assessment) }
+        async let mosquito = inModule(.mosquito) { await self.fetchMosquito(property: assessment) }
 
         await progress?(.infrastructure)
         let infrastructureSummary = await infrastructure
@@ -257,6 +382,12 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         let waterQualitySummary = await waterQuality
         let capitalWorksSummary = await capitalWorks
         let facilityClosureSummary = await facilityClosures
+        let heritageSummary = await heritage
+        let mosquitoSummary = await mosquito
+        // Radon and rental-market figures are metro-wide reference values (not per-address),
+        // so they are filled from static City/Province sources rather than fetched.
+        let radonSummary = assessment == nil ? nil : winnipegRadon
+        let rentalMarketSummary = assessment == nil ? nil : winnipegRentalMarket
 
         await progress?(.assembling)
 
@@ -307,6 +438,10 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             waterQuality: waterQualitySummary,
             capitalWorks: capitalWorksSummary,
             facilityClosures: facilityClosureSummary,
+            heritage: heritageSummary,
+            mosquito: mosquitoSummary,
+            radon: radonSummary,
+            rentalMarket: rentalMarketSummary,
             sources: sourceList(),
             failedModules: failedModules.isEmpty ? nil : failedModules
         )
@@ -500,7 +635,9 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
             ("Block by Block On-Street Paid Parking", datasets.paidParking),
             ("Capital Projects Current Status", datasets.capitalProjects),
             ("Infrastructure Plan Funding", datasets.infrastructureFunding),
-            ("Province of Manitoba - Health Protection Reports - Winnipeg", datasets.facilityClosures)
+            ("Province of Manitoba - Health Protection Reports - Winnipeg", datasets.facilityClosures),
+            ("Historical Resources", datasets.heritage),
+            ("Daily Adult Mosquito Trap Data", datasets.mosquitoTraps)
         ]
         let citySources: [DatasetSource] = sourcePairs.compactMap { pair -> DatasetSource? in
             let (name, id) = pair
@@ -2057,26 +2194,30 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         guard let property else { return nil }
         async let zoning = fetchZoningDescription(zoningCode: property.zoning)
         async let notices = fetchPublicNotices(property: property)
-        let zoningDescription = await zoning
+        let zoningInfo = await zoning
         let publicNotices = await notices
-        if property.zoning == nil && zoningDescription == nil && publicNotices.isEmpty { return nil }
+        if property.zoning == nil && zoningInfo.short == nil && zoningInfo.long == nil && publicNotices.isEmpty { return nil }
         return PlanningContextSummary(
             zoningCode: property.zoning,
-            zoningDescription: zoningDescription,
+            zoningDescription: zoningInfo.short ?? zoningInfo.long,
+            zoningIntent: zoningInfo.long,
             publicNotices: publicNotices
         )
     }
 
-    private func fetchZoningDescription(zoningCode: String?) async -> String? {
+    private func fetchZoningDescription(zoningCode: String?) async -> (short: String?, long: String?) {
         guard let dataset = datasets.zoningParcels,
               let zoningCode,
-              !zoningCode.isEmpty else { return nil }
+              !zoningCode.isEmpty else { return (nil, nil) }
         let rows = (try? await fetch(dataset, queryItems: [
             URLQueryItem(name: "$select", value: "short_description,long_description"),
             URLQueryItem(name: "$where", value: "upper(zoning)='\(escaped(zoningCode.uppercased()))'"),
             URLQueryItem(name: "$limit", value: "1")
         ])) ?? []
-        return rows.first?.string("short_description") ?? rows.first?.string("long_description")
+        let short = rows.first?.string("short_description")
+        let long = rows.first?.string("long_description")
+        // Don't repeat the same text in both slots — the card shows them separately.
+        return (short, long == short ? nil : long)
     }
 
     private func fetchPublicNotices(property: PropertyAssessment) async -> [PublicNotice] {
@@ -2412,144 +2553,46 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
               let url = URL(string: "https://www.arcgis.com/sharing/rest/content/items/\(dataset)/data") else {
             return nil
         }
+        guard let agg = await PoliceCrimeStore.shared.aggregates(from: url) else { return nil }
 
-        do {
-            let csv: String
-            if let cached = Self.policeCrimeCSVCache {
-                csv = cached
-            } else {
-                let (data, response) = try await URLSession.shared.data(from: url)
-                guard let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode,
-                      let downloaded = String(data: data, encoding: .utf8) else {
-                    return nil
-                }
-                Self.policeCrimeCSVCache = downloaded
-                csv = downloaded
-            }
-
-            var yearlyNeighbourhood: [Int: Int] = [:]
-            var yearlyCityNeighbourhoods: [Int: [String: Int]] = [:]
-            var crimeTypes: [String: Int] = [:]
-            var crimeTypesByYear: [Int: [String: Int]] = [:]
-            var offenceTypes: [String: Int] = [:]
-            var offenceTypesByYear: [Int: [String: Int]] = [:]
-            // City-wide totals per type (across all neighbourhoods) used to derive a per-type average.
-            var cityCrimeTypes: [String: Int] = [:]
-            var cityCrimeTypesByYear: [Int: [String: Int]] = [:]
-            var cityOffenceTypes: [String: Int] = [:]
-            var cityOffenceTypesByYear: [Int: [String: Int]] = [:]
-            var cityNeighbourhoods: Set<String> = []
-            var latestMonth: PoliceCrimeMonth?
-
-            for rawLine in csv.split(whereSeparator: \.isNewline).dropFirst() {
-                let columns = parseCSVLine(String(rawLine))
-                guard columns.count >= 7,
-                      let year = Int(columns[0]),
-                      let month = Int(columns[1]),
-                      let count = Int(columns[4]) else { continue }
-                let rowNeighbourhood = columns[2].trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !rowNeighbourhood.isEmpty, rowNeighbourhood.uppercased() != "NA" else { continue }
-
-                yearlyCityNeighbourhoods[year, default: [:]][rowNeighbourhood, default: 0] += count
-                cityNeighbourhoods.insert(rowNeighbourhood)
-                let rowMonth = PoliceCrimeMonth(year: year, month: month)
-                if latestMonth == nil || year > latestMonth!.year || (year == latestMonth!.year && month > latestMonth!.month) {
-                    latestMonth = rowMonth
-                }
-
-                let crimeType = columns[5].trimmingCharacters(in: .whitespacesAndNewlines)
-                let offenceType = columns[6].trimmingCharacters(in: .whitespacesAndNewlines)
-
-                if !crimeType.isEmpty {
-                    cityCrimeTypes[crimeType, default: 0] += count
-                    cityCrimeTypesByYear[year, default: [:]][crimeType, default: 0] += count
-                }
-                if !offenceType.isEmpty {
-                    cityOffenceTypes[offenceType, default: 0] += count
-                    cityOffenceTypesByYear[year, default: [:]][offenceType, default: 0] += count
-                }
-
-                guard neighbourhoodName(rowNeighbourhood, matches: neighbourhood) else { continue }
-                yearlyNeighbourhood[year, default: 0] += count
-
-                if !crimeType.isEmpty {
-                    crimeTypes[crimeType, default: 0] += count
-                    crimeTypesByYear[year, default: [:]][crimeType, default: 0] += count
-                }
-                if !offenceType.isEmpty {
-                    offenceTypes[offenceType, default: 0] += count
-                    offenceTypesByYear[year, default: [:]][offenceType, default: 0] += count
-                }
-            }
-
-            let years = Set(yearlyNeighbourhood.keys).union(yearlyCityNeighbourhoods.keys).sorted()
-            let allNeighbourhoodCount = cityNeighbourhoods.count
-            let yearlyCounts = years.map { year in
-                let cityTotal = yearlyCityNeighbourhoods[year]?.values.reduce(0, +) ?? 0
-                let average = allNeighbourhoodCount > 0 ? Double(cityTotal) / Double(allNeighbourhoodCount) : 0
-                return PoliceCrimeYear(
-                    year: year,
-                    neighbourhood: yearlyNeighbourhood[year] ?? 0,
-                    citywideAverage: average
-                )
-            }
-
-            let summary = PoliceCrimeSummary(
-                neighbourhood: neighbourhood,
-                latestMonth: latestMonth,
-                yearlyCounts: yearlyCounts,
-                crimeTypes: incidentBreakdowns(from: crimeTypes,
-                                               cityTotals: cityCrimeTypes,
-                                               neighbourhoodCount: allNeighbourhoodCount),
-                crimeTypesByYear: crimeTypesByYear.reduce(into: [:]) { result, entry in
-                    let (year, counts) = entry
-                    result[year] = incidentBreakdowns(from: counts,
-                                                      cityTotals: cityCrimeTypesByYear[year] ?? [:],
-                                                      neighbourhoodCount: allNeighbourhoodCount)
-                },
-                offenceTypes: incidentBreakdowns(from: offenceTypes,
-                                                 cityTotals: cityOffenceTypes,
-                                                 neighbourhoodCount: allNeighbourhoodCount),
-                offenceTypesByYear: offenceTypesByYear.reduce(into: [:]) { result, entry in
-                    let (year, counts) = entry
-                    result[year] = incidentBreakdowns(from: counts,
-                                                      cityTotals: cityOffenceTypesByYear[year] ?? [:],
-                                                      neighbourhoodCount: allNeighbourhoodCount)
-                }
+        let slice = agg.slices[PoliceCrimeAggregates.key(neighbourhood)] ?? PoliceCrimeNeighbourhoodSlice()
+        let allNeighbourhoodCount = agg.neighbourhoodCount
+        let yearlyCounts = agg.yearlyCityTotals.keys.sorted().map { year in
+            let average = allNeighbourhoodCount > 0
+                ? Double(agg.yearlyCityTotals[year] ?? 0) / Double(allNeighbourhoodCount)
+                : 0
+            return PoliceCrimeYear(
+                year: year,
+                neighbourhood: slice.yearly[year] ?? 0,
+                citywideAverage: average
             )
-            if summary.yearlyCounts.isEmpty && summary.crimeTypes.isEmpty && summary.offenceTypes.isEmpty { return nil }
-            return summary
-        } catch {
-            return nil
         }
-    }
 
-    private func parseCSVLine(_ line: String) -> [String] {
-        var fields: [String] = []
-        var current = ""
-        var isQuoted = false
-        var index = line.startIndex
-
-        while index < line.endIndex {
-            let character = line[index]
-            if character == "\"" {
-                let nextIndex = line.index(after: index)
-                if isQuoted, nextIndex < line.endIndex, line[nextIndex] == "\"" {
-                    current.append("\"")
-                    index = nextIndex
-                } else {
-                    isQuoted.toggle()
-                }
-            } else if character == "," && !isQuoted {
-                fields.append(current)
-                current = ""
-            } else {
-                current.append(character)
+        let summary = PoliceCrimeSummary(
+            neighbourhood: neighbourhood,
+            latestMonth: agg.latestMonth,
+            yearlyCounts: yearlyCounts,
+            crimeTypes: incidentBreakdowns(from: slice.crimeTypes,
+                                           cityTotals: agg.cityCrimeTypes,
+                                           neighbourhoodCount: allNeighbourhoodCount),
+            crimeTypesByYear: slice.crimeTypesByYear.reduce(into: [:]) { result, entry in
+                let (year, counts) = entry
+                result[year] = incidentBreakdowns(from: counts,
+                                                  cityTotals: agg.cityCrimeTypesByYear[year] ?? [:],
+                                                  neighbourhoodCount: allNeighbourhoodCount)
+            },
+            offenceTypes: incidentBreakdowns(from: slice.offenceTypes,
+                                             cityTotals: agg.cityOffenceTypes,
+                                             neighbourhoodCount: allNeighbourhoodCount),
+            offenceTypesByYear: slice.offenceTypesByYear.reduce(into: [:]) { result, entry in
+                let (year, counts) = entry
+                result[year] = incidentBreakdowns(from: counts,
+                                                  cityTotals: agg.cityOffenceTypesByYear[year] ?? [:],
+                                                  neighbourhoodCount: allNeighbourhoodCount)
             }
-            index = line.index(after: index)
-        }
-        fields.append(current)
-        return fields
+        )
+        if summary.yearlyCounts.isEmpty && summary.crimeTypes.isEmpty && summary.offenceTypes.isEmpty { return nil }
+        return summary
     }
 
     private func incidentBreakdowns(from counts: [String: Int]) -> [IncidentBreakdown] {
@@ -2576,11 +2619,6 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
                 if lhs.count == rhs.count { return lhs.incidentType < rhs.incidentType }
                 return lhs.count > rhs.count
             }
-    }
-
-    private func neighbourhoodName(_ lhs: String, matches rhs: String) -> Bool {
-        lhs.trimmingCharacters(in: .whitespacesAndNewlines)
-            .compare(rhs.trimmingCharacters(in: .whitespacesAndNewlines), options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
     }
 
     private func fetchPublicHealth(neighbourhood: String?, coordinate: CLLocationCoordinate2D? = nil) async -> PublicHealthSummary? {
@@ -3660,6 +3698,120 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
         }
         guard !closures.isEmpty else { return nil }
         return FacilityClosureSummary(closures: closures)
+    }
+
+    // MARK: - Heritage / historical resources
+
+    private func fetchHeritage(address: NormalizedAddress, property: PropertyAssessment?) async -> HeritageSummary? {
+        guard let dataset = datasets.heritage,
+              let subject = property?.coordinate else { return nil }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "historical_name,street_number,street_name,grade,sub_code,construction_date,point"),
+            URLQueryItem(name: "$where", value: "within_circle(point,\(subject.latitude),\(subject.longitude),500)"),
+            URLQueryItem(name: "$limit", value: "40")
+        ])) ?? []
+        guard !rows.isEmpty else { return nil }
+
+        let subjectLocation = CLLocation(latitude: subject.latitude, longitude: subject.longitude)
+        let subjectNumber = address.civicNumber.map(String.init)
+        let subjectStreet = streetCore(address.streetName)
+
+        var subjectDesignation: HeritageBuilding?
+        var nearby: [(HeritageBuilding, Double)] = []
+
+        for row in rows {
+            guard let name = row.string("historical_name") else { continue }
+            guard let coordinate = parseCoordinate(row) else { continue }
+            let distance = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude).distance(from: subjectLocation)
+            let number = row.string("street_number")
+            let streetName = row.string("street_name")
+            let addressLabel = [number, streetName].compactMap { $0 }.joined(separator: " ")
+            let grade = row.string("grade").flatMap { $0 == "N/A" ? nil : $0 }
+            let building = HeritageBuilding(
+                name: name,
+                address: addressLabel.isEmpty ? nil : addressLabel,
+                grade: grade,
+                listType: row.string("sub_code"),
+                constructionYear: row.string("construction_date"),
+                distanceDescription: distanceDescription(meters: distance)
+            )
+            let isSubject = subjectNumber != nil
+                && number == subjectNumber
+                && !subjectStreet.isEmpty
+                && streetCore(streetName ?? "") == subjectStreet
+            if isSubject, subjectDesignation == nil {
+                subjectDesignation = building
+            } else {
+                nearby.append((building, distance))
+            }
+        }
+
+        let nearbySorted = nearby.sorted { $0.1 < $1.1 }.prefix(8).map(\.0)
+        guard subjectDesignation != nil || !nearbySorted.isEmpty else { return nil }
+        return HeritageSummary(subjectDesignation: subjectDesignation, nearby: Array(nearbySorted))
+    }
+
+    // MARK: - Mosquito control (Insect Control)
+
+    private func fetchMosquito(property: PropertyAssessment?) async -> MosquitoSummary? {
+        guard let dataset = datasets.mosquitoTraps,
+              let subject = property?.coordinate else { return nil }
+        let rows = (try? await fetch(dataset, queryItems: [
+            URLQueryItem(name: "$select", value: "count_date,city_wide_daily_average,north_west_average,north_east_average,south_east_average,south_west_average"),
+            URLQueryItem(name: "$order", value: "count_date DESC"),
+            URLQueryItem(name: "$limit", value: "1")
+        ])) ?? []
+        guard let row = rows.first else { return nil }
+
+        // Winnipeg's geographic quadrants split roughly at the city centre (Portage & Main).
+        // The trap dataset reports one average per quadrant, so we pick the matching one.
+        let centreLat = 49.8951
+        let centreLon = -97.1384
+        let northSouth = subject.latitude >= centreLat ? "north" : "south"
+        let eastWest = subject.longitude >= centreLon ? "east" : "west"
+        let quadrantKey = "\(northSouth)_\(eastWest)_average"
+        let quadrantName = "\(northSouth.capitalized) \(eastWest.capitalized)"
+
+        let quadrantCount = row.int(quadrantKey)
+        let cityWide = row.int("city_wide_daily_average")
+        guard quadrantCount != nil || cityWide != nil else { return nil }
+        let peak = max(quadrantCount ?? 0, cityWide ?? 0)
+        return MosquitoSummary(
+            quadrant: quadrantName,
+            quadrantCount: quadrantCount,
+            cityWideAverage: cityWide,
+            countDate: parseDate(row.string("count_date")),
+            foggingThresholdReached: peak >= 100
+        )
+    }
+
+    // MARK: - Static metro-wide reference figures
+
+    /// Health Canada, 2012 Cross-Canada Survey of Radon Concentrations in Homes — 19% of
+    /// Manitoba homes tested at or above the 200 Bq/m³ guideline. A regional reference, not
+    /// an address-level reading; presented as information with a "test your home" prompt.
+    private var winnipegRadon: RadonSummary {
+        RadonSummary(
+            region: "Manitoba",
+            percentAboveGuideline: 19,
+            surveyName: "Health Canada Cross-Canada Survey of Radon Concentrations in Homes"
+        )
+    }
+
+    /// CMHC Rental Market Survey (Winnipeg CMA). Metro-wide averages updated annually each
+    /// October; not specific to one address.
+    private var winnipegRentalMarket: RentalMarketSummary {
+        RentalMarketSummary(
+            area: "Winnipeg CMA",
+            year: 2025,
+            vacancyRate: 2.8,
+            brackets: [
+                RentBracket(bedrooms: "Bachelor", averageRent: 1000),
+                RentBracket(bedrooms: "1 bedroom", averageRent: 1230),
+                RentBracket(bedrooms: "2 bedroom", averageRent: 1480),
+                RentBracket(bedrooms: "3 bedroom+", averageRent: 1700)
+            ]
+        )
     }
 
     private func fetchOptional(_ dataset: String?, _ items: [URLQueryItem]) async -> [[String: Any]] {
