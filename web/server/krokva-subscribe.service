@@ -1,0 +1,20 @@
+[Unit]
+Description=Krokva email subscribe endpoint (krokva.com)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+Environment=KROKVA_SUB_DB=/var/lib/krokva-subscribe/subscribers.db
+Environment=KROKVA_SUB_PORT=8891
+ExecStart=/usr/bin/python3 /opt/krokva-subscribe/subscribe.py
+Restart=on-failure
+RestartSec=2
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/var/lib/krokva-subscribe
+
+[Install]
+WantedBy=multi-user.target

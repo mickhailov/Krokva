@@ -23,6 +23,7 @@
 		51571B4D6E620BED0E65805D /* HeroPropertyCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 544C3AE7965538FD20DD57D3 /* HeroPropertyCard.swift */; };
 		542A8A4B34CD18652D2CE786 /* AddressNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4A8149ED5C1D566D32081FF /* AddressNormalizer.swift */; };
 		635757E71A10C067D43385B1 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = B7F1905B4B6739B2C6F2E50C /* README.md */; };
+		652923AC3D5861BB7DEAA5DD /* ReportPDFExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4359DC46BC54FE609773500E /* ReportPDFExporter.swift */; };
 		65820CA94F778D8DCC95F45F /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F06B1C0B8AB5419FCF47087 /* SharedComponents.swift */; };
 		671939D3FAFF1ED9F7C34828 /* Branding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FECAABF841CF818A1E97C9C /* Branding.swift */; };
 		6E395B3B9662C042CD99AA13 /* ReportMapCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95D8B7D6288A5B2F15A10EFD /* ReportMapCard.swift */; };
@@ -34,6 +35,7 @@
 		85B49D849175D70DCF3BE521 /* CKANProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F4B613E4DA165E2C23814C4 /* CKANProvider.swift */; };
 		89616A386D2B132E0F7BBA27 /* ReportAnalytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = BFEC2737697898108E64C912 /* ReportAnalytics.swift */; };
 		8F5AC3F294BF612EF3DCB3F5 /* CityRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C43B172C331B2B173A02962 /* CityRegistry.swift */; };
+		94A47DA7186668C64F71FE35 /* SampleReportData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5118628641EEE8D9145E4EA /* SampleReportData.swift */; };
 		963690E787817552473D6254 /* CivicMapMarker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FC556B1A1AAF1F372A674EF /* CivicMapMarker.swift */; };
 		A00D4CBEA655169F82FE1A98 /* PropertyFinancialCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F77CD4C38DDC28AF44B35B7 /* PropertyFinancialCard.swift */; };
 		A153AED25BF33F38C0143782 /* AnalyticsCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE4746F1695870DC4B351429 /* AnalyticsCards.swift */; };
@@ -48,11 +50,13 @@
 		C8FA2D5D29DF3ACEEBF7A79F /* CityDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA022CB7A47C4C9260F5D6B2 /* CityDataProvider.swift */; };
 		CB53429D374C4CC30CB3E734 /* WRHAWaitTimesClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0458BEF8DC7227A7F0CF9B0C /* WRHAWaitTimesClient.swift */; };
 		CBF2D6736133493CFE073ECC /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DB389CA7F436647F57835984 /* SettingsView.swift */; };
+		CD5C75430597FBFBE41D5DDA /* ExportReportSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A2482F900E5C165078BC0C7 /* ExportReportSheet.swift */; };
 		CDEAE12DFF8F3AFBA5D90C84 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 31E85998790F6BB49E8E368F /* Localizable.strings */; };
 		E5EB0CB93846CF68B7E9DA96 /* ReportModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1C0CE8DECD1EB1777ACFF9 /* ReportModels.swift */; };
 		F122744F9415E55F7CBA7290 /* SocrataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01A63E3487763FB58DEFEF96 /* SocrataProvider.swift */; };
 		F833EBCAE2951A850402DAE2 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B03FA5D861E3F28FA66EA5D /* HomeView.swift */; };
 		FA9EF786D4F3BB149EA72B3C /* KrokvaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC1194C7694F1F34C41D90AB /* KrokvaApp.swift */; };
+		FE93CDD9CC8A52E53F8CCC2B /* ReportCardCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D4BF4083F620A6111FFE62 /* ReportCardCatalog.swift */; };
 		FEC0756F0BF43253A455DC93 /* PropertyCompareView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5919826963BC2623D95BC970 /* PropertyCompareView.swift */; };
 /* End PBXBuildFile section */
 
@@ -74,9 +78,11 @@
 		3F121150FE0C7BBD9EB3ED97 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3FC556B1A1AAF1F372A674EF /* CivicMapMarker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CivicMapMarker.swift; sourceTree = "<group>"; };
 		40AA1F1989F02FB958D27E1F /* ListCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ListCards.swift; sourceTree = "<group>"; };
+		4359DC46BC54FE609773500E /* ReportPDFExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportPDFExporter.swift; sourceTree = "<group>"; };
 		4377808D626DA37B8F05A13C /* PermitHistoryModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PermitHistoryModels.swift; sourceTree = "<group>"; };
 		544C3AE7965538FD20DD57D3 /* HeroPropertyCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeroPropertyCard.swift; sourceTree = "<group>"; };
 		5919826963BC2623D95BC970 /* PropertyCompareView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PropertyCompareView.swift; sourceTree = "<group>"; };
+		6A2482F900E5C165078BC0C7 /* ExportReportSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExportReportSheet.swift; sourceTree = "<group>"; };
 		6FEEAB4689ACCBBCFB2D67AD /* ReportRating.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportRating.swift; sourceTree = "<group>"; };
 		74B574BD6B938B415BCED4E4 /* Krokva.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Krokva.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		769D61AFF41D9C47FF63D345 /* ReportRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportRouter.swift; sourceTree = "<group>"; };
@@ -92,6 +98,7 @@
 		9F0BB65C03381D7D248723D2 /* NearbySchoolsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NearbySchoolsCard.swift; sourceTree = "<group>"; };
 		AA022CB7A47C4C9260F5D6B2 /* CityDataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityDataProvider.swift; sourceTree = "<group>"; };
 		B2721C378AB3D61C4A836A13 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		B4D4BF4083F620A6111FFE62 /* ReportCardCatalog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportCardCatalog.swift; sourceTree = "<group>"; };
 		B6E1A69646C041B3CFBD6ABE /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		B7F1905B4B6739B2C6F2E50C /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 		BB625FD5DEE14E21C60EFF75 /* PropertyFactsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PropertyFactsCard.swift; sourceTree = "<group>"; };
@@ -107,6 +114,7 @@
 		DE55B8FEBE6C7B4873572249 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/Localizable.strings; sourceTree = "<group>"; };
 		EC2CECAE53863D72727091C0 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		EE4746F1695870DC4B351429 /* AnalyticsCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsCards.swift; sourceTree = "<group>"; };
+		F5118628641EEE8D9145E4EA /* SampleReportData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleReportData.swift; sourceTree = "<group>"; };
 		F6ED210E53D2D95220B4BCB0 /* RootTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RootTabView.swift; sourceTree = "<group>"; };
 		FBF242F3724ED06A3A624C9F /* OpenDataClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenDataClient.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -139,7 +147,9 @@
 				6FEEAB4689ACCBBCFB2D67AD /* ReportRating.swift */,
 				CCBA00D8FFB1CB1FCAF18D95 /* ReportService.swift */,
 				2B8186D49089188A7387B1B2 /* ReportView.swift */,
+				F5118628641EEE8D9145E4EA /* SampleReportData.swift */,
 				8D59B0E02F58D016CC3642C4 /* Cards */,
+				63F5337C5253AB30D200DF91 /* ReportPDF */,
 			);
 			path = Report;
 			sourceTree = "<group>";
@@ -202,6 +212,16 @@
 				942F23DB5D7CE47C12C00E7C /* Resources */,
 			);
 			path = Krokva;
+			sourceTree = "<group>";
+		};
+		63F5337C5253AB30D200DF91 /* ReportPDF */ = {
+			isa = PBXGroup;
+			children = (
+				6A2482F900E5C165078BC0C7 /* ExportReportSheet.swift */,
+				B4D4BF4083F620A6111FFE62 /* ReportCardCatalog.swift */,
+				4359DC46BC54FE609773500E /* ReportPDFExporter.swift */,
+			);
+			path = ReportPDF;
 			sourceTree = "<group>";
 		};
 		6C782B64E052127DA8DD1A5E /* App */ = {
@@ -420,6 +440,7 @@
 				3FD5B20A38138C0D34DD0AF6 /* CleanComponents.swift in Sources */,
 				B8433B8AFDAD29A67D54A545 /* DataSourceHealth.swift in Sources */,
 				C2B39E1DB6BD77B2A02C5F29 /* DataStatusService.swift in Sources */,
+				CD5C75430597FBFBE41D5DDA /* ExportReportSheet.swift in Sources */,
 				51571B4D6E620BED0E65805D /* HeroPropertyCard.swift in Sources */,
 				F833EBCAE2951A850402DAE2 /* HomeView.swift in Sources */,
 				FA9EF786D4F3BB149EA72B3C /* KrokvaApp.swift in Sources */,
@@ -435,13 +456,16 @@
 				A00D4CBEA655169F82FE1A98 /* PropertyFinancialCard.swift in Sources */,
 				A70A053EFACEC934B66930A7 /* PropertyPermitHistoryCard.swift in Sources */,
 				89616A386D2B132E0F7BBA27 /* ReportAnalytics.swift in Sources */,
+				FE93CDD9CC8A52E53F8CCC2B /* ReportCardCatalog.swift in Sources */,
 				6E395B3B9662C042CD99AA13 /* ReportMapCard.swift in Sources */,
 				E5EB0CB93846CF68B7E9DA96 /* ReportModels.swift in Sources */,
+				652923AC3D5861BB7DEAA5DD /* ReportPDFExporter.swift in Sources */,
 				1843931D9F1AE26EADC76E88 /* ReportRating.swift in Sources */,
 				1538789F4E211E2464C2381E /* ReportRouter.swift in Sources */,
 				A25CA791D76A906EDBB479C4 /* ReportService.swift in Sources */,
 				22C7335DBAE46585FB320448 /* ReportView.swift in Sources */,
 				3D1CCB928EFD5980102E32DD /* RootTabView.swift in Sources */,
+				94A47DA7186668C64F71FE35 /* SampleReportData.swift in Sources */,
 				7041520F8C1442911558548E /* ScoreBreakdownSheet.swift in Sources */,
 				70690205B017B435FB252D76 /* SearchView.swift in Sources */,
 				45E7B46E942BC8BB65BD2007 /* SearchViewModel.swift in Sources */,

@@ -59,6 +59,7 @@ struct DemographicsCard: View {
     let summary: DemographicsSummary?
     let sourceFailed: Bool
     @State private var isExpanded = false
+    @Environment(\.reportPDFRender) private var pdfRender
     private let modeColors: [Color] = [.cleanSky, .cleanIndigo, Color(hex: 0x10B981), .cleanAmber, Color(hex: 0x38BDF8)]
 
     var body: some View {
@@ -73,7 +74,7 @@ struct DemographicsCard: View {
             CleanCard(padding: 0) {
                 VStack(spacing: 0) {
                     headerButton
-                    if isExpanded {
+                    if isExpanded || pdfRender {
                         Divider()
                         fullContent
                             .padding(18)
@@ -354,6 +355,7 @@ struct TrafficCard: View {
     var risk: NeighbourhoodRiskSummary?
     var sourceFailed = false
     @State private var isExpanded = false
+    @Environment(\.reportPDFRender) private var pdfRender
 
     private var hasTrafficCounts: Bool {
         guard let summary else { return false }
@@ -375,7 +377,7 @@ struct TrafficCard: View {
             CleanCard(padding: 0) {
                 VStack(spacing: 0) {
                     headerButton
-                    if isExpanded {
+                    if isExpanded || pdfRender {
                         Divider()
                         fullContent
                             .padding(18)
@@ -564,6 +566,7 @@ struct WaterQualityCard: View {
     let summary: WaterQualitySummary?
     var sourceFailed = false
     @State private var isExpanded = false
+    @Environment(\.reportPDFRender) private var pdfRender
 
     // Health Canada Guidelines for Canadian Drinking Water Quality (MAC / aesthetic objectives).
     // Matched by a substring of the parameter name; `within` tests the measured average.
@@ -649,7 +652,7 @@ struct WaterQualityCard: View {
             CleanCard(padding: 0) {
                 VStack(spacing: 0) {
                     headerButton(summary)
-                    if isExpanded {
+                    if isExpanded || pdfRender {
                         Divider()
                         fullContent(summary)
                             .padding(18)

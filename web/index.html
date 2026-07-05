@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Krokva — the foundation of every address</title>
+<meta name="description" content="Krokva builds a clear dossier for any civic address. In development — Winnipeg first.">
+<meta name="theme-color" content="#EDE7D6">
+<meta property="og:title" content="Krokva">
+<meta property="og:description" content="The foundation of every address. Civic address dossiers, in development.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://krokva.com/">
+<meta property="og:site_name" content="Krokva">
+<meta property="og:image" content="https://krokva.com/og.png">
+<meta property="og:image:type" content="image/png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Krokva — the foundation of every address">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Krokva">
+<meta name="twitter:description" content="The foundation of every address. Civic address dossiers, in development.">
+<meta name="twitter:image" content="https://krokva.com/og.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M6 25 L16 7 L26 25' fill='none' stroke='%23B89455' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='16' cy='18' r='1.6' fill='%23B89455'/%3E%3C/svg%3E">
+<style>
+  :root{
+    --paper:#EDE7D6; --surface:#F4ECD5; --surface-alt:#E2DBC6;
+    --ink:#1B1E25; --ink2:#2A2E37; --ink3:#6E727C;
+    --line:#D8D0BD; --line-soft:#E2DBC6;
+    --gold:#B89455; --gold-soft:#E5D6B0; --gold-deep:#937539;
+    --navy:#4E5874; --blue:#2F7BFF; --sage:#6B8166; --clay:#B07262;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    background:var(--paper); color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.55; -webkit-font-smoothing:antialiased;
+    min-height:100vh; display:flex; flex-direction:column;
+    background-image:radial-gradient(120% 80% at 50% -10%, rgba(184,148,85,.10), transparent 60%);
+  }
+  .mono{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace}
+  .eyebrow{
+    font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;
+    font-size:10px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--ink3);
+  }
+  .wrap{width:100%; max-width:960px; margin:0 auto; padding:0 24px}
+
+  /* header */
+  header{padding:34px 0 0}
+  .brand{display:flex; align-items:center; gap:12px}
+  .mark{width:34px; height:34px; flex:none}
+  .wordmark{font-size:22px; font-weight:700; letter-spacing:.02em}
+  .status-pill{
+    margin-left:auto; display:inline-flex; align-items:center; gap:7px;
+    padding:6px 12px; border:1px solid var(--line); border-radius:999px;
+    background:var(--surface); color:var(--gold-deep);
+    font-family:ui-monospace,SFMono-Regular,monospace; font-size:10px; font-weight:700;
+    letter-spacing:.12em; text-transform:uppercase;
+  }
+  .dot{width:7px; height:7px; border-radius:50%; background:var(--gold);
+    box-shadow:0 0 0 0 rgba(184,148,85,.5); animation:pulse 2.4s ease-out infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(184,148,85,.5)}70%{box-shadow:0 0 0 7px rgba(184,148,85,0)}100%{box-shadow:0 0 0 0 rgba(184,148,85,0)}}
+
+  /* hero */
+  .hero{flex:1; display:flex; flex-direction:column; justify-content:center; padding-top:56px; padding-bottom:40px}
+  .hero .eyebrow{margin-bottom:18px}
+  h1{
+    font-size:clamp(34px,7vw,60px); font-weight:700; line-height:1.04;
+    letter-spacing:-.02em; color:var(--ink); max-width:15ch;
+  }
+  h1 .accent{color:var(--gold-deep)}
+  .lede{margin-top:22px; font-size:clamp(16px,2.4vw,20px); color:var(--ink2); max-width:56ch}
+  .subnote{margin-top:14px; font-size:14px; color:var(--ink3); max-width:56ch}
+
+  /* cards */
+  .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin-top:44px}
+  .card{
+    background:var(--surface); border:1px solid var(--line); border-radius:20px;
+    padding:20px; position:relative; overflow:hidden;
+    box-shadow:0 14px 30px -22px rgba(27,30,37,.35);
+  }
+  .card::before{content:""; position:absolute; top:16px; left:20px; width:26px; height:3px;
+    border-radius:2px; background:var(--gold)}
+  .card .eyebrow{display:block; margin:18px 0 8px}
+  .card h3{font-size:16px; font-weight:600; color:var(--ink); margin-bottom:6px}
+  .card p{font-size:13.5px; color:var(--ink3)}
+
+  /* coverage line */
+  .coverage{margin-top:40px; display:flex; flex-wrap:wrap; gap:10px}
+  .chip{
+    font-family:ui-monospace,SFMono-Regular,monospace; font-size:11px; font-weight:600;
+    color:var(--ink2); background:var(--surface-alt); border:1px solid var(--line);
+    border-radius:999px; padding:6px 12px; letter-spacing:.02em;
+  }
+  .chip.lead{color:var(--gold-deep); border-color:rgba(184,148,85,.5); background:var(--gold-soft)}
+  .chip.soon{color:var(--ink3)}
+
+  /* subscribe */
+  .subscribe{margin-top:48px; max-width:520px}
+  .subscribe .eyebrow{display:block; margin-bottom:10px}
+  .sub-title{font-size:clamp(18px,2.6vw,22px); font-weight:600; color:var(--ink); margin-bottom:16px}
+  #sub-form{display:flex; gap:10px; flex-wrap:wrap}
+  #sub-email{
+    flex:1; min-width:220px; padding:13px 16px; font-size:15px; color:var(--ink);
+    background:var(--surface); border:1px solid var(--line); border-radius:12px; outline:none;
+    font-family:inherit; transition:border-color .15s, box-shadow .15s;
+  }
+  #sub-email::placeholder{color:var(--ink3)}
+  #sub-email:focus{border-color:var(--gold); box-shadow:0 0 0 3px rgba(184,148,85,.18)}
+  #sub-city{
+    min-width:150px; padding:13px 40px 13px 16px; font-size:15px; color:var(--ink);
+    background-color:var(--surface); border:1px solid var(--line); border-radius:12px; outline:none;
+    font-family:inherit; cursor:pointer; appearance:none; -webkit-appearance:none;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5 L6 6.5 L11 1.5' fill='none' stroke='%236E727C' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat; background-position:right 14px center;
+    transition:border-color .15s, box-shadow .15s;
+  }
+  #sub-city:required:invalid{color:var(--ink3)}
+  #sub-city:focus{border-color:var(--gold); box-shadow:0 0 0 3px rgba(184,148,85,.18)}
+  #sub-btn{
+    padding:13px 22px; font-size:15px; font-weight:600; color:#fff; cursor:pointer;
+    background:var(--ink); border:1px solid var(--ink); border-radius:12px;
+    font-family:inherit; transition:background .15s, opacity .15s; white-space:nowrap;
+  }
+  #sub-btn:hover{background:var(--gold-deep); border-color:var(--gold-deep)}
+  #sub-btn:disabled{opacity:.55; cursor:default}
+  .beta-check{flex-basis:100%; display:flex; align-items:center; gap:10px; margin-top:4px;
+    cursor:pointer; font-size:14px; color:var(--ink2); user-select:none}
+  .beta-check input{position:absolute; opacity:0; width:0; height:0; margin:0}
+  .beta-box{width:20px; height:20px; flex:none; border:1.5px solid var(--line); border-radius:6px;
+    background:var(--surface); display:inline-flex; align-items:center; justify-content:center;
+    transition:background .15s, border-color .15s}
+  .beta-box svg{opacity:0; transform:scale(.5); transition:opacity .15s, transform .15s}
+  .beta-check input:checked + .beta-box{background:var(--gold-deep); border-color:var(--gold-deep)}
+  .beta-check input:checked + .beta-box svg{opacity:1; transform:scale(1)}
+  .beta-check input:focus-visible + .beta-box{box-shadow:0 0 0 3px rgba(184,148,85,.25)}
+  .beta-check:hover .beta-box{border-color:var(--gold)}
+  .sub-msg{margin-top:12px; font-size:13.5px; min-height:1.2em}
+  .sub-msg.ok{color:var(--sage)}
+  .sub-msg.err{color:var(--clay)}
+
+  /* sister app (MyHata) — MyHata's own green brand */
+  .sister{margin-top:56px; display:flex; align-items:center; gap:24px; flex-wrap:wrap;
+    background:linear-gradient(135deg, #E8F3EC, #D8EADE);
+    border:1px solid #C4E0CC; border-radius:24px; padding:28px 30px}
+  .sister-icon{width:56px; height:56px; flex:none; display:grid; place-items:center;
+    border-radius:15px; box-shadow:0 8px 18px -8px rgba(21,122,64,.55)}
+  .sister-icon svg{width:56px; height:56px; display:block; border-radius:15px}
+  .sister-body{flex:1; min-width:250px}
+  .sister .eyebrow{display:block; margin-bottom:6px; color:#157A40}
+  .sister-title{font-size:22px; font-weight:700; color:var(--ink); margin-bottom:6px}
+  .sister-title b{color:#1B9C52}
+  .sister-text{font-size:14.5px; color:var(--ink3); line-height:1.5; margin:0}
+  .sister-btn{display:inline-flex; align-items:center; gap:8px; background:#1B9C52; color:#fff;
+    text-decoration:none; font-weight:700; font-size:15px; padding:13px 22px; border-radius:12px; white-space:nowrap}
+  .sister-btn:hover{background:#157A40}
+
+  /* B2B / custom deployments */
+  .b2b{margin-top:20px; display:flex; align-items:center; gap:24px; flex-wrap:wrap;
+    background:var(--surface); border:1px solid var(--line); border-radius:24px; padding:26px 30px}
+  .b2b-body{flex:1; min-width:250px}
+  .b2b-title{font-size:19px; font-weight:700; color:var(--ink); margin-bottom:6px}
+  .b2b-text{font-size:14.5px; color:var(--ink3); line-height:1.5; margin:0}
+  .b2b-btn{display:inline-flex; align-items:center; gap:8px; background:var(--ink); color:#fff;
+    text-decoration:none; font-weight:700; font-size:15px; padding:13px 22px; border-radius:12px; white-space:nowrap;
+    transition:background .15s}
+  .b2b-btn:hover{background:var(--gold-deep)}
+
+  /* success modal */
+  .modal-overlay{
+    position:fixed; inset:0; z-index:100; display:flex; align-items:center; justify-content:center;
+    padding:24px; background:rgba(27,30,37,.30);
+    backdrop-filter:blur(12px) saturate(1.05); -webkit-backdrop-filter:blur(12px) saturate(1.05);
+    animation:overlayIn .28s ease both;
+  }
+  .modal-overlay[hidden]{display:none}
+  @keyframes overlayIn{from{opacity:0}to{opacity:1}}
+  .modal-card{
+    background:var(--surface); border:1px solid var(--line); border-radius:24px;
+    padding:38px 34px 30px; max-width:420px; width:100%; text-align:center; position:relative;
+    box-shadow:0 34px 80px -34px rgba(27,30,37,.55);
+    animation:cardIn .42s cubic-bezier(.2,.7,.3,1) both;
+  }
+  @keyframes cardIn{from{opacity:0; transform:translateY(16px) scale(.95)}to{opacity:1; transform:none}}
+  .modal-mark{width:58px; height:58px; margin:0 auto 20px; border-radius:50%;
+    background:var(--gold-deep); display:flex; align-items:center; justify-content:center;
+    box-shadow:0 0 0 6px rgba(184,148,85,.16)}
+  .modal-card .eyebrow{display:block; margin-bottom:8px}
+  .modal-title{font-size:24px; font-weight:700; color:var(--ink); margin-bottom:10px}
+  .modal-text{font-size:15px; color:var(--ink3); margin-bottom:26px; line-height:1.5}
+  .modal-close{padding:12px 30px; font-size:15px; font-weight:600; color:#fff; cursor:pointer;
+    background:var(--ink); border:1px solid var(--ink); border-radius:12px; font-family:inherit;
+    transition:background .15s, border-color .15s}
+  .modal-close:hover{background:var(--gold-deep); border-color:var(--gold-deep)}
+  .modal-x{position:absolute; top:14px; right:16px; width:30px; height:30px; border:none;
+    background:transparent; color:var(--ink3); font-size:22px; line-height:1; cursor:pointer; border-radius:8px}
+  .modal-x:hover{background:var(--surface-alt); color:var(--ink)}
+  footer{border-top:1px solid var(--line); margin-top:56px; padding:22px 0 34px}
+  .foot-row{display:flex; flex-wrap:wrap; gap:8px 20px; align-items:center; color:var(--ink3); font-size:12px}
+  .foot-row .mono{font-size:11px; letter-spacing:.04em}
+  .sep{color:var(--line)}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <svg class="mark" viewBox="0 0 32 32" aria-label="Krokva rafter mark">
+          <path d="M6 25 L16 7 L26 25" fill="none" stroke="#B89455" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="16" cy="18" r="1.7" fill="#B89455"/>
+        </svg>
+        <span class="wordmark">Krokva</span>
+        <span class="status-pill"><span class="dot"></span>In development</span>
+      </div>
+    </header>
+  </div>
+
+  <main class="wrap hero">
+    <span class="eyebrow">Civic address dossiers · Canada</span>
+    <h1>The foundation of<br>every <span class="accent">address</span>.</h1>
+    <p class="lede">
+      <strong>Krokva</strong> (Ukrainian: <em lang="uk">кроква</em>) is the rafter beam that holds up a roof —
+      the structural element on which a home rests. We surface the structural facts the city
+      already knows about your address.
+    </p>
+    <p class="subnote">
+      A clear dossier for any civic address — property, permits, safety, daily living, amenities.
+      Built in the open, city by city. Winnipeg first. This site is a work in progress.
+    </p>
+
+    <div class="coverage" aria-label="City coverage">
+      <span class="chip lead">Winnipeg — planning 2026</span>
+      <span class="chip soon">Toronto — planned</span>
+      <span class="chip soon">Vancouver — planned</span>
+      <span class="chip soon">More cities — planned</span>
+    </div>
+
+    <section class="subscribe" aria-label="Subscribe for launch updates">
+      <span class="eyebrow">Get early access</span>
+      <h3 class="sub-title">Be first when we launch in your city.</h3>
+      <form id="sub-form" novalidate>
+        <input type="email" id="sub-email" name="email" placeholder="you@email.com"
+               autocomplete="email" inputmode="email" required aria-label="Email address">
+        <select id="sub-city" name="city" required aria-label="Your city">
+          <option value="" disabled selected>Your city</option>
+          <option>Winnipeg</option>
+          <option>Toronto</option>
+          <option>Vancouver</option>
+          <option>Calgary</option>
+          <option>Edmonton</option>
+          <option>Ottawa</option>
+          <option>Montréal</option>
+          <option value="Other">Other / not listed</option>
+        </select>
+        <button type="submit" id="sub-btn">Notify me</button>
+        <label class="beta-check">
+          <input type="checkbox" id="sub-beta">
+          <span class="beta-box" aria-hidden="true">
+            <svg viewBox="0 0 14 14" width="12" height="12"><path d="M2.5 7.5 L5.8 10.5 L11.5 3.8" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </span>
+          <span>I want to be a beta tester</span>
+        </label>
+      </form>
+      <p class="sub-msg" id="sub-msg" role="status" aria-live="polite"></p>
+    </section>
+
+    <aside class="sister" aria-label="MyHata — companion app">
+      <span class="sister-icon" aria-hidden="true">
+        <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="48" height="48" rx="11" fill="#1B9C52"/>
+          <path d="M13 23.5 24 14l11 9.5V35a1.5 1.5 0 0 1-1.5 1.5h-6.2V29h-6.6v7.5H14.5A1.5 1.5 0 0 1 13 35V23.5Z" fill="#fff"/>
+        </svg>
+      </span>
+      <div class="sister-body">
+        <span class="eyebrow">Also from us</span>
+        <h3 class="sister-title">Already own your home? Meet <b>MyHata</b>.</h3>
+        <p class="sister-text">Notifications for your house and block — collection days, snow bans, nearby permits, 311 activity and emergency calls.</p>
+      </div>
+      <a class="sister-btn" href="https://myhata.app">myhata.app&nbsp;→</a>
+    </aside>
+
+    <aside class="b2b" aria-label="Custom deployments and partnerships">
+      <div class="b2b-body">
+        <span class="eyebrow">For realtors &amp; partners</span>
+        <h3 class="b2b-title">Want a custom design, your own data, or Krokva built into your workflow?</h3>
+        <p class="b2b-text">We work with realtors and businesses on white-label reports and custom integrations. Get in touch.</p>
+      </div>
+      <a class="b2b-btn" href="mailto:hello@krokva.com">hello@krokva.com</a>
+    </aside>
+  </main>
+
+  <div class="modal-overlay" id="sub-modal" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+      <button type="button" class="modal-x" id="modal-x" aria-label="Close">&times;</button>
+      <div class="modal-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" width="26" height="26"><path d="M5 12.5 L10 17.5 L19.5 6.5" fill="none" stroke="#fff" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </div>
+      <span class="eyebrow">You're subscribed</span>
+      <h3 class="modal-title" id="modal-title">You're on the list.</h3>
+      <p class="modal-text">We'll email you when Krokva launches in your city. Thanks for the early interest.</p>
+      <button type="button" class="modal-close" id="modal-close">Done</button>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var form = document.getElementById('sub-form');
+      var email = document.getElementById('sub-email');
+      var city = document.getElementById('sub-city');
+      var beta = document.getElementById('sub-beta');
+      var btn = document.getElementById('sub-btn');
+      var msg = document.getElementById('sub-msg');
+      var modal = document.getElementById('sub-modal');
+      var re = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+      function show(t, ok) { msg.textContent = t; msg.className = 'sub-msg ' + (ok ? 'ok' : 'err'); }
+      function openModal() { msg.textContent = ''; modal.hidden = false; document.body.style.overflow = 'hidden'; document.getElementById('modal-close').focus(); }
+      function closeModal() { modal.hidden = true; document.body.style.overflow = ''; }
+      document.getElementById('modal-close').addEventListener('click', closeModal);
+      document.getElementById('modal-x').addEventListener('click', closeModal);
+      modal.addEventListener('click', function (e) { if (e.target === modal) closeModal(); });
+      document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !modal.hidden) closeModal(); });
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var val = (email.value || '').trim();
+        if (!re.test(val) || val.length > 254) { show('Please enter a valid email address.', false); return; }
+        if (!city.value) { show('Please choose your city.', false); return; }
+        var label = btn.textContent;
+        btn.disabled = true; btn.textContent = '…';
+        fetch('/subscribe', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: val, city: city.value, beta: beta.checked })
+        }).then(function (r) {
+          return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok, d: d }; });
+        }).then(function (res) {
+          if (res.ok && res.d.ok) { form.reset(); openModal(); }
+          else { show((res.d && res.d.error) || 'Something went wrong. Please try again.', false); }
+        }).catch(function () {
+          show('Network error. Please try again.', false);
+        }).finally(function () {
+          btn.disabled = false; btn.textContent = label;
+        });
+      });
+    })();
+  </script>
+
+  <div class="wrap">
+    <footer>
+      <div class="foot-row">
+        <span class="mono">KROKVA</span>
+        <span class="sep">/</span>
+        <span>Civic address dossiers · Canada</span>
+        <span class="sep">/</span>
+        <span class="mono">© 2026</span>
+      </div>
+    </footer>
+  </div>
+</body>
+</html>

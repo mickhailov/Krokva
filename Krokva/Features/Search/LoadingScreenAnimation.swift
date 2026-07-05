@@ -18,13 +18,14 @@ struct LoadingScreenAnimation: View {
     var subStageFraction: Double = 0
     var onCancel: (() -> Void)? = nil
 
+    /// The report loads in at most `ReportService.timeout`, so the bar simply
+    /// fills linearly over that window regardless of per-stage timing.
+    var duration: Double = 10
+
     @State private var addressTyped = 0
     @State private var liveDot = false
     @State private var iconScale: CGFloat = 0.8
-    @State private var displayProgress: Double = 0   // smoothly eased 0...1
-    @State private var targetProgress: Double = 0
-    @State private var driftCeiling: Double = 0      // cosmetic ceiling while waiting for data
-    @State private var progressTimer: Timer?
+    @State private var typewriterTask: Task<Void, Never>?
     @State private var mapPosition: MapCameraPosition = .region(
         MKCoordinateRegion(
             center: CLLocationCoordinate2D(latitude: 49.8951, longitude: -97.1384),
@@ -73,24 +74,16 @@ struct LoadingScreenAnimation: View {
         }
         .onAppear { startAnimations() }
         .onDisappear {
-            progressTimer?.invalidate()
-            progressTimer = nil
+            typewriterTask?.cancel()
+            typewriterTask = nil
         }
-        .onChange(of: stage) { _, newStage in
-            let newTarget = Double(newStage.rawValue + 1) / Double(loadingStages.count)
-            targetProgress = newTarget
-            driftCeiling = newTarget + 0.5 / Double(loadingStages.count)
+        .onChange(of: stage) { _, _ in
             withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) {
                 iconScale = 0.7
             }
             withAnimation(.spring(response: 0.4, dampingFraction: 0.72).delay(0.08)) {
                 iconScale = 1.0
             }
-        }
-        .onChange(of: subStageFraction) { _, fraction in
-            let stageBase = Double(idx + 1) / Double(loadingStages.count)
-            let stageEnd = Double(idx + 2) / Double(loadingStages.count)
-            targetProgress = stageBase + (stageEnd - stageBase) * fraction
         }
     }
 
@@ -272,34 +265,11 @@ struct LoadingScreenAnimation: View {
     // MARK: Progress bar
 
     private var progressBar: some View {
-        VStack(spacing: 8) {
-            GeometryReader { geo in
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color.cleanTrack)
-                    Capsule()
-                        .fill(
-                            LinearGradient(
-                                colors: [.cleanSky, .cleanIndigo],
-                                startPoint: .leading, endPoint: .trailing
-                            )
-                        )
-                        .frame(width: geo.size.width * CGFloat(displayProgress))
-                        .animation(.linear(duration: 0.02), value: displayProgress)
-                }
-            }
-            .frame(height: 5)
-
-            HStack {
-                Text("\(idx + 1) of \(loadingStages.count) checks")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(Color.cleanLabel3)
-                Spacer()
-                Text("\(Int((displayProgress * 100).rounded()))%")
-                    .font(.system(size: 11, weight: .semibold).monospacedDigit())
-                    .foregroundStyle(Color.cleanSky)
-            }
-        }
+        FixedProgressBar(
+            duration: duration,
+            stepIndex: idx,
+            stepCount: loadingStages.count
+        )
     }
 
     // MARK: Cancel button
@@ -333,36 +303,19 @@ struct LoadingScreenAnimation: View {
             iconScale = 1.0
         }
 
-        // Typewriter
+        // Typewriter — a single cancellable task instead of one fire-and-forget
+        // asyncAfter per character (those kept firing after the overlay closed).
         let count = addressText.count
-        guard count > 0 else { addressTyped = count; return }
-        let delay = min(0.04, 0.9 / Double(count))
-        for i in 1...count {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.2 + Double(i) * delay) {
-                addressTyped = i
-            }
-        }
-
-        // Smoothly ease the progress bar / percentage toward the current stage
-        // target so it glides between values instead of jumping in 10% steps.
-        let initialTarget = Double(idx + 1) / Double(loadingStages.count)
-        targetProgress = initialTarget
-        driftCeiling = initialTarget + 0.5 / Double(loadingStages.count)
-        progressTimer?.invalidate()
-        progressTimer = Timer.scheduledTimer(withTimeInterval: 0.02, repeats: true) { _ in
-            // Cosmetic drift: while waiting for real data, creep toward driftCeiling
-            // at ~1 % per second so the bar never looks frozen.
-            if targetProgress < driftCeiling {
-                targetProgress = min(driftCeiling, targetProgress + 0.0002)
-            }
-            let diff = targetProgress - displayProgress
-            if diff > 0.0001 {
-                // Asymptotic ease-out with a small floor so the number keeps
-                // ticking even as it approaches the target; never overshoot it.
-                let step = max(0.0007, diff * 0.05)
-                displayProgress = min(targetProgress, displayProgress + step)
-            } else if diff < 0 {
-                displayProgress = targetProgress
+        typewriterTask?.cancel()
+        if count > 0 {
+            let delay = min(0.04, 0.9 / Double(count))
+            typewriterTask = Task { @MainActor in
+                try? await Task.sleep(for: .seconds(0.2))
+                for i in 1...count {
+                    try? await Task.sleep(for: .seconds(delay))
+                    guard !Task.isCancelled else { return }
+                    addressTyped = i
+                }
             }
         }
 
@@ -379,7 +332,9 @@ struct LoadingScreenAnimation: View {
                     span: MKCoordinateSpan(latitudeDelta: 0.06, longitudeDelta: 0.06)
                 ))
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                    withAnimation(.easeInOut(duration: 9).repeatForever(autoreverses: true)) {
+                    // One slow zoom-in; a repeatForever camera animation kept
+                    // MapKit re-rendering for the whole load.
+                    withAnimation(.easeInOut(duration: 9)) {
                         mapPosition = .region(MKCoordinateRegion(
                             center: coord,
                             span: MKCoordinateSpan(latitudeDelta: 0.007, longitudeDelta: 0.007)
@@ -391,10 +346,61 @@ struct LoadingScreenAnimation: View {
     }
 }
 
+// MARK: - Fixed progress bar
+
+/// Fills linearly from 0 % to 100 % over `duration` seconds. The report load is
+/// capped at the same window (`ReportService.timeout`), so the bar simply tracks
+/// elapsed time rather than per-stage progress. `TimelineView(.animation)` drives
+/// the redraws and is scoped to just this small bar, so the map and step timeline
+/// aren't re-rendered every frame.
+private struct FixedProgressBar: View {
+    var duration: Double
+    let stepIndex: Int
+    let stepCount: Int
+
+    @State private var start = Date()
+
+    var body: some View {
+        TimelineView(.animation) { timeline in
+            let elapsed = timeline.date.timeIntervalSince(start)
+            let progress = min(1, max(0, duration > 0 ? elapsed / duration : 1))
+            VStack(spacing: 8) {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color.cleanTrack)
+                        Capsule()
+                            .fill(
+                                LinearGradient(
+                                    colors: [.cleanSky, .cleanIndigo],
+                                    startPoint: .leading, endPoint: .trailing
+                                )
+                            )
+                            .frame(width: geo.size.width * CGFloat(progress))
+                    }
+                }
+                .frame(height: 5)
+
+                HStack {
+                    Text("\(stepIndex + 1) of \(stepCount) checks")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(Color.cleanLabel3)
+                    Spacer()
+                    Text("\(Int((progress * 100).rounded()))%")
+                        .font(.system(size: 11, weight: .semibold).monospacedDigit())
+                        .foregroundStyle(Color.cleanSky)
+                }
+            }
+        }
+        .onAppear { start = Date() }
+    }
+}
+
 // MARK: - Animated loading dots
 
 private struct LoadingDots: View {
     @State private var phase = 0
+    @State private var timer: Timer?
 
     var body: some View {
         HStack(spacing: 3) {
@@ -407,10 +413,17 @@ private struct LoadingDots: View {
             }
         }
         .onAppear { animate() }
+        .onDisappear {
+            // The dots remount on every step change; without invalidation each
+            // appearance leaked another repeating timer.
+            timer?.invalidate()
+            timer = nil
+        }
     }
 
     private func animate() {
-        Timer.scheduledTimer(withTimeInterval: 0.28, repeats: true) { _ in
+        timer?.invalidate()
+        timer = Timer.scheduledTimer(withTimeInterval: 0.28, repeats: true) { _ in
             withAnimation(.spring(response: 0.25, dampingFraction: 0.6)) {
                 phase = (phase + 1) % 3
             }

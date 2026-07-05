@@ -6,12 +6,13 @@ struct PublicHealthCard: View {
     let summary: PublicHealthSummary
     let neighbourhood: String
     @State private var isExpanded = false
+    @Environment(\.reportPDFRender) private var pdfRender
 
     var body: some View {
         CleanCard(padding: 0) {
             VStack(spacing: 0) {
                 headerButton
-                if isExpanded {
+                if isExpanded || pdfRender {
                     Divider()
                     HealthInlineContent(summary: summary, neighbourhood: neighbourhood)
                         .padding(18)
@@ -77,12 +78,13 @@ struct PublicHealthCard: View {
 struct Service311Card: View {
     let summary: ServiceRequestSummary
     @State private var isExpanded = false
+    @Environment(\.reportPDFRender) private var pdfRender
 
     var body: some View {
         CleanCard(padding: 0) {
             VStack(spacing: 0) {
                 headerButton
-                if isExpanded {
+                if isExpanded || pdfRender {
                     Divider()
                     Service311InlineContent(summary: summary)
                         .padding(18)

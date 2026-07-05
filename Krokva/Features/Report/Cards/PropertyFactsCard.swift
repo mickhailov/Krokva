@@ -4,12 +4,13 @@ struct PropertyFactsCard: View {
     let property: PropertyAssessment?
     var sourceFailed = false
     @State private var isExpanded = false
+    @Environment(\.reportPDFRender) private var pdfRender
 
     var body: some View {
         CleanCard(padding: 0) {
             VStack(spacing: 0) {
                 headerButton
-                if isExpanded {
+                if isExpanded || pdfRender {
                     Divider()
                     if let p = property {
                         factsGrid(p)

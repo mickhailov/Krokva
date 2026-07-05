@@ -56,8 +56,129 @@ private actor GeoProgressAggregator {
     func setVacants(_ v: Double) { vacants = v }
 }
 
+// MARK: - Police crime aggregates
+
+/// Pre-aggregated crime counts for one neighbourhood of the city-wide WPS CSV.
+private struct PoliceCrimeNeighbourhoodSlice {
+    var yearly: [Int: Int] = [:]
+    var crimeTypes: [String: Int] = [:]
+    var crimeTypesByYear: [Int: [String: Int]] = [:]
+    var offenceTypes: [String: Int] = [:]
+    var offenceTypesByYear: [Int: [String: Int]] = [:]
+}
+
+private struct PoliceCrimeAggregates {
+    var slices: [String: PoliceCrimeNeighbourhoodSlice] = [:]
+    var yearlyCityTotals: [Int: Int] = [:]
+    var cityCrimeTypes: [String: Int] = [:]
+    var cityCrimeTypesByYear: [Int: [String: Int]] = [:]
+    var cityOffenceTypes: [String: Int] = [:]
+    var cityOffenceTypesByYear: [Int: [String: Int]] = [:]
+    var latestMonth: PoliceCrimeMonth?
+    var neighbourhoodCount: Int { slices.count }
+
+    /// Case- and diacritic-insensitive slice key, mirroring how report
+    /// neighbourhood names were previously compared against CSV rows.
+    static func key(_ name: String) -> String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
+            .folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
+    }
+}
+
+/// Downloads and parses the city-wide WPS crime CSV at most once per app run and
+/// serves pre-aggregated per-neighbourhood slices. Actor isolation replaces the
+/// old unsynchronised `static var` cache, and holding aggregates rather than the
+/// raw multi-megabyte CSV string avoids re-parsing the file for every report.
+private actor PoliceCrimeStore {
+    static let shared = PoliceCrimeStore()
+
+    private var cached: PoliceCrimeAggregates?
+    private var inFlight: Task<PoliceCrimeAggregates?, Never>?
+
+    func aggregates(from url: URL) async -> PoliceCrimeAggregates? {
+        if let cached { return cached }
+        if let inFlight { return await inFlight.value }
+        let task = Task { () -> PoliceCrimeAggregates? in
+            guard let (data, response) = try? await URLSession.shared.data(from: url),
+                  let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode,
+                  let csv = String(data: data, encoding: .utf8) else { return nil }
+            return Self.parse(csv)
+        }
+        inFlight = task
+        // A nil result (failed download) is not kept, so the next report retries.
+        cached = await task.value
+        inFlight = nil
+        return cached
+    }
+
+    private static func parse(_ csv: String) -> PoliceCrimeAggregates {
+        var agg = PoliceCrimeAggregates()
+        for rawLine in csv.split(whereSeparator: \.isNewline).dropFirst() {
+            let columns = parseCSVLine(String(rawLine))
+            guard columns.count >= 7,
+                  let year = Int(columns[0]),
+                  let month = Int(columns[1]),
+                  let count = Int(columns[4]) else { continue }
+            let neighbourhood = columns[2].trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !neighbourhood.isEmpty, neighbourhood.uppercased() != "NA" else { continue }
+
+            agg.yearlyCityTotals[year, default: 0] += count
+            if agg.latestMonth == nil || year > agg.latestMonth!.year
+                || (year == agg.latestMonth!.year && month > agg.latestMonth!.month) {
+                agg.latestMonth = PoliceCrimeMonth(year: year, month: month)
+            }
+
+            let crimeType = columns[5].trimmingCharacters(in: .whitespacesAndNewlines)
+            let offenceType = columns[6].trimmingCharacters(in: .whitespacesAndNewlines)
+            let key = PoliceCrimeAggregates.key(neighbourhood)
+            agg.slices[key, default: .init()].yearly[year, default: 0] += count
+
+            if !crimeType.isEmpty {
+                agg.cityCrimeTypes[crimeType, default: 0] += count
+                agg.cityCrimeTypesByYear[year, default: [:]][crimeType, default: 0] += count
+                agg.slices[key, default: .init()].crimeTypes[crimeType, default: 0] += count
+                agg.slices[key, default: .init()].crimeTypesByYear[year, default: [:]][crimeType, default: 0] += count
+            }
+            if !offenceType.isEmpty {
+                agg.cityOffenceTypes[offenceType, default: 0] += count
+                agg.cityOffenceTypesByYear[year, default: [:]][offenceType, default: 0] += count
+                agg.slices[key, default: .init()].offenceTypes[offenceType, default: 0] += count
+                agg.slices[key, default: .init()].offenceTypesByYear[year, default: [:]][offenceType, default: 0] += count
+            }
+        }
+        return agg
+    }
+
+    private static func parseCSVLine(_ line: String) -> [String] {
+        var fields: [String] = []
+        var current = ""
+        var isQuoted = false
+        var index = line.startIndex
+
+        while index < line.endIndex {
+            let character = line[index]
+            if character == "\"" {
+                let nextIndex = line.index(after: index)
+                if isQuoted, nextIndex < line.endIndex, line[nextIndex] == "\"" {
+                    current.append("\"")
+                    index = nextIndex
+                } else {
+                    isQuoted.toggle()
+                }
+            } else if character == "," && !isQuoted {
+                fields.append(current)
+                current = ""
+            } else {
+                current.append(character)
+            }
+            index = line.index(after: index)
+        }
+        fields.append(current)
+        return fields
+    }
+}
+
 final class WinnipegProvider: SocrataProvider, CityDataProvider {
-    private static var policeCrimeCSVCache: String?
     private let nearbyRadiusMeters: Double = 500
 
     let cityID = "winnipeg"
@@ -154,7 +275,7 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
     let implementationState: ProviderImplementationState = .live
 
     init() {
-        super.init(domain: "3.99.123.190:8889", scheme: "http")
+        super.init(domain: "krokva.144.217.5.174.sslip.io")
     }
 
     func fetchReport(for address: NormalizedAddress) async -> AddressReport {
@@ -2432,144 +2553,46 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
               let url = URL(string: "https://www.arcgis.com/sharing/rest/content/items/\(dataset)/data") else {
             return nil
         }
+        guard let agg = await PoliceCrimeStore.shared.aggregates(from: url) else { return nil }
 
-        do {
-            let csv: String
-            if let cached = Self.policeCrimeCSVCache {
-                csv = cached
-            } else {
-                let (data, response) = try await URLSession.shared.data(from: url)
-                guard let http = response as? HTTPURLResponse, 200..<300 ~= http.statusCode,
-                      let downloaded = String(data: data, encoding: .utf8) else {
-                    return nil
-                }
-                Self.policeCrimeCSVCache = downloaded
-                csv = downloaded
-            }
-
-            var yearlyNeighbourhood: [Int: Int] = [:]
-            var yearlyCityNeighbourhoods: [Int: [String: Int]] = [:]
-            var crimeTypes: [String: Int] = [:]
-            var crimeTypesByYear: [Int: [String: Int]] = [:]
-            var offenceTypes: [String: Int] = [:]
-            var offenceTypesByYear: [Int: [String: Int]] = [:]
-            // City-wide totals per type (across all neighbourhoods) used to derive a per-type average.
-            var cityCrimeTypes: [String: Int] = [:]
-            var cityCrimeTypesByYear: [Int: [String: Int]] = [:]
-            var cityOffenceTypes: [String: Int] = [:]
-            var cityOffenceTypesByYear: [Int: [String: Int]] = [:]
-            var cityNeighbourhoods: Set<String> = []
-            var latestMonth: PoliceCrimeMonth?
-
-            for rawLine in csv.split(whereSeparator: \.isNewline).dropFirst() {
-                let columns = parseCSVLine(String(rawLine))
-                guard columns.count >= 7,
-                      let year = Int(columns[0]),
-                      let month = Int(columns[1]),
-                      let count = Int(columns[4]) else { continue }
-                let rowNeighbourhood = columns[2].trimmingCharacters(in: .whitespacesAndNewlines)
-                guard !rowNeighbourhood.isEmpty, rowNeighbourhood.uppercased() != "NA" else { continue }
-
-                yearlyCityNeighbourhoods[year, default: [:]][rowNeighbourhood, default: 0] += count
-                cityNeighbourhoods.insert(rowNeighbourhood)
-                let rowMonth = PoliceCrimeMonth(year: year, month: month)
-                if latestMonth == nil || year > latestMonth!.year || (year == latestMonth!.year && month > latestMonth!.month) {
-                    latestMonth = rowMonth
-                }
-
-                let crimeType = columns[5].trimmingCharacters(in: .whitespacesAndNewlines)
-                let offenceType = columns[6].trimmingCharacters(in: .whitespacesAndNewlines)
-
-                if !crimeType.isEmpty {
-                    cityCrimeTypes[crimeType, default: 0] += count
-                    cityCrimeTypesByYear[year, default: [:]][crimeType, default: 0] += count
-                }
-                if !offenceType.isEmpty {
-                    cityOffenceTypes[offenceType, default: 0] += count
-                    cityOffenceTypesByYear[year, default: [:]][offenceType, default: 0] += count
-                }
-
-                guard neighbourhoodName(rowNeighbourhood, matches: neighbourhood) else { continue }
-                yearlyNeighbourhood[year, default: 0] += count
-
-                if !crimeType.isEmpty {
-                    crimeTypes[crimeType, default: 0] += count
-                    crimeTypesByYear[year, default: [:]][crimeType, default: 0] += count
-                }
-                if !offenceType.isEmpty {
-                    offenceTypes[offenceType, default: 0] += count
-                    offenceTypesByYear[year, default: [:]][offenceType, default: 0] += count
-                }
-            }
-
-            let years = Set(yearlyNeighbourhood.keys).union(yearlyCityNeighbourhoods.keys).sorted()
-            let allNeighbourhoodCount = cityNeighbourhoods.count
-            let yearlyCounts = years.map { year in
-                let cityTotal = yearlyCityNeighbourhoods[year]?.values.reduce(0, +) ?? 0
-                let average = allNeighbourhoodCount > 0 ? Double(cityTotal) / Double(allNeighbourhoodCount) : 0
-                return PoliceCrimeYear(
-                    year: year,
-                    neighbourhood: yearlyNeighbourhood[year] ?? 0,
-                    citywideAverage: average
-                )
-            }
-
-            let summary = PoliceCrimeSummary(
-                neighbourhood: neighbourhood,
-                latestMonth: latestMonth,
-                yearlyCounts: yearlyCounts,
-                crimeTypes: incidentBreakdowns(from: crimeTypes,
-                                               cityTotals: cityCrimeTypes,
-                                               neighbourhoodCount: allNeighbourhoodCount),
-                crimeTypesByYear: crimeTypesByYear.reduce(into: [:]) { result, entry in
-                    let (year, counts) = entry
-                    result[year] = incidentBreakdowns(from: counts,
-                                                      cityTotals: cityCrimeTypesByYear[year] ?? [:],
-                                                      neighbourhoodCount: allNeighbourhoodCount)
-                },
-                offenceTypes: incidentBreakdowns(from: offenceTypes,
-                                                 cityTotals: cityOffenceTypes,
-                                                 neighbourhoodCount: allNeighbourhoodCount),
-                offenceTypesByYear: offenceTypesByYear.reduce(into: [:]) { result, entry in
-                    let (year, counts) = entry
-                    result[year] = incidentBreakdowns(from: counts,
-                                                      cityTotals: cityOffenceTypesByYear[year] ?? [:],
-                                                      neighbourhoodCount: allNeighbourhoodCount)
-                }
+        let slice = agg.slices[PoliceCrimeAggregates.key(neighbourhood)] ?? PoliceCrimeNeighbourhoodSlice()
+        let allNeighbourhoodCount = agg.neighbourhoodCount
+        let yearlyCounts = agg.yearlyCityTotals.keys.sorted().map { year in
+            let average = allNeighbourhoodCount > 0
+                ? Double(agg.yearlyCityTotals[year] ?? 0) / Double(allNeighbourhoodCount)
+                : 0
+            return PoliceCrimeYear(
+                year: year,
+                neighbourhood: slice.yearly[year] ?? 0,
+                citywideAverage: average
             )
-            if summary.yearlyCounts.isEmpty && summary.crimeTypes.isEmpty && summary.offenceTypes.isEmpty { return nil }
-            return summary
-        } catch {
-            return nil
         }
-    }
 
-    private func parseCSVLine(_ line: String) -> [String] {
-        var fields: [String] = []
-        var current = ""
-        var isQuoted = false
-        var index = line.startIndex
-
-        while index < line.endIndex {
-            let character = line[index]
-            if character == "\"" {
-                let nextIndex = line.index(after: index)
-                if isQuoted, nextIndex < line.endIndex, line[nextIndex] == "\"" {
-                    current.append("\"")
-                    index = nextIndex
-                } else {
-                    isQuoted.toggle()
-                }
-            } else if character == "," && !isQuoted {
-                fields.append(current)
-                current = ""
-            } else {
-                current.append(character)
+        let summary = PoliceCrimeSummary(
+            neighbourhood: neighbourhood,
+            latestMonth: agg.latestMonth,
+            yearlyCounts: yearlyCounts,
+            crimeTypes: incidentBreakdowns(from: slice.crimeTypes,
+                                           cityTotals: agg.cityCrimeTypes,
+                                           neighbourhoodCount: allNeighbourhoodCount),
+            crimeTypesByYear: slice.crimeTypesByYear.reduce(into: [:]) { result, entry in
+                let (year, counts) = entry
+                result[year] = incidentBreakdowns(from: counts,
+                                                  cityTotals: agg.cityCrimeTypesByYear[year] ?? [:],
+                                                  neighbourhoodCount: allNeighbourhoodCount)
+            },
+            offenceTypes: incidentBreakdowns(from: slice.offenceTypes,
+                                             cityTotals: agg.cityOffenceTypes,
+                                             neighbourhoodCount: allNeighbourhoodCount),
+            offenceTypesByYear: slice.offenceTypesByYear.reduce(into: [:]) { result, entry in
+                let (year, counts) = entry
+                result[year] = incidentBreakdowns(from: counts,
+                                                  cityTotals: agg.cityOffenceTypesByYear[year] ?? [:],
+                                                  neighbourhoodCount: allNeighbourhoodCount)
             }
-            index = line.index(after: index)
-        }
-        fields.append(current)
-        return fields
+        )
+        if summary.yearlyCounts.isEmpty && summary.crimeTypes.isEmpty && summary.offenceTypes.isEmpty { return nil }
+        return summary
     }
 
     private func incidentBreakdowns(from counts: [String: Int]) -> [IncidentBreakdown] {
@@ -2596,11 +2619,6 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
                 if lhs.count == rhs.count { return lhs.incidentType < rhs.incidentType }
                 return lhs.count > rhs.count
             }
-    }
-
-    private func neighbourhoodName(_ lhs: String, matches rhs: String) -> Bool {
-        lhs.trimmingCharacters(in: .whitespacesAndNewlines)
-            .compare(rhs.trimmingCharacters(in: .whitespacesAndNewlines), options: [.caseInsensitive, .diacriticInsensitive]) == .orderedSame
     }
 
     private func fetchPublicHealth(neighbourhood: String?, coordinate: CLLocationCoordinate2D? = nil) async -> PublicHealthSummary? {

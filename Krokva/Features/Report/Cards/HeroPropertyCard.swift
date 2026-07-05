@@ -6,6 +6,8 @@ import SwiftUI
 
 struct HeroPropertyCard: View {
     let report: AddressReport
+    /// Live MapKit views don't render in offscreen PDF export, so the map is skipped there.
+    var showsMap: Bool = true
     @State private var camera: MapCameraPosition
     @State private var permitVM = PermitHistoryViewModel()
     @State private var selectedSection: ScoreSectionDetail?
@@ -13,8 +15,9 @@ struct HeroPropertyCard: View {
 
     private var property: PropertyAssessment? { report.property }
 
-    init(report: AddressReport) {
+    init(report: AddressReport, showsMap: Bool = true) {
         self.report = report
+        self.showsMap = showsMap
         let coord = report.property?.coordinate
             ?? CLLocationCoordinate2D(latitude: 49.8951, longitude: -97.1384)
         _camera = State(initialValue: .camera(MapCamera(
@@ -28,7 +31,9 @@ struct HeroPropertyCard: View {
     var body: some View {
         CleanCard(padding: 0) {
             VStack(spacing: 0) {
-                mapSection
+                if showsMap {
+                    mapSection
+                }
                 addressSection
                 if property != nil {
                     Divider().foregroundStyle(Color.cleanSep)

@@ -10,7 +10,15 @@ struct DataStatus: Sendable, Equatable {
 final class DataStatusService: ObservableObject {
     @Published var status: DataStatus?
 
-    private static let url = URL(string: "http://3.99.123.190:8889/api/status")!
+    private static let url = URL(string: "https://krokva.144.217.5.174.sslip.io/api/status")!
+
+    // One shared session — sessions hold their connection pools until invalidated,
+    // and refresh() runs on every screen appearance.
+    private static let session: URLSession = {
+        let config = URLSessionConfiguration.default
+        config.timeoutIntervalForRequest = 15
+        return URLSession(configuration: config)
+    }()
 
     func refresh() {
         Task {
@@ -20,10 +28,7 @@ final class DataStatusService: ObservableObject {
     }
 
     private func fetch() async throws -> DataStatus {
-        let config = URLSessionConfiguration.default
-        config.timeoutIntervalForRequest = 15
-        let session = URLSession(configuration: config)
-        let (data, _) = try await session.data(from: Self.url)
+        let (data, _) = try await Self.session.data(from: Self.url)
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
         let rows = json?["total_rows"] as? Int ?? 0
         let count = json?["table_count"] as? Int ?? 0

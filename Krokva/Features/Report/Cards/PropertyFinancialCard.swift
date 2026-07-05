@@ -4,6 +4,8 @@ struct PropertyFinancialCard: View {
     let property: PropertyAssessment?
 
     @State private var isExpanded = false
+
+    @Environment(\.reportPDFRender) private var pdfRender
     @State private var listingText = ""
     @State private var isEditingListing = false
     @State private var downText = "20"
@@ -81,7 +83,7 @@ struct PropertyFinancialCard: View {
         CleanCard(padding: 0) {
             VStack(spacing: 0) {
                 headerButton
-                if isExpanded {
+                if isExpanded || pdfRender {
                     VStack(alignment: .leading, spacing: 16) {
                         Divider()
                         priceSection

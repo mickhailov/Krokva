@@ -6,13 +6,14 @@ struct PermitsCard: View {
     let permits: [BuildingPermit]
     var sourceFailed = false
     @State private var isExpanded = false
+    @Environment(\.reportPDFRender) private var pdfRender
     @State private var selectedPermit: BuildingPermit?
 
     var body: some View {
         CleanCard(padding: 0) {
             VStack(spacing: 0) {
                 headerButton
-                if isExpanded {
+                if isExpanded || pdfRender {
                     Divider()
                     fullContent
                         .padding(18)
@@ -141,12 +142,13 @@ struct VacantOrdersCard: View {
     let orders: [VacantOrder]
     var sourceFailed = false
     @State private var isExpanded = false
+    @Environment(\.reportPDFRender) private var pdfRender
 
     var body: some View {
         CleanCard(padding: 0) {
             VStack(spacing: 0) {
                 headerButton
-                if isExpanded {
+                if isExpanded || pdfRender {
                     Divider()
                     fullContent
                         .padding(18)
@@ -251,12 +253,13 @@ struct TransitAccessCard: View {
     let summary: TransitAccessSummary?
     var sourceFailed = false
     @State private var isExpanded = false
+    @Environment(\.reportPDFRender) private var pdfRender
 
     var body: some View {
         CleanCard(padding: 0) {
             VStack(spacing: 0) {
                 headerButton
-                if isExpanded {
+                if isExpanded || pdfRender {
                     Divider()
                     fullContent
                         .padding(18)
@@ -372,12 +375,13 @@ struct DevelopmentContextCard: View {
     let summary: DevelopmentContextSummary?
     var sourceFailed = false
     @State private var isExpanded = false
+    @Environment(\.reportPDFRender) private var pdfRender
 
     var body: some View {
         CleanCard(padding: 0) {
             VStack(spacing: 0) {
                 headerButton
-                if isExpanded {
+                if isExpanded || pdfRender {
                     Divider()
                     fullContent
                         .padding(18)
@@ -516,6 +520,7 @@ struct CivicAmenitiesCard: View {
     var aquatics: AquaticsAmenitiesSummary?
     var sourceFailed = false
     @State private var isExpanded = false
+    @Environment(\.reportPDFRender) private var pdfRender
 
     private var hasAquatics: Bool {
         guard let aquatics else { return false }
@@ -526,7 +531,7 @@ struct CivicAmenitiesCard: View {
         CleanCard(padding: 0) {
             VStack(spacing: 0) {
                 headerButton
-                if isExpanded {
+                if isExpanded || pdfRender {
                     Divider()
                     fullContent
                         .padding(18)
@@ -731,13 +736,14 @@ struct PlanningContextCard: View {
     let summary: PlanningContextSummary?
     var sourceFailed = false
     @State private var isExpanded = false
+    @Environment(\.reportPDFRender) private var pdfRender
     @State private var selectedNotice: PublicNotice?
 
     var body: some View {
         CleanCard(padding: 0) {
             VStack(spacing: 0) {
                 headerButton
-                if isExpanded {
+                if isExpanded || pdfRender {
                     Divider()
                     fullContent
                         .padding(18)
@@ -912,12 +918,13 @@ struct StreetAccessCard: View {
     let infrastructure: InfrastructureSummary?
     var sourceFailed = false
     @State private var isExpanded = false
+    @Environment(\.reportPDFRender) private var pdfRender
 
     var body: some View {
         CleanCard(padding: 0) {
             VStack(spacing: 0) {
                 headerButton
-                if isExpanded {
+                if isExpanded || pdfRender {
                     Divider()
                     fullContent
                         .padding(18)
@@ -1077,12 +1084,13 @@ struct CivicContextCard: View {
     let summary: AddressCivicContext?
     var sourceFailed = false
     @State private var isExpanded = false
+    @Environment(\.reportPDFRender) private var pdfRender
 
     var body: some View {
         CleanCard(padding: 0) {
             VStack(spacing: 0) {
                 headerButton
-                if isExpanded {
+                if isExpanded || pdfRender {
                     Divider()
                     fullContent
                         .padding(18)
@@ -1172,12 +1180,13 @@ struct RecreationCard: View {
     let summary: RecreationSummary?
     var sourceFailed = false
     @State private var isExpanded = false
+    @Environment(\.reportPDFRender) private var pdfRender
 
     var body: some View {
         CleanCard(padding: 0) {
             VStack(spacing: 0) {
                 headerButton
-                if isExpanded {
+                if isExpanded || pdfRender {
                     Divider()
                     fullContent
                         .padding(18)
@@ -1350,12 +1359,13 @@ struct ShortTermRentalsCard: View {
     let summary: ShortTermRentalSummary?
     var sourceFailed = false
     @State private var isExpanded = false
+    @Environment(\.reportPDFRender) private var pdfRender
 
     var body: some View {
         CleanCard(padding: 0) {
             VStack(spacing: 0) {
                 headerButton
-                if isExpanded {
+                if isExpanded || pdfRender {
                     Divider()
                     fullContent
                         .padding(18)

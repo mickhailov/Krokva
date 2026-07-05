@@ -28,8 +28,6 @@ targets:
           UIApplicationSupportsMultipleScenes: false
         NSLocationWhenInUseUsageDescription: Krokva uses location only when you choose to search near you.
         UIUserInterfaceStyle: Light
-        NSAppTransportSecurity:
-          NSAllowsArbitraryLoads: true
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: ca.krokva.app

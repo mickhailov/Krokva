@@ -12,6 +12,7 @@ struct ReportView: View {
     @State private var permitVM = PermitHistoryViewModel()
     @State private var isRetrying = false
     @State private var showSaveSheet = false
+    @State private var showExportSheet = false
     @Environment(\.modelContext) private var modelContext
     @Query private var savedReports: [SavedReport]
 
@@ -69,7 +70,23 @@ struct ReportView: View {
                             .contentTransition(.symbolEffect(.replace))
                     }
                 }
+                if !report.dataSourceUnavailable {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            showExportSheet = true
+                        } label: {
+                            Image(systemName: "square.and.arrow.up")
+                                .foregroundStyle(Color.cleanLabel2)
+                        }
+                    }
+                }
             }
+        }
+        .sheet(isPresented: $showExportSheet) {
+            ExportReportSheet(
+                report: report,
+                analytics: ReportAnalytics.compute(report: report, permitHistory: permitVM.result)
+            )
         }
         .sheet(isPresented: $showSaveSheet) {
             SaveReportSheet(
@@ -91,94 +108,17 @@ struct ReportView: View {
                         ComingSoonReportCard(report: report)
                     }
 
-                    // ── A. Property & valuation ──────────────────────────────
-                    // Identity first: what is this place, what does it cost, key facts.
-                    HeroPropertyCard(report: report)
-
-                    // Analytics band: composite indices, year-over-year trends,
-                    // and comparative percentiles derived from the report data.
-                    let analytics = ReportAnalytics.compute(report: report, permitHistory: permitVM.result)
-                    CompositeIndicesCard(analytics: analytics)
-                    TrendsCard(analytics: analytics)
-                    ComparativeCard(analytics: analytics)
-
-                    PropertyFinancialCard(property: report.property)
-                    PropertyFactsCard(property: report.property, sourceFailed: report.moduleFailed(.property))
-                    CivicContextCard(summary: report.civicContext, sourceFailed: report.moduleFailed(.civicContext))
-                    RentalMarketCard(summary: report.rentalMarket)
-
-                    // ── B. Safety & health ───────────────────────────────────
-                    // The questions buyers/renters fear most, surfaced high.
-                    PoliceCrimeCard(summary: report.policeCrime, sourceFailed: report.moduleFailed(.policeCrime))
-                    EmergencyActivityCard(
-                        summary: report.emergency,
-                        substances: report.publicHealth?.substances ?? [],
-                        sourceFailed: report.moduleFailed(.emergency)
+                    // The card stack is defined once in `ReportCardCatalog` —
+                    // the same entries drive the PDF export, so adding or
+                    // changing a card there updates both screen and PDF.
+                    let context = ReportCardContext(
+                        report: report,
+                        analytics: ReportAnalytics.compute(report: report, permitHistory: permitVM.result),
+                        permitHistoryRefreshToken: permitHistoryRefreshToken
                     )
-                    if let health = report.publicHealth {
-                        PublicHealthCard(
-                            summary: health,
-                            neighbourhood: report.property?.neighbourhood ?? report.cityName
-                        )
-                    } else if report.moduleFailed(.publicHealth) {
-                        ModuleErrorCard(title: "Public Health", systemImage: "heart.text.square", iconColor: .cleanSky,
-                                        message: "Database error loading public health data.")
+                    ForEach(ReportCardCatalog.all) { card in
+                        card.makeView(context)
                     }
-                    NeighbourhoodRiskCard(summary: report.neighbourhoodRisk, sourceFailed: report.moduleFailed(.neighbourhoodRisk))
-
-                    // ── C. Daily living ──────────────────────────────────────
-                    WasteCollectionCard(summary: report.waste, sourceFailed: report.moduleFailed(.waste))
-                    NearbySchoolsCard(
-                        schools: report.nearbySchools,
-                        property: report.property,
-                        schoolZone: report.streetAccess?.schoolSpeedLimit,
-                        civicContext: report.civicContext,
-                        sourceFailed: report.moduleFailed(.schools)
-                    )
-                    DemographicsCard(
-                        summary: report.demographics,
-                        sourceFailed: report.moduleFailed(.demographics)
-                    )
-                    LocalGovernmentCard(summary: report.localGovernment, sourceFailed: report.moduleFailed(.localGovernment))
-                    if let sr = report.serviceRequests {
-                        Service311Card(summary: sr)
-                    } else if report.moduleFailed(.serviceRequests) {
-                        ModuleErrorCard(title: "311 Activity", systemImage: "phone.badge.waveform", iconColor: .cleanIndigo,
-                                        message: "Database error loading 311 activity.")
-                    }
-
-                    // ── D. Getting around ────────────────────────────────────
-                    TransitAccessCard(summary: report.transit, sourceFailed: report.moduleFailed(.transit))
-                    StreetAccessCard(street: report.streetAccess, infrastructure: report.infrastructure,
-                                     sourceFailed: report.moduleFailed(.streetAccess) || report.moduleFailed(.infrastructure))
-                    TrafficCard(summary: report.traffic, risk: report.neighbourhoodRisk,
-                                sourceFailed: report.moduleFailed(.traffic) || report.moduleFailed(.neighbourhoodRisk))
-
-                    // ── E. Amenities & lifestyle ─────────────────────────────
-                    CivicAmenitiesCard(parks: report.parks, river: report.river, library: report.library, aquatics: report.aquatics,
-                                       sourceFailed: report.moduleFailed(.parks) || report.moduleFailed(.river) || report.moduleFailed(.library) || report.moduleFailed(.aquatics))
-                    RecreationCard(summary: report.recreation, sourceFailed: report.moduleFailed(.recreation))
-                    LocalBusinessCard(summary: report.localBusiness, sourceFailed: report.moduleFailed(.localBusiness))
-
-                    // ── F. Development & property risk ───────────────────────
-                    PropertyPermitHistoryCard(report: report, refreshToken: permitHistoryRefreshToken)
-                    PermitsCard(permits: report.permits, sourceFailed: report.moduleFailed(.permits))
-                    PermitActivityCard(activity: report.permitActivity, sourceFailed: report.moduleFailed(.permitActivity))
-                    VacantOrdersCard(orders: report.vacantOrders, sourceFailed: report.moduleFailed(.vacantOrders))
-                    DevelopmentContextCard(summary: report.development, sourceFailed: report.moduleFailed(.development))
-                    PlanningContextCard(summary: report.planning, sourceFailed: report.moduleFailed(.planning))
-                    HeritageCard(summary: report.heritage, sourceFailed: report.moduleFailed(.heritage))
-                    ShortTermRentalsCard(summary: report.shortTermRentals, sourceFailed: report.moduleFailed(.shortTermRentals))
-                    BylawInvestigationsCard(summary: report.bylaw, sourceFailed: report.moduleFailed(.bylaw))
-
-                    // ── G. Environment, city works & reference ───────────────
-                    MosquitoCard(summary: report.mosquito, sourceFailed: report.moduleFailed(.mosquito))
-                    RadonCard(summary: report.radon)
-                    WaterQualityCard(summary: report.waterQuality, sourceFailed: report.moduleFailed(.waterQuality))
-                    CapitalWorksCard(summary: report.capitalWorks, sourceFailed: report.moduleFailed(.capitalWorks))
-                    FacilityClosuresCard(summary: report.facilityClosures, sourceFailed: report.moduleFailed(.facilityClosures))
-                    ReportMapCard(report: report)
-                    SourcesCard(report: report)
             }
             .padding(20)
         }
