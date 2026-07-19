@@ -10,7 +10,17 @@ struct DataStatus: Sendable, Equatable {
 final class DataStatusService: ObservableObject {
     @Published var status: DataStatus?
 
-    private static let url = URL(string: "http://krokva.144.217.5.174.sslip.io/api/status")!
+    // The old self-hosted mirror's custom /api/status endpoint was decommissioned
+    // 2026-07-05. CDS exposes an equivalent service summary at /v1/health (a `summary`
+    // object with totalRows / datasetsEnabled / serverTime). It aggregates all datasets
+    // so it can take ~10s — fine here since the badge loads async and animates in.
+    private static let url = URL(string: "https://civic.144.217.5.174.sslip.io/v1/health")!
+
+    private static let session: URLSession = {
+        let configuration = URLSessionConfiguration.default
+        configuration.timeoutIntervalForRequest = 30
+        return URLSession(configuration: configuration)
+    }()
 
     func refresh() {
         Task {
@@ -22,10 +32,11 @@ final class DataStatusService: ObservableObject {
     private func fetch() async throws -> DataStatus {
         let (data, _) = try await Self.session.data(from: Self.url)
         let json = try JSONSerialization.jsonObject(with: data) as? [String: Any]
-        let rows = json?["total_rows"] as? Int ?? 0
-        let count = json?["table_count"] as? Int ?? 0
+        let summary = json?["summary"] as? [String: Any]
+        let rows = summary?["totalRows"] as? Int ?? 0
+        let count = summary?["datasetsEnabled"] as? Int ?? 0
         var date: Date?
-        if let iso = json?["last_updated"] as? String {
+        if let iso = summary?["serverTime"] as? String {
             date = Self.parseISODate(iso)
         }
         return DataStatus(totalRows: rows, lastUpdated: date, tableCount: count)

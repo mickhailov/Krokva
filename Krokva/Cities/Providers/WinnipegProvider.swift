@@ -275,7 +275,10 @@ final class WinnipegProvider: SocrataProvider, CityDataProvider {
     let implementationState: ProviderImplementationState = .live
 
     init() {
-        super.init(domain: "krokva.144.217.5.174.sslip.io", scheme: "http")
+        // Old self-hosted Socrata mirror (krokva.…sslip.io, http) was decommissioned
+        // 2026-07-05. Point at the CDS Socrata facade — same SoQL dialect and the same
+        // 4x4 dataset IDs, served over https. See README "data backend" note.
+        super.init(domain: "civic.144.217.5.174.sslip.io", scheme: "https")
     }
 
     func fetchReport(for address: NormalizedAddress) async -> AddressReport {
