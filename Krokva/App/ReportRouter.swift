@@ -6,4 +6,7 @@ import Observation
 @Observable
 final class ReportRouter {
     var pendingReport: AddressReport?
+    /// Toggled to route the user to the Compare tab (e.g. from a report's
+    /// "compare with your current address" hint). `RootTabView` observes it.
+    var openCompare = false
 }

@@ -31,5 +31,11 @@ struct RootTabView: View {
         .onChange(of: router.pendingReport?.id) { _, newValue in
             if newValue != nil { selection = 1 }
         }
+        .onChange(of: router.openCompare) { _, requested in
+            if requested {
+                selection = 2
+                router.openCompare = false
+            }
+        }
     }
 }

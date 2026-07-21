@@ -7,16 +7,10 @@ import UIKit
 /// Each card is rendered offscreen with `ImageRenderer` using the *same* views
 /// the on-screen report shows (via `ReportCardCatalog`), with
 /// `\.reportPDFRender == true` so collapsible cards expand and appear-animated
-/// components draw their final state. Cards taller than a page are sliced
-/// across page breaks.
+/// components draw their final state. Pagination and page slicing live in the
+/// shared `PDFPageComposer`.
 enum ReportPDFExporter {
-    private static let pageSize = CGSize(width: 612, height: 792) // US Letter, points
-    private static let margin: CGFloat = 36
-    private static let footerHeight: CGFloat = 26
-    private static let cardSpacing: CGFloat = 14
-
-    private static var contentWidth: CGFloat { pageSize.width - margin * 2 }
-    private static var pageBottom: CGFloat { pageSize.height - margin - footerHeight }
+    private static let style = PDFPageComposer.Style()
 
     @MainActor
     static func export(report: AddressReport,
@@ -27,94 +21,22 @@ enum ReportPDFExporter {
         context.isPDF = true
 
         var images: [UIImage] = []
-        if let header = renderImage(AnyView(PDFHeaderView(report: report)), modelContext: modelContext) {
+        if let header = PDFPageComposer.renderImage(AnyView(PDFHeaderView(report: report)), style: style, modelContext: modelContext) {
             images.append(header)
         }
         for card in ReportCardCatalog.all where card.includeInPDF && selectedCardIDs.contains(card.id) {
-            if let image = renderImage(card.makeView(context), modelContext: modelContext) {
+            if let image = PDFPageComposer.renderImage(card.makeView(context), style: style, modelContext: modelContext) {
                 images.append(image)
             }
         }
         guard !images.isEmpty else { return nil }
 
         let url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName(for: report))
-        let renderer = UIGraphicsPDFRenderer(bounds: CGRect(origin: .zero, size: pageSize))
-        do {
-            try renderer.writePDF(to: url) { pdf in
-                var pageNumber = 0
-                var cursorY = margin
-
-                func beginPage() {
-                    pdf.beginPage()
-                    pageNumber += 1
-                    cursorY = margin
-                    drawFooter(in: pdf.cgContext, pageNumber: pageNumber, report: report)
-                }
-
-                beginPage()
-                for image in images {
-                    let height = image.size.height
-                    // Start a new page when the card doesn't fit but would fit a fresh page.
-                    if height > pageBottom - cursorY, height <= pageBottom - margin {
-                        beginPage()
-                    }
-                    if height <= pageBottom - cursorY {
-                        image.draw(in: CGRect(x: margin, y: cursorY, width: contentWidth, height: height))
-                        cursorY += height + cardSpacing
-                    } else {
-                        // Taller than a full page: slice across pages.
-                        var offset: CGFloat = 0
-                        while offset < height {
-                            let available = pageBottom - cursorY
-                            let slice = min(available, height - offset)
-                            let cg = pdf.cgContext
-                            cg.saveGState()
-                            cg.clip(to: CGRect(x: margin, y: cursorY, width: contentWidth, height: slice))
-                            image.draw(in: CGRect(x: margin, y: cursorY - offset, width: contentWidth, height: height))
-                            cg.restoreGState()
-                            offset += slice
-                            cursorY += slice
-                            if offset < height { beginPage() }
-                        }
-                        cursorY += cardSpacing
-                    }
-                }
-            }
-        } catch {
-            return nil
+        let footerText = "Krokva · \(report.cityName) · \(report.attributionText)"
+        let ok = PDFPageComposer.write(images: images, to: url, style: style) { cg, page in
+            PDFPageComposer.drawCenteredFooter("\(footerText) · Page \(page)", in: cg, style: style)
         }
-        return url
-    }
-
-    // MARK: - Rendering
-
-    @MainActor
-    private static func renderImage(_ view: AnyView, modelContext: ModelContext) -> UIImage? {
-        let renderer = ImageRenderer(content:
-            view
-                .environment(\.reportPDFRender, true)
-                .environment(\.colorScheme, .light)
-                .modelContext(modelContext)
-                .frame(width: contentWidth)
-        )
-        renderer.scale = 2
-        renderer.proposedSize = ProposedViewSize(width: contentWidth, height: nil)
-        guard let image = renderer.uiImage, image.size.height > 1 else { return nil }
-        return image
-    }
-
-    private static func drawFooter(in cg: CGContext, pageNumber: Int, report: AddressReport) {
-        let text = "Krokva · \(report.cityName) · \(report.attributionText) · Page \(pageNumber)"
-        let attributes: [NSAttributedString.Key: Any] = [
-            .font: UIFont.systemFont(ofSize: 7.5, weight: .medium),
-            .foregroundColor: UIColor.gray
-        ]
-        let attributed = NSAttributedString(string: text, attributes: attributes)
-        let size = attributed.size()
-        attributed.draw(at: CGPoint(
-            x: (pageSize.width - min(size.width, contentWidth)) / 2,
-            y: pageSize.height - margin * 0.5 - size.height / 2
-        ))
+        return ok ? url : nil
     }
 
     private static func fileName(for report: AddressReport) -> String {
@@ -133,7 +55,7 @@ private extension AddressReport {
     }
 }
 
-// MARK: - PDF header block
+// MARK: - PDF cover / header block
 
 private struct PDFHeaderView: View {
     let report: AddressReport
@@ -142,8 +64,14 @@ private struct PDFHeaderView: View {
         report.property?.fullAddress ?? report.address.displayAddress
     }
 
+    // House Score is cheap and pure to recompute; permit history isn't needed
+    // for the overall grade shown on the cover.
+    private var rating: ReportRating {
+        ReportRating.compute(report: report, permitHistory: nil)
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
                 Text("Krokva")
                     .font(.system(size: 20, weight: .bold))
@@ -161,9 +89,53 @@ private struct PDFHeaderView: View {
             Text("\(report.cityName) · Generated \(Date.now.formatted(date: .long, time: .shortened))")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(Color.cleanLabel2)
+
+            summaryStrip
+                .padding(.top, 2)
+
             Divider()
                 .foregroundStyle(Color.cleanSep)
         }
         .padding(.bottom, 4)
+    }
+
+    private var summaryStrip: some View {
+        HStack(spacing: 10) {
+            summaryTile("House Score", "\(Int(rating.overall.rounded())) · \(rating.grade)")
+            if let assessed = report.property?.totalAssessedValue {
+                summaryTile("Assessed", currency(assessed))
+            }
+            if let tax = report.property?.propertyTax {
+                summaryTile("Property tax", currency(tax) + (report.property?.propertyTaxIsEstimated == true ? "*" : ""))
+            }
+            if let n = report.property?.neighbourhood, !n.isEmpty {
+                summaryTile("Neighbourhood", n)
+            }
+        }
+    }
+
+    private func summaryTile(_ label: String, _ value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label.uppercased())
+                .font(.system(size: 8, weight: .heavy))
+                .tracking(0.8)
+                .foregroundStyle(Color.cleanLabel3)
+            Text(value)
+                .font(.system(size: 13, weight: .bold).monospacedDigit())
+                .foregroundStyle(Color.cleanLabel)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(Color.cleanCard, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 12, style: .continuous).stroke(Color.cleanSep, lineWidth: 1))
+    }
+
+    private func currency(_ value: Double) -> String {
+        if value >= 1_000_000 { return String(format: "$%.2fM", value / 1_000_000) }
+        if value >= 1_000 { return String(format: "$%.0fK", value / 1_000) }
+        return String(format: "$%.0f", value)
     }
 }

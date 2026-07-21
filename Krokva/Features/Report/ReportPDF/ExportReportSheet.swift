@@ -13,6 +13,7 @@ struct ExportReportSheet: View {
     @State private var selected: Set<String>
     @State private var isGenerating = false
     @State private var shareItem: ShareItem?
+    @State private var showError = false
 
     private struct ShareItem: Identifiable {
         let url: URL
@@ -94,6 +95,11 @@ struct ExportReportSheet: View {
         .sheet(item: $shareItem) { item in
             ActivityShareSheet(url: item.url)
                 .presentationDetents([.medium, .large])
+        }
+        .alert("Couldn’t generate PDF", isPresented: $showError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Something went wrong while building the PDF. Please try again.")
         }
     }
 
@@ -178,12 +184,15 @@ struct ExportReportSheet: View {
             isGenerating = false
             if let url {
                 shareItem = ShareItem(url: url)
+            } else {
+                showError = true
             }
         }
     }
 }
 
-private struct ActivityShareSheet: UIViewControllerRepresentable {
+/// Shared iOS share sheet for exported PDFs (report and comparison exporters).
+struct ActivityShareSheet: UIViewControllerRepresentable {
     let url: URL
 
     func makeUIViewController(context: Context) -> UIActivityViewController {

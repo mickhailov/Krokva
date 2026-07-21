@@ -64,8 +64,20 @@ final class SavedReport {
     var neighbourhood: String
     var savedAt: Date
 
+    // The one address the user treats as home / their current place. Relocation
+    // comparisons and the report hint measure candidates against it. At most one
+    // saved report has this set (enforced by `setCurrent(_:in:)`). Defaulted so
+    // reports saved before this field decode via lightweight migration.
+    var isCurrentAddress: Bool = false
+
     // Up to this many reports can be pinned for fast access.
     static let maxSaved = 5
+
+    /// Marks `target` as the current/home address and clears the flag on every
+    /// other saved report, keeping the "exactly one current" invariant.
+    static func setCurrent(_ target: SavedReport, in all: [SavedReport]) {
+        for report in all { report.isCurrentAddress = (report === target) }
+    }
 
     // Assessment snapshot
     var assessedValue: Double?

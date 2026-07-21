@@ -23,9 +23,11 @@
 		51571B4D6E620BED0E65805D /* HeroPropertyCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 544C3AE7965538FD20DD57D3 /* HeroPropertyCard.swift */; };
 		542A8A4B34CD18652D2CE786 /* AddressNormalizer.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4A8149ED5C1D566D32081FF /* AddressNormalizer.swift */; };
 		635757E71A10C067D43385B1 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = B7F1905B4B6739B2C6F2E50C /* README.md */; };
+		638C230D445CCA44B325403F /* ComparePDFExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D895E861DCA149033F161C8 /* ComparePDFExporter.swift */; };
 		652923AC3D5861BB7DEAA5DD /* ReportPDFExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4359DC46BC54FE609773500E /* ReportPDFExporter.swift */; };
 		65820CA94F778D8DCC95F45F /* SharedComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3F06B1C0B8AB5419FCF47087 /* SharedComponents.swift */; };
 		671939D3FAFF1ED9F7C34828 /* Branding.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8FECAABF841CF818A1E97C9C /* Branding.swift */; };
+		6896E5A01E0CB1392816A386 /* PDFPageComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2DD391D4B1F7EF47CEB37F9 /* PDFPageComposer.swift */; };
 		6E395B3B9662C042CD99AA13 /* ReportMapCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95D8B7D6288A5B2F15A10EFD /* ReportMapCard.swift */; };
 		7041520F8C1442911558548E /* ScoreBreakdownSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 274D2F33B340BF946C92C180 /* ScoreBreakdownSheet.swift */; };
 		70690205B017B435FB252D76 /* SearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EC2CECAE53863D72727091C0 /* SearchView.swift */; };
@@ -37,14 +39,17 @@
 		8F5AC3F294BF612EF3DCB3F5 /* CityRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0C43B172C331B2B173A02962 /* CityRegistry.swift */; };
 		94A47DA7186668C64F71FE35 /* SampleReportData.swift in Sources */ = {isa = PBXBuildFile; fileRef = F5118628641EEE8D9145E4EA /* SampleReportData.swift */; };
 		963690E787817552473D6254 /* CivicMapMarker.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3FC556B1A1AAF1F372A674EF /* CivicMapMarker.swift */; };
+		9F23C328E2B473BA031F2710 /* RelocationVerdict.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9AD3685E4C40BF7B8D2BA166 /* RelocationVerdict.swift */; };
 		A00D4CBEA655169F82FE1A98 /* PropertyFinancialCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8F77CD4C38DDC28AF44B35B7 /* PropertyFinancialCard.swift */; };
 		A153AED25BF33F38C0143782 /* AnalyticsCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE4746F1695870DC4B351429 /* AnalyticsCards.swift */; };
 		A25CA791D76A906EDBB479C4 /* ReportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = CCBA00D8FFB1CB1FCAF18D95 /* ReportService.swift */; };
 		A3CC867E76D177F67DAC0BB6 /* StubProviders.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98289983C0C4C167469AF07D /* StubProviders.swift */; };
 		A608292ABB71B2A32ADF523E /* ListCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = 40AA1F1989F02FB958D27E1F /* ListCards.swift */; };
+		A60FB3DF2653F1F18DB2838F /* CompareTableView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 81267C66F18C7129D4CE5B1F /* CompareTableView.swift */; };
 		A6A3114D6C5DE80D48A598EB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 3F121150FE0C7BBD9EB3ED97 /* Assets.xcassets */; };
 		A70A053EFACEC934B66930A7 /* PropertyPermitHistoryCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BCDE0923D5C280EDDC76993 /* PropertyPermitHistoryCard.swift */; };
 		B8433B8AFDAD29A67D54A545 /* DataSourceHealth.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8ACFA09CFFCB70198757DA6D /* DataSourceHealth.swift */; };
+		C07096E35177089B42A2F003 /* CompareVerdictCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 26A4866C2A10DF5ADBF1A47C /* CompareVerdictCard.swift */; };
 		C2B39E1DB6BD77B2A02C5F29 /* DataStatusService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 79A15CC362BC7FAAE91D9207 /* DataStatusService.swift */; };
 		C50E03509CA1167594372E68 /* LoadingScreenAnimation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 189159582EB5E4F5FF4C6FD2 /* LoadingScreenAnimation.swift */; };
 		C8FA2D5D29DF3ACEEBF7A79F /* CityDataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA022CB7A47C4C9260F5D6B2 /* CityDataProvider.swift */; };
@@ -54,6 +59,7 @@
 		CDEAE12DFF8F3AFBA5D90C84 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 31E85998790F6BB49E8E368F /* Localizable.strings */; };
 		E5EB0CB93846CF68B7E9DA96 /* ReportModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA1C0CE8DECD1EB1777ACFF9 /* ReportModels.swift */; };
 		F122744F9415E55F7CBA7290 /* SocrataProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 01A63E3487763FB58DEFEF96 /* SocrataProvider.swift */; };
+		F39DE52792E9DDBD2F10939C /* RelocationHintCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1BF5F5A5F1856CD455E60A9C /* RelocationHintCard.swift */; };
 		F833EBCAE2951A850402DAE2 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8B03FA5D861E3F28FA66EA5D /* HomeView.swift */; };
 		FA9EF786D4F3BB149EA72B3C /* KrokvaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = BC1194C7694F1F34C41D90AB /* KrokvaApp.swift */; };
 		FE93CDD9CC8A52E53F8CCC2B /* ReportCardCatalog.swift in Sources */ = {isa = PBXBuildFile; fileRef = B4D4BF4083F620A6111FFE62 /* ReportCardCatalog.swift */; };
@@ -70,10 +76,13 @@
 		189159582EB5E4F5FF4C6FD2 /* LoadingScreenAnimation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoadingScreenAnimation.swift; sourceTree = "<group>"; };
 		1BCDE0923D5C280EDDC76993 /* PropertyPermitHistoryCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PropertyPermitHistoryCard.swift; sourceTree = "<group>"; };
 		1BD82335870EA3842809E034 /* ChartCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartCards.swift; sourceTree = "<group>"; };
+		1BF5F5A5F1856CD455E60A9C /* RelocationHintCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelocationHintCard.swift; sourceTree = "<group>"; };
 		1D0C497E36152CCF911EC480 /* WinnipegProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WinnipegProvider.swift; sourceTree = "<group>"; };
 		1E0136370803A2EFD49C117E /* SearchViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchViewModel.swift; sourceTree = "<group>"; };
+		26A4866C2A10DF5ADBF1A47C /* CompareVerdictCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompareVerdictCard.swift; sourceTree = "<group>"; };
 		274D2F33B340BF946C92C180 /* ScoreBreakdownSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScoreBreakdownSheet.swift; sourceTree = "<group>"; };
 		2B8186D49089188A7387B1B2 /* ReportView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportView.swift; sourceTree = "<group>"; };
+		3D895E861DCA149033F161C8 /* ComparePDFExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComparePDFExporter.swift; sourceTree = "<group>"; };
 		3F06B1C0B8AB5419FCF47087 /* SharedComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedComponents.swift; sourceTree = "<group>"; };
 		3F121150FE0C7BBD9EB3ED97 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		3FC556B1A1AAF1F372A674EF /* CivicMapMarker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CivicMapMarker.swift; sourceTree = "<group>"; };
@@ -88,6 +97,7 @@
 		769D61AFF41D9C47FF63D345 /* ReportRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportRouter.swift; sourceTree = "<group>"; };
 		79A15CC362BC7FAAE91D9207 /* DataStatusService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataStatusService.swift; sourceTree = "<group>"; };
 		7A7885B55E9CFB81A846104D /* uk */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = uk; path = uk.lproj/Localizable.strings; sourceTree = "<group>"; };
+		81267C66F18C7129D4CE5B1F /* CompareTableView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompareTableView.swift; sourceTree = "<group>"; };
 		8ACFA09CFFCB70198757DA6D /* DataSourceHealth.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataSourceHealth.swift; sourceTree = "<group>"; };
 		8B03FA5D861E3F28FA66EA5D /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
 		8F4B613E4DA165E2C23814C4 /* CKANProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CKANProvider.swift; sourceTree = "<group>"; };
@@ -95,6 +105,7 @@
 		8FECAABF841CF818A1E97C9C /* Branding.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Branding.swift; sourceTree = "<group>"; };
 		95D8B7D6288A5B2F15A10EFD /* ReportMapCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReportMapCard.swift; sourceTree = "<group>"; };
 		98289983C0C4C167469AF07D /* StubProviders.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StubProviders.swift; sourceTree = "<group>"; };
+		9AD3685E4C40BF7B8D2BA166 /* RelocationVerdict.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RelocationVerdict.swift; sourceTree = "<group>"; };
 		9F0BB65C03381D7D248723D2 /* NearbySchoolsCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NearbySchoolsCard.swift; sourceTree = "<group>"; };
 		AA022CB7A47C4C9260F5D6B2 /* CityDataProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CityDataProvider.swift; sourceTree = "<group>"; };
 		B2721C378AB3D61C4A836A13 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
@@ -112,6 +123,7 @@
 		D4DA22E3474964063FB88970 /* CleanComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CleanComponents.swift; sourceTree = "<group>"; };
 		DB389CA7F436647F57835984 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		DE55B8FEBE6C7B4873572249 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = ru.lproj/Localizable.strings; sourceTree = "<group>"; };
+		E2DD391D4B1F7EF47CEB37F9 /* PDFPageComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFPageComposer.swift; sourceTree = "<group>"; };
 		EC2CECAE53863D72727091C0 /* SearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchView.swift; sourceTree = "<group>"; };
 		EE4746F1695870DC4B351429 /* AnalyticsCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnalyticsCards.swift; sourceTree = "<group>"; };
 		F5118628641EEE8D9145E4EA /* SampleReportData.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleReportData.swift; sourceTree = "<group>"; };
@@ -165,7 +177,11 @@
 		271FF6A4F85D20CF8EFCC73B /* Compare */ = {
 			isa = PBXGroup;
 			children = (
+				3D895E861DCA149033F161C8 /* ComparePDFExporter.swift */,
+				81267C66F18C7129D4CE5B1F /* CompareTableView.swift */,
+				26A4866C2A10DF5ADBF1A47C /* CompareVerdictCard.swift */,
 				5919826963BC2623D95BC970 /* PropertyCompareView.swift */,
+				9AD3685E4C40BF7B8D2BA166 /* RelocationVerdict.swift */,
 			);
 			path = Compare;
 			sourceTree = "<group>";
@@ -218,6 +234,7 @@
 			isa = PBXGroup;
 			children = (
 				6A2482F900E5C165078BC0C7 /* ExportReportSheet.swift */,
+				E2DD391D4B1F7EF47CEB37F9 /* PDFPageComposer.swift */,
 				B4D4BF4083F620A6111FFE62 /* ReportCardCatalog.swift */,
 				4359DC46BC54FE609773500E /* ReportPDFExporter.swift */,
 			);
@@ -286,6 +303,7 @@
 				9F0BB65C03381D7D248723D2 /* NearbySchoolsCard.swift */,
 				BB625FD5DEE14E21C60EFF75 /* PropertyFactsCard.swift */,
 				8F77CD4C38DDC28AF44B35B7 /* PropertyFinancialCard.swift */,
+				1BF5F5A5F1856CD455E60A9C /* RelocationHintCard.swift */,
 				95D8B7D6288A5B2F15A10EFD /* ReportMapCard.swift */,
 				274D2F33B340BF946C92C180 /* ScoreBreakdownSheet.swift */,
 				3F06B1C0B8AB5419FCF47087 /* SharedComponents.swift */,
@@ -438,6 +456,9 @@
 				779DCB113CF02338059BD050 /* CivicDataCards.swift in Sources */,
 				963690E787817552473D6254 /* CivicMapMarker.swift in Sources */,
 				3FD5B20A38138C0D34DD0AF6 /* CleanComponents.swift in Sources */,
+				638C230D445CCA44B325403F /* ComparePDFExporter.swift in Sources */,
+				A60FB3DF2653F1F18DB2838F /* CompareTableView.swift in Sources */,
+				C07096E35177089B42A2F003 /* CompareVerdictCard.swift in Sources */,
 				B8433B8AFDAD29A67D54A545 /* DataSourceHealth.swift in Sources */,
 				C2B39E1DB6BD77B2A02C5F29 /* DataStatusService.swift in Sources */,
 				CD5C75430597FBFBE41D5DDA /* ExportReportSheet.swift in Sources */,
@@ -449,12 +470,15 @@
 				32AFE0E08E6F02D413C1A7CC /* LocalModels.swift in Sources */,
 				15F2BDC1EBAB68D02BB7361D /* NearbySchoolsCard.swift in Sources */,
 				7F919F845BBE634B965951B3 /* OpenDataClient.swift in Sources */,
+				6896E5A01E0CB1392816A386 /* PDFPageComposer.swift in Sources */,
 				40B3528742E8C22EDB646B6D /* PermitHistoryModels.swift in Sources */,
 				2FBC4B01F16178AF8DDFFB46 /* PermitHistoryService.swift in Sources */,
 				FEC0756F0BF43253A455DC93 /* PropertyCompareView.swift in Sources */,
 				836EBC21D7CD77CE7012AF7D /* PropertyFactsCard.swift in Sources */,
 				A00D4CBEA655169F82FE1A98 /* PropertyFinancialCard.swift in Sources */,
 				A70A053EFACEC934B66930A7 /* PropertyPermitHistoryCard.swift in Sources */,
+				F39DE52792E9DDBD2F10939C /* RelocationHintCard.swift in Sources */,
+				9F23C328E2B473BA031F2710 /* RelocationVerdict.swift in Sources */,
 				89616A386D2B132E0F7BBA27 /* ReportAnalytics.swift in Sources */,
 				FE93CDD9CC8A52E53F8CCC2B /* ReportCardCatalog.swift in Sources */,
 				6E395B3B9662C042CD99AA13 /* ReportMapCard.swift in Sources */,

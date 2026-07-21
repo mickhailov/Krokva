@@ -14,6 +14,9 @@ struct ReportView: View {
     @State private var showSaveSheet = false
     @State private var showExportSheet = false
     @Environment(\.modelContext) private var modelContext
+    // Optional so ReportView still works when presented outside the tab router
+    // (e.g. the Settings sample report), where no router is injected.
+    @Environment(ReportRouter.self) private var router: ReportRouter?
     @Query private var savedReports: [SavedReport]
 
     init(report: AddressReport) {
@@ -79,6 +82,25 @@ struct ReportView: View {
                                 .foregroundStyle(Color.cleanLabel2)
                         }
                     }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Menu {
+                            Button {
+                                withAnimation { makeCurrent() }
+                            } label: {
+                                Label(isThisCurrent ? "Current address" : "Make current address",
+                                      systemImage: isThisCurrent ? "house.fill" : "house")
+                            }
+                            .disabled(isThisCurrent || (thisSavedReport == nil && savedReports.count >= SavedReport.maxSaved))
+                            Button {
+                                openCompare()
+                            } label: {
+                                Label("Open comparison", systemImage: "arrow.left.arrow.right")
+                            }
+                        } label: {
+                            Image(systemName: "ellipsis.circle")
+                                .foregroundStyle(Color.cleanLabel2)
+                        }
+                    }
                 }
             }
         }
@@ -106,6 +128,14 @@ struct ReportView: View {
             LazyVStack(spacing: 14) {
                     if report.providerState == .comingSoon {
                         ComingSoonReportCard(report: report)
+                    }
+
+                    if showRelocationHint {
+                        RelocationHintCard(
+                            currentAddress: currentSaved?.address,
+                            score: relocationScore,
+                            onOpenCompare: openCompare
+                        )
                     }
 
                     // The card stack is defined once in `ReportCardCatalog` —
@@ -143,6 +173,55 @@ struct ReportView: View {
             modelContext.delete(existing)
         } else {
             showSaveSheet = true
+        }
+    }
+
+    // MARK: - Relocation hint / current address
+
+    private var thisSavedReport: SavedReport? {
+        savedReports.first { $0.address == reportAddress && $0.cityID == report.providerID }
+    }
+
+    /// The user's current/home address, unless it *is* this report.
+    private var currentSaved: SavedReport? {
+        guard let current = savedReports.first(where: \.isCurrentAddress) else { return nil }
+        return current.address == reportAddress && current.cityID == report.providerID ? nil : current
+    }
+
+    private var isThisCurrent: Bool { thisSavedReport?.isCurrentAddress == true }
+
+    /// Show the moving hint when this isn't already the current address and
+    /// there's at least one other saved report to compare against.
+    private var showRelocationHint: Bool {
+        guard !addressNotFound, !report.dataSourceUnavailable, !isThisCurrent else { return false }
+        return savedReports.contains { !($0.address == reportAddress && $0.cityID == report.providerID) }
+    }
+
+    /// This report scored against the current address (nil when none is set).
+    private var relocationScore: RelocationScore? {
+        guard let currentSaved else { return nil }
+        let currentMetrics = RelocationMetrics.from(saved: currentSaved, report: currentSaved.decodedReport())
+        let mine = RelocationMetrics.from(report: report)
+        return RelocationVerdict.make(
+            currentAddress: currentSaved.address,
+            current: currentMetrics,
+            candidates: [(address: reportAddress, metrics: mine)]
+        ).scores.first
+    }
+
+    private func openCompare() {
+        router?.openCompare = true
+    }
+
+    /// Marks this address as the current/home address, saving it first if there
+    /// is room and it isn't saved yet.
+    private func makeCurrent() {
+        if let existing = thisSavedReport {
+            SavedReport.setCurrent(existing, in: savedReports)
+        } else if savedReports.count < SavedReport.maxSaved {
+            let new = SavedReport(from: report)
+            modelContext.insert(new)
+            SavedReport.setCurrent(new, in: savedReports + [new])
         }
     }
 }
