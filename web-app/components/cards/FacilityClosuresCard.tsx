@@ -18,12 +18,20 @@ export function FacilityClosuresCard({ report }: { report: AddressReport }) {
   const closures = report.facilityClosures?.closures ?? [];
   if (closures.length === 0) return null;
 
+  // Any still-open closure (no reopen date) reads as a live flag; all-reopened
+  // is historical context.
+  const stillClosed = closures.some((c) => !c.reopenDate);
+  const status = stillClosed
+    ? ({ tone: "bad", label: `${closures.length} on this street` } as const)
+    : ({ tone: "warn", label: `${closures.length} past` } as const);
+
   return (
     <KrokvaCard
       eyebrow="Amenities · Health protection"
       title="Facility closures"
       subtitle="Health-protection closure reports on this street"
       accent={`${closures.length}`}
+      status={status}
       collapsible
       collapsedSummary={`${closures.length} closure report${closures.length === 1 ? "" : "s"} on this street`}
     >

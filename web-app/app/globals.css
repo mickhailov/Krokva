@@ -249,6 +249,73 @@ a {
   white-space: nowrap;
 }
 
+/* --- Verdict (plain-language lede in the House Score card) --- */
+.verdict {
+  border-left: 3px solid var(--line);
+  padding: 2px 0 2px 14px;
+  margin-bottom: 18px;
+}
+.verdict--good { border-left-color: var(--sage); }
+.verdict--warn { border-left-color: var(--gold-deep); }
+.verdict--bad { border-left-color: var(--clay); }
+.verdict__headline {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--ink);
+  line-height: 1.35;
+}
+.verdict__clauses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: 8px;
+}
+.verdict__clause {
+  font-size: 12.5px;
+  line-height: 1.4;
+  color: var(--ink3);
+}
+.verdict__clause--good { color: var(--sage); }
+.verdict__clause--bad { color: var(--clay); }
+
+/* --- Section-header traffic-light dot --- */
+.section-head__dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+.section-head__dot--good { background: var(--sage); }
+.section-head__dot--warn { background: var(--gold-deep); }
+.section-head__dot--bad { background: var(--clay); }
+
+/* --- Card status chip (at-a-glance traffic light in the eyebrow row) --- */
+.card__status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.card__status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.card__status--good { color: var(--sage); }
+.card__status--good .card__status-dot { background: var(--sage); }
+.card__status--warn { color: var(--gold-deep); }
+.card__status--warn .card__status-dot { background: var(--gold-deep); }
+.card__status--bad { color: var(--clay); }
+.card__status--bad .card__status-dot { background: var(--clay); }
+
 /* --- Chart kit --- */
 /* Charts print as rendered — the bars ARE the data. */
 .card { print-color-adjust: exact; -webkit-print-color-adjust: exact; }

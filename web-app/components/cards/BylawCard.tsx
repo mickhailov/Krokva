@@ -20,7 +20,17 @@ export function BylawCard({ report }: { report: AddressReport }) {
   if (!bylaw || (bylaw.yearly.length === 0 && bylaw.complaintTypes.length === 0)) return null;
 
   const yearly = [...bylaw.yearly].sort((a, b) => a.year - b.year);
-  const lastYear = yearly.length ? yearly[yearly.length - 1].count : undefined;
+  const last = yearly.length ? yearly[yearly.length - 1] : undefined;
+  const lastYear = last?.count;
+  const cityAvg = last?.citywideAverage;
+  const status =
+    lastYear != null && cityAvg != null && cityAvg > 0
+      ? lastYear > cityAvg * 1.05
+        ? ({ tone: "bad", label: "Above city average" } as const)
+        : lastYear < cityAvg * 0.95
+          ? ({ tone: "good", label: "Below city average" } as const)
+          : ({ tone: "warn", label: "Around city average" } as const)
+      : undefined;
 
   return (
     <KrokvaCard
@@ -28,6 +38,7 @@ export function BylawCard({ report }: { report: AddressReport }) {
       title="By-law investigations"
       subtitle={`${bylaw.neighbourhood} · complaints per year`}
       accent={lastYear != null ? `${lastYear}` : undefined}
+      status={status}
     >
       {yearly.length ? (
         <ColumnTrend

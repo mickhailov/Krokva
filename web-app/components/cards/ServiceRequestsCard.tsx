@@ -42,12 +42,22 @@ export function ServiceRequestsCard({ report }: { report: AddressReport }) {
   const types = service.topTypes.slice(0, 6);
   const recent = service.recentRequests.slice(0, 6);
 
+  const openRate = service.totalLastYear > 0 ? service.openLastYear / service.totalLastYear : 0;
+  const openPct = Math.round(openRate * 100);
+  const status =
+    openRate > 0.4
+      ? ({ tone: "bad", label: `${openPct}% still open` } as const)
+      : openRate > 0.2
+        ? ({ tone: "warn", label: `${openPct}% still open` } as const)
+        : ({ tone: "good", label: "Mostly resolved" } as const);
+
   return (
     <KrokvaCard
       eyebrow="Daily · 311"
       title="311 service requests"
       subtitle={`${service.neighbourhood} · last 12 months`}
       accent={`${service.totalLastYear}`}
+      status={status}
     >
       <StatRow>
         <StatTile label="Requests · 12 mo" value={service.totalLastYear} />

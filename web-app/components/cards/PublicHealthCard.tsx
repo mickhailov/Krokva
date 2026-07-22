@@ -38,12 +38,22 @@ export function PublicHealthCard({ report }: { report: AddressReport }) {
     (health.aedsNearby ?? 0) > 0;
   if (!hasAny) return null;
 
+  const status =
+    latest != null && latest.citywideAverage > 0
+      ? latest.neighbourhood > latest.citywideAverage * 1.05
+        ? ({ tone: "bad", label: "Above city average" } as const)
+        : latest.neighbourhood < latest.citywideAverage * 0.95
+          ? ({ tone: "good", label: "Below city average" } as const)
+          : ({ tone: "warn", label: "Around city average" } as const)
+      : undefined;
+
   return (
     <KrokvaCard
       eyebrow="Safety · Public health"
       title="Overdose response & health access"
       subtitle="Naloxone administrations & substance use vs. citywide average"
       accent={latest ? `${latest.neighbourhood}` : undefined}
+      status={status}
     >
       {years.length > 1 ? (
         <div>

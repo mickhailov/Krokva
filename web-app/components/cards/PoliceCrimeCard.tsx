@@ -39,6 +39,15 @@ export function PoliceCrimeCard({ report }: { report: AddressReport }) {
   const latestYear = crime.yearlyCounts.length ? crime.yearlyCounts[crime.yearlyCounts.length - 1] : undefined;
   const topCrimeTypes = crime.crimeTypes.slice(0, 6);
   const topOffenceTypes = crime.offenceTypes.slice(0, 6);
+  const cityAvg = latestYear?.citywideAverage;
+  const status =
+    latestYear && cityAvg != null && cityAvg > 0
+      ? latestYear.neighbourhood > cityAvg * 1.05
+        ? ({ tone: "bad", label: "Above city average" } as const)
+        : latestYear.neighbourhood < cityAvg * 0.95
+          ? ({ tone: "good", label: "Below city average" } as const)
+          : ({ tone: "warn", label: "Around city average" } as const)
+      : undefined;
 
   return (
     <KrokvaCard
@@ -46,6 +55,7 @@ export function PoliceCrimeCard({ report }: { report: AddressReport }) {
       title="Reported crime"
       subtitle={`${crime.neighbourhood}${crime.latestMonth ? ` · to ${monthLabel(crime.latestMonth.year, crime.latestMonth.month)}` : ""}`}
       accent={latestYear ? `${latestYear.neighbourhood} in ${latestYear.year}` : undefined}
+      status={status}
     >
       {latestYear ? (
         <div style={{ marginBottom: 10 }}>

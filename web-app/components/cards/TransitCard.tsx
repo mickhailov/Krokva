@@ -28,12 +28,23 @@ export function TransitCard({ report }: { report: AddressReport }) {
     transit.averageDailyBoardings != null;
   if (!hasAny) return null;
 
+  const otp = transit.onTimePercentage;
+  const status =
+    otp != null
+      ? otp >= 80
+        ? ({ tone: "good", label: `${Math.round(otp)}% on time` } as const)
+        : otp >= 65
+          ? ({ tone: "warn", label: `${Math.round(otp)}% on time` } as const)
+          : ({ tone: "bad", label: `${Math.round(otp)}% on time` } as const)
+      : undefined;
+
   return (
     <KrokvaCard
       eyebrow="Amenities · Transit"
       title="Transit access"
       subtitle="Stops and routes within 500 m"
       accent={routes.length ? `${routes.length} routes` : undefined}
+      status={status}
     >
       <Fact
         label="Nearest stop"

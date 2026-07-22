@@ -26,12 +26,22 @@ export function EmergencyCard({
   const top = emergency.last12Months.slice(0, 6);
   const years = emergency.yearlyCalls.slice(-6);
   const months = emergency.monthlyTrend.slice(-12);
+  const median = emergency.citywideMedian;
+  const status =
+    median != null && median > 0
+      ? emergency.totalLastYear > median * 1.05
+        ? ({ tone: "bad", label: "Above city median" } as const)
+        : emergency.totalLastYear < median * 0.95
+          ? ({ tone: "good", label: "Below city median" } as const)
+          : ({ tone: "warn", label: "Around city median" } as const)
+      : undefined;
   return (
     <KrokvaCard
       eyebrow="Safety · WFPS"
       title="Emergency calls"
       subtitle={`${emergency.neighbourhood} · last 12 months`}
       accent={`${emergency.totalLastYear}`}
+      status={status}
     >
       <StatRow>
         <StatTile label="Calls · 12 mo" value={emergency.totalLastYear} />
