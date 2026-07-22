@@ -39,6 +39,16 @@ export function PoliceCrimeCard({ report }: { report: AddressReport }) {
   const latestYear = crime.yearlyCounts.length ? crime.yearlyCounts[crime.yearlyCounts.length - 1] : undefined;
   const topCrimeTypes = crime.crimeTypes.slice(0, 6);
   const topOffenceTypes = crime.offenceTypes.slice(0, 6);
+  // The type/offence breakdowns are all-years totals, not the latest year — say
+  // so, otherwise "Property 2,044" reads as a contradiction of "52 in 2026".
+  const firstYear = crime.yearlyCounts.length ? crime.yearlyCounts[0].year : undefined;
+  const lastYear = latestYear?.year;
+  const breakdownPeriod =
+    firstYear != null && lastYear != null && firstYear !== lastYear
+      ? `${firstYear}–${lastYear} total`
+      : lastYear != null
+        ? `${lastYear} total`
+        : "all years";
   const cityAvg = latestYear?.citywideAverage;
   const status =
     latestYear && cityAvg != null && cityAvg > 0
@@ -80,7 +90,7 @@ export function PoliceCrimeCard({ report }: { report: AddressReport }) {
 
       {topCrimeTypes.length ? (
         <div style={{ marginTop: 16 }}>
-          <span className="eyebrow">Top crime types</span>
+          <span className="eyebrow">Top crime types · {breakdownPeriod}</span>
           <div style={{ marginTop: 8 }}>
             <HBars
               items={topCrimeTypes.map((t) => ({
@@ -94,7 +104,7 @@ export function PoliceCrimeCard({ report }: { report: AddressReport }) {
 
       {topOffenceTypes.length ? (
         <div style={{ marginTop: 16 }}>
-          <span className="eyebrow">Top offences</span>
+          <span className="eyebrow">Top offences · {breakdownPeriod}</span>
           <div style={{ marginTop: 8 }}>
             <HBars
               items={topOffenceTypes.map((t) => ({

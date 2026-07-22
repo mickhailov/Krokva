@@ -121,7 +121,7 @@ export default async function ReportPage({
     { id: SECTION_IDS.permits, title: "Flags" },
     { id: SECTION_IDS.safety, title: "Safety" },
     { id: SECTION_IDS.daily, title: "Daily life" },
-    { id: SECTION_IDS.amenities, title: "Nearby" },
+    { id: SECTION_IDS.amenities, title: "Schools & travel" },
     { id: SECTION_IDS.reference, title: "Reference" },
   ].map((s) => ({ ...s, hasConcern: digest.concernSections.has(s.id) }));
 
@@ -206,20 +206,22 @@ export default async function ReportPage({
         <ServiceRequestsCard report={report} />
       </Section>
 
-      <Section id={SECTION_IDS.amenities} title="What's nearby?" tone={sectionTone(digest, SECTION_IDS.amenities)}>
-        <InfrastructureCard
-          infrastructure={report.infrastructure}
-          failed={report.failedModules.includes("infrastructure")}
-        />
+      <Section id={SECTION_IDS.amenities} title="Schools & getting around" tone={sectionTone(digest, SECTION_IDS.amenities)}>
+        {/* Buyer-priority order: schools + how you get around come first, then
+            green space and leisure, then street/utility reference cards. */}
+        <SchoolsCard report={report} />
+        <TransitCard report={report} />
+        <StreetAccessCard report={report} />
+        <TrafficCard report={report} />
         <ParksCard report={report} />
         <RecreationCard report={report} />
         <AquaticsCard report={report} />
         <LibraryCard report={report} />
         <RiverCard report={report} />
-        <TransitCard report={report} />
-        <SchoolsCard report={report} />
-        <StreetAccessCard report={report} />
-        <TrafficCard report={report} />
+        <InfrastructureCard
+          infrastructure={report.infrastructure}
+          failed={report.failedModules.includes("infrastructure")}
+        />
         <WaterQualityCard report={report} />
         <CapitalWorksCard report={report} />
         <FacilityClosuresCard report={report} />

@@ -105,6 +105,16 @@ const plural = (n: number, s = "s") => (n === 1 ? "" : s);
 const capFirst = (s: string) => (s.length ? s[0].toUpperCase() + s.slice(1) : s);
 const failed = (d: AddressReport, m: ReportModule) => d.failedModules.includes(m);
 
+/** Assessment feature fields are free-text strings ("Attached", "Full", "No",
+ *  "None", ""). A feature counts as present only when its value is affirmative —
+ *  a bare `!= null` check wrongly treats "No" as "has one". */
+function hasFeature(value: string | null | undefined): boolean {
+  if (value == null) return false;
+  const v = value.trim().toLowerCase();
+  if (v === "") return false;
+  return !["no", "none", "n", "0", "false", "nil", "n/a", "na"].includes(v);
+}
+
 function computeProperty(d: AddressReport): SectionScore {
   const signals: Signal[] = [];
   const p = d.property;
@@ -135,15 +145,15 @@ function computeProperty(d: AddressReport): SectionScore {
   if (p != null) {
     let bonus = 40;
     const present: string[] = [];
-    if (p.garage != null) {
+    if (hasFeature(p.garage)) {
       bonus += 20;
       present.push("garage");
     }
-    if (p.basement != null) {
+    if (hasFeature(p.basement)) {
       bonus += 20;
       present.push("basement");
     }
-    if (p.airConditioning != null) {
+    if (hasFeature(p.airConditioning)) {
       bonus += 20;
       present.push("A/C");
     }
@@ -283,12 +293,17 @@ function computeLiveability(d: AddressReport): SectionScore {
       detail: pc === 0 ? "No parks within walking distance" : `${pc} park${plural(pc)} within reach`,
     });
 
-    const amenities = parks.nearbyParks.reduce((a, p) => a + p.playgrounds + p.fields + p.courts, 0);
-    const amenityScore = amenities === 0 ? 10 : amenities <= 3 ? 40 : amenities <= 8 ? 70 : 100;
+    // Count parks that offer play/sport amenities, not raw asset rows (the
+    // dataset lists each swing or bench separately, which inflates the tally).
+    const withPlay = parks.nearbyParks.filter((p) => p.playgrounds + p.fields + p.courts > 0).length;
+    const amenityScore = withPlay === 0 ? 10 : withPlay === 1 ? 55 : withPlay === 2 ? 80 : 100;
     signals.push({
       label: "Park facilities",
       score: amenityScore,
-      detail: `${amenities} playground${plural(amenities)}, field${plural(amenities)} & court${plural(amenities)}`,
+      detail:
+        withPlay === 0
+          ? "No playgrounds or sports courts nearby"
+          : `${withPlay} park${plural(withPlay)} with playgrounds or courts`,
     });
 
     if (parks.neighbourhoodHectares != null) {

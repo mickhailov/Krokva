@@ -79,24 +79,28 @@ export async function fetchLocalBusiness(
     .slice(0, 8)
     .map((r) => r.record);
 
-  const patios = patioData
-    .flatMap((row): { record: LocalBusinessRecord; distance: number }[] => {
-      const name = rowString(row, "name");
-      const coordinate = parseCoordinate(row);
-      if (!name || !coordinate) return [];
-      const distance = distanceMeters(coordinate, subject);
-      return [
-        {
-          record: {
-            name,
-            category: rowString(row, "operational_dates"),
-            distanceDescription: distanceDescription(distance),
-            coordinate,
-          },
-          distance,
-        },
-      ];
-    })
+  // A single venue registers one row per patio section, so the raw feed repeats
+  // the same name many times — keep only the nearest instance of each venue.
+  const patiosByName = new Map<string, { record: LocalBusinessRecord; distance: number }>();
+  for (const row of patioData) {
+    const name = rowString(row, "name");
+    const coordinate = parseCoordinate(row);
+    if (!name || !coordinate) continue;
+    const distance = distanceMeters(coordinate, subject);
+    const key = name.trim().toLowerCase();
+    const existing = patiosByName.get(key);
+    if (existing && existing.distance <= distance) continue;
+    patiosByName.set(key, {
+      record: {
+        name,
+        category: rowString(row, "operational_dates"),
+        distanceDescription: distanceDescription(distance),
+        coordinate,
+      },
+      distance,
+    });
+  }
+  const patios = [...patiosByName.values()]
     .sort((a, b) => a.distance - b.distance)
     .map((r) => r.record);
 

@@ -91,10 +91,6 @@ export function DemographicsCard({ report }: { report: AddressReport }) {
 
           <div style={{ marginTop: 12 }}>
             <Fact label="Top non-official language" value={demographics.topNonOfficialLanguage} />
-            <Fact
-              label="Gini index"
-              value={demographics.giniIndex != null ? demographics.giniIndex.toFixed(3) : undefined}
-            />
           </div>
           {demographics.isHighPovertyArea ? (
             <div style={{ marginTop: 8 }}>

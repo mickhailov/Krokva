@@ -25,14 +25,12 @@ export function PublicHealthCard({ report }: { report: AddressReport }) {
     : undefined;
   const years = health.yearlyEvents.slice(-6);
   const topSubstances = health.substances.slice(0, 6);
-  const topAges = health.ageGroups.slice(0, 5);
   const aed = health.nearestAED;
   const er = health.nearestER;
 
   const hasAny =
     latest != null ||
     topSubstances.length > 0 ||
-    topAges.length > 0 ||
     aed != null ||
     er != null ||
     (health.aedsNearby ?? 0) > 0;
@@ -94,20 +92,6 @@ export function PublicHealthCard({ report }: { report: AddressReport }) {
         </div>
       ) : null}
 
-      {topAges.length ? (
-        <div style={{ marginTop: 14 }}>
-          <span className="eyebrow">Age groups</span>
-          <div style={{ marginTop: 8 }}>
-            <HBars
-              items={topAges.map((a) => ({
-                label: titleCase(a.incidentType) ?? a.incidentType,
-                value: a.count,
-              }))}
-            />
-          </div>
-        </div>
-      ) : null}
-
       {er ? (
         <div style={{ marginTop: 14 }}>
           <span className="eyebrow">Nearest emergency room</span>
@@ -153,7 +137,7 @@ export function PublicHealthCard({ report }: { report: AddressReport }) {
         </div>
       ) : null}
 
-      {!latest && !topSubstances.length && !topAges.length && !aed && !er ? <EmptyState /> : null}
+      {!latest && !topSubstances.length && !aed && !er ? <EmptyState /> : null}
     </KrokvaCard>
   );
 }

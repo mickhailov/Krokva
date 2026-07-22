@@ -20,15 +20,26 @@ export function PermitsCard({ permits, failed }: { permits: BuildingPermit[]; fa
     );
   }
   if (permits.length === 0) return null;
+  // Work on or next to this property matters far more to a buyer than a sign
+  // permit three blocks away — float adjacent structural permits to the top.
+  const ordered = [...permits].sort(
+    (a, b) => Number(b.isAdjacentStructural) - Number(a.isAdjacentStructural),
+  );
+  const adjacentCount = permits.filter((p) => p.isAdjacentStructural).length;
   return (
     <KrokvaCard
       eyebrow="Permits · Building"
       title="Recent building permits"
       subtitle="On this street, last 2 years"
       accent={`${permits.length}`}
+      status={
+        adjacentCount > 0
+          ? ({ tone: "warn", label: `${adjacentCount} on/next to this lot` } as const)
+          : undefined
+      }
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-        {permits.slice(0, 12).map((p, i) => (
+        {ordered.slice(0, 12).map((p, i) => (
           <div key={i} style={{ borderBottom: "1px solid var(--line-soft)", paddingBottom: 8 }}>
             <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
               <strong style={{ fontSize: 14 }}>{titleCase(p.type)}</strong>
