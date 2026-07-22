@@ -53,13 +53,27 @@ import { KpiStrip } from "@/components/cards/KpiStrip";
 import { DigestCard } from "@/components/cards/DigestCard";
 import { PrintButton } from "@/components/PrintButton";
 import { SectionNav } from "@/components/SectionNav";
-import { computeDigest, SECTION_IDS } from "@/lib/report/digest";
+import { computeDigest, sectionTone, SECTION_IDS, SectionTone } from "@/lib/report/digest";
 
-/** Section header + dashboard grid for its cards. `id` anchors the section nav. */
-function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+/** Section header + dashboard grid for its cards. `id` anchors the section nav;
+ *  `tone` drives the traffic-light dot beside the header. */
+function Section({
+  id,
+  title,
+  tone = "none",
+  children,
+}: {
+  id: string;
+  title: string;
+  tone?: SectionTone;
+  children: React.ReactNode;
+}) {
   return (
     <section id={id} style={{ scrollMarginTop: 76 }}>
-      <div className="section-head">{title}</div>
+      <div className="section-head">
+        {tone !== "none" ? <span className={`section-head__dot section-head__dot--${tone}`} aria-hidden /> : null}
+        {title}
+      </div>
       <div className="report-grid">{children}</div>
     </section>
   );
@@ -103,11 +117,11 @@ export default async function ReportPage({
   const propertyFailed = report.failedModules.includes("property");
   const digest = computeDigest(report);
   const navSections = [
-    { id: SECTION_IDS.property, title: "Property" },
-    { id: SECTION_IDS.permits, title: "Permits" },
+    { id: SECTION_IDS.property, title: "Value" },
+    { id: SECTION_IDS.permits, title: "Flags" },
     { id: SECTION_IDS.safety, title: "Safety" },
-    { id: SECTION_IDS.daily, title: "Daily" },
-    { id: SECTION_IDS.amenities, title: "Amenities" },
+    { id: SECTION_IDS.daily, title: "Daily life" },
+    { id: SECTION_IDS.amenities, title: "Nearby" },
     { id: SECTION_IDS.reference, title: "Reference" },
   ].map((s) => ({ ...s, hasConcern: digest.concernSections.has(s.id) }));
 
@@ -146,7 +160,7 @@ export default async function ReportPage({
 
       <SectionNav sections={navSections} />
 
-      <Section id={SECTION_IDS.property} title="Property">
+      <Section id={SECTION_IDS.property} title="What's it worth?" tone={sectionTone(digest, SECTION_IDS.property)}>
         <HeroPropertyCard property={report.property} failed={propertyFailed} />
         {report.property ? (
           <>
@@ -160,7 +174,7 @@ export default async function ReportPage({
 
       <MapCard report={report} />
 
-      <Section id={SECTION_IDS.permits} title="Permits &amp; development">
+      <Section id={SECTION_IDS.permits} title="Anything flagged here?" tone={sectionTone(digest, SECTION_IDS.permits)}>
         <PermitsCard permits={report.permits} failed={report.failedModules.includes("permits")} />
         <VacantOrdersCard
           orders={report.vacantOrders}
@@ -173,7 +187,7 @@ export default async function ReportPage({
         <ShortTermRentalsCard report={report} />
       </Section>
 
-      <Section id={SECTION_IDS.safety} title="Safety &amp; health">
+      <Section id={SECTION_IDS.safety} title="Is it safe here?" tone={sectionTone(digest, SECTION_IDS.safety)}>
         <EmergencyCard
           emergency={report.emergency}
           failed={report.failedModules.includes("emergency")}
@@ -183,7 +197,7 @@ export default async function ReportPage({
         <NeighbourhoodRiskCard report={report} />
       </Section>
 
-      <Section id={SECTION_IDS.daily} title="Daily living">
+      <Section id={SECTION_IDS.daily} title="What's daily life like?" tone={sectionTone(digest, SECTION_IDS.daily)}>
         <WasteCard report={report} />
         <DemographicsCard report={report} />
         <LocalGovernmentCard report={report} />
@@ -192,7 +206,7 @@ export default async function ReportPage({
         <ServiceRequestsCard report={report} />
       </Section>
 
-      <Section id={SECTION_IDS.amenities} title="Amenities &amp; street">
+      <Section id={SECTION_IDS.amenities} title="What's nearby?" tone={sectionTone(digest, SECTION_IDS.amenities)}>
         <InfrastructureCard
           infrastructure={report.infrastructure}
           failed={report.failedModules.includes("infrastructure")}
@@ -213,7 +227,7 @@ export default async function ReportPage({
         <MosquitoCard report={report} />
       </Section>
 
-      <Section id={SECTION_IDS.reference} title="Reference">
+      <Section id={SECTION_IDS.reference} title="Good to know" tone={sectionTone(digest, SECTION_IDS.reference)}>
         <RadonCard report={report} />
         <RentalMarketCard report={report} />
       </Section>

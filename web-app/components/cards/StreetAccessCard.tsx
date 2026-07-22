@@ -50,8 +50,16 @@ export function StreetAccessCard({ report }: { report: AddressReport }) {
     access.cyclingRoutesNearby > 0 ||
     school != null;
 
+  const disruptions = access.activeDisruptions.length + access.activeLaneClosures.length;
+  const status =
+    disruptions >= 2
+      ? ({ tone: "bad", label: `${disruptions} disruptions` } as const)
+      : disruptions === 1
+        ? ({ tone: "warn", label: "1 disruption" } as const)
+        : ({ tone: "good", label: "No active work" } as const);
+
   return (
-    <KrokvaCard eyebrow="Amenities · Street" title="Street access">
+    <KrokvaCard eyebrow="Amenities · Street" title="Street access" status={status}>
       {hasFacts ? (
         <>
           <Fact label="Pavement condition" value={titleCase(access.pavementCondition)} />

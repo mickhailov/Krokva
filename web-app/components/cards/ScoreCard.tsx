@@ -4,6 +4,7 @@
 import { KrokvaCard } from "../KrokvaCard";
 import { Meter, Tone } from "../viz/Viz";
 import { AddressReport } from "@/lib/report/types";
+import { computeVerdict } from "@/lib/report/digest";
 import {
   computeRating,
   effectiveWeight,
@@ -75,6 +76,7 @@ export function ScoreCard({ report }: { report: AddressReport }) {
   if (totalDataPoints(rating) === 0) return null;
 
   const overall = Math.round(rating.overall);
+  const verdict = computeVerdict(report);
   const rows: [string, SectionScore][] = [
     ["Property", rating.property],
     ["Safety", rating.safety],
@@ -93,6 +95,21 @@ export function ScoreCard({ report }: { report: AddressReport }) {
 
   return (
     <KrokvaCard eyebrow="Krokva · House Score" title="House Score" accent={grade(rating.overall)}>
+      {verdict ? (
+        <div className={`verdict verdict--${verdict.tone}`}>
+          <p className="verdict__headline">{verdict.headline}</p>
+          {verdict.strength || verdict.concern ? (
+            <div className="verdict__clauses">
+              {verdict.strength ? (
+                <span className="verdict__clause verdict__clause--good">✓ {verdict.strength}</span>
+              ) : null}
+              {verdict.concern ? (
+                <span className="verdict__clause verdict__clause--bad">! {verdict.concern}</span>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       <div style={{ display: "flex", flexWrap: "wrap", gap: "20px 32px", alignItems: "flex-start" }}>
         <div style={{ flex: "0 0 auto" }}>
           <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>

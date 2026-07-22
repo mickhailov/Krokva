@@ -1,11 +1,19 @@
 // KrokvaCard — the Civic Modernist container used by every dossier module,
 // matching the app's KrokvaCard (eyebrow label + title + body).
 
+/** At-a-glance traffic-light for a card, shown as a dot + short label in the
+ *  eyebrow row so the reader can scan a column of cards without reading each. */
+export interface CardStatus {
+  tone: "good" | "warn" | "bad";
+  label: string;
+}
+
 export function KrokvaCard({
   eyebrow,
   title,
   subtitle,
   accent,
+  status,
   wide,
   collapsible,
   collapsedSummary,
@@ -15,6 +23,8 @@ export function KrokvaCard({
   title: string;
   subtitle?: string;
   accent?: string;
+  /** Traffic-light status chip in the eyebrow row (good / warn / bad). */
+  status?: CardStatus;
   /** Span the full dashboard-grid width (maps, hero modules). */
   wide?: boolean;
   /** Render as a collapsed <details> (quiet/reference cards) that expands on
@@ -24,6 +34,12 @@ export function KrokvaCard({
   collapsedSummary?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const statusChip = status ? (
+    <span className={`card__status card__status--${status.tone}`}>
+      <span className="card__status-dot" aria-hidden />
+      {status.label}
+    </span>
+  ) : null;
   const className = [
     "card",
     wide ? "card--wide" : "",
@@ -40,6 +56,7 @@ export function KrokvaCard({
             <div className="card__eyebrow" style={{ marginBottom: 6 }}>
               <span className="eyebrow">{eyebrow}</span>
               {accent ? <span className="pill">{accent}</span> : null}
+              {statusChip}
             </div>
             <h2 className="card__title">{title}</h2>
             {collapsedSummary ? (
@@ -63,6 +80,7 @@ export function KrokvaCard({
       <div className="card__eyebrow">
         <span className="eyebrow">{eyebrow}</span>
         {accent ? <span className="pill">{accent}</span> : null}
+        {statusChip}
       </div>
       <h2 className="card__title">{title}</h2>
       {subtitle ? <p className="card__subtitle">{subtitle}</p> : null}

@@ -4,7 +4,7 @@
 // into "worth a look" vs "strengths" and anchor each back to its page section.
 
 import { AddressReport } from "./types";
-import { computeRating, Signal } from "./rating";
+import { computeRating, grade, Signal, totalDataPoints } from "./rating";
 
 /** Page-section anchors (must match the ids rendered in app/report/page.tsx). */
 export const SECTION_IDS = {
@@ -43,6 +43,17 @@ export interface Digest {
   strengths: DigestItem[];
   /** Page-section ids that contain at least one concern (drives the nav dot). */
   concernSections: Set<string>;
+  /** Page-section ids that contain at least one standout strength. */
+  strengthSections: Set<string>;
+}
+
+/** Traffic-light tone for a page section, from its concern/strength membership. */
+export type SectionTone = "good" | "warn" | "bad" | "none";
+
+export function sectionTone(digest: Digest, id: string): SectionTone {
+  if (digest.concernSections.has(id)) return "bad";
+  if (digest.strengthSections.has(id)) return "good";
+  return "none";
 }
 
 export function computeDigest(report: AddressReport): Digest {
@@ -78,10 +89,55 @@ export function computeDigest(report: AddressReport): Digest {
   strengths.sort((a, b) => b.score - a.score);
 
   const concernSections = new Set(concerns.map((c) => c.sectionId));
+  const strengthSections = new Set(strengths.map((s) => s.sectionId));
 
   return {
     concerns: concerns.slice(0, 5),
     strengths: strengths.slice(0, 5),
     concernSections,
+    strengthSections,
+  };
+}
+
+// ---------------------------------------------------------------- verdict
+
+/** One-line, human-readable "should I keep looking?" read for the top of the
+ *  report — the plain-language companion to the House Score number. */
+export interface Verdict {
+  overall: number;
+  grade: string;
+  tone: "good" | "warn" | "bad";
+  /** Headline sentence, e.g. "Solid overall, with a few things to check." */
+  headline: string;
+  /** Strongest single point, phrased as a clause (may be absent). */
+  strength?: string;
+  /** Most notable concern, phrased as a clause (may be absent). */
+  concern?: string;
+}
+
+export function computeVerdict(report: AddressReport): Verdict | null {
+  const rating = computeRating(report);
+  if (totalDataPoints(rating) === 0) return null;
+  const overall = rating.overall;
+  const { concerns, strengths } = computeDigest(report);
+
+  const headline =
+    overall >= 85
+      ? "Strong across the board for Winnipeg"
+      : overall >= 72
+        ? "Solid overall, with a few things to check"
+        : overall >= 58
+          ? "Mixed — real trade-offs to weigh here"
+          : overall >= 45
+            ? "Below par — read the flags before you commit"
+            : "Weak on several fronts";
+
+  return {
+    overall: Math.round(overall),
+    grade: grade(overall),
+    tone: overall >= 72 ? "good" : overall >= 55 ? "warn" : "bad",
+    headline,
+    strength: strengths[0]?.detail,
+    concern: concerns[0]?.detail,
   };
 }

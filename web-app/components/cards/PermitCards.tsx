@@ -53,12 +53,17 @@ export function VacantOrdersCard({ orders, failed }: { orders: VacantOrder[]; fa
     );
   }
   if (orders.length === 0) return null;
+  const status =
+    orders.length >= 2
+      ? ({ tone: "bad", label: `${orders.length} nearby` } as const)
+      : ({ tone: "warn", label: "1 nearby" } as const);
   return (
     <KrokvaCard
       eyebrow="Permits · Vacant buildings"
       title="Vacant-building orders"
       subtitle="Nearby compliance orders"
       accent={`${orders.length}`}
+      status={status}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
         {orders.slice(0, 10).map((o, i) => (
