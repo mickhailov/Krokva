@@ -4,6 +4,7 @@
 // no payment yet — just enter an address).
 
 import Link from "next/link";
+import { AddressForm } from "@/components/AddressForm";
 
 // A real, well-populated residential dossier used as the public sample.
 const SAMPLE_ADDRESS = "50 Ash St";
@@ -114,24 +115,6 @@ const STEPS = [
     body: "A single dossier with a House Score, plain-language verdict and a shareable link. Print to PDF in one click.",
   },
 ];
-
-function AddressForm({ cta = "Build my report" }: { cta?: string }) {
-  return (
-    <form action="/report" method="get" className="lp-form">
-      <input
-        name="address"
-        required
-        className="lp-form__input"
-        placeholder="e.g. 50 Ash St, Winnipeg"
-        autoComplete="off"
-        aria-label="Winnipeg address"
-      />
-      <button type="submit" className="lp-btn lp-btn--primary">
-        {cta}
-      </button>
-    </form>
-  );
-}
 
 export default function HomePage() {
   return (
