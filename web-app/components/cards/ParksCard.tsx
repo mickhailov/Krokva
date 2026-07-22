@@ -4,13 +4,16 @@
 import { EmptyState, ErrorState, Fact, KrokvaCard } from "../KrokvaCard";
 import { AddressReport, ParkAmenity } from "@/lib/report/types";
 
+// The park-assets dataset has one row per asset component (each swing, slide or
+// bench is its own record), so raw counts read as absurd ("62 playgrounds").
+// Show which amenities the park HAS instead — that's what a buyer wants to know.
 function amenityLine(park: ParkAmenity): string | undefined {
   const parts: string[] = [];
-  if (park.playgrounds) parts.push(`${park.playgrounds} playground${park.playgrounds === 1 ? "" : "s"}`);
-  if (park.fields) parts.push(`${park.fields} field${park.fields === 1 ? "" : "s"}`);
-  if (park.courts) parts.push(`${park.courts} court${park.courts === 1 ? "" : "s"}`);
-  if (park.washrooms) parts.push(`${park.washrooms} washroom${park.washrooms === 1 ? "" : "s"}`);
-  if (park.benches) parts.push(`${park.benches} bench${park.benches === 1 ? "" : "es"}`);
+  if (park.playgrounds) parts.push("Playground");
+  if (park.fields) parts.push("Sports fields");
+  if (park.courts) parts.push("Courts");
+  if (park.washrooms) parts.push("Washrooms");
+  if (park.benches) parts.push("Benches");
   return parts.length ? parts.join(" · ") : undefined;
 }
 

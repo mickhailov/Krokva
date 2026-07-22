@@ -49,17 +49,25 @@ async function fetchPublicNotices(
     init,
   );
 
+  const seen = new Set<string>();
   return rows
     .flatMap((row): { notice: PublicNotice; distance: number }[] => {
       const noticeType = rowString(row, "notice_type");
       if (!noticeType) return [];
       const coordinate = parseCoordinate(row);
       if (!coordinate) return [];
+      const address = rowString(row, "address") ?? "Address unavailable";
+      const description = plainText(rowString(row, "description") ?? rowString(row, "plain_language"));
+      // The feed re-posts the same notice (same address, type and description)
+      // more than once — collapse exact repeats.
+      const key = `${address}|${noticeType}|${description ?? ""}`.toLowerCase();
+      if (seen.has(key)) return [];
+      seen.add(key);
       const distance = distanceMeters(coordinate, subject);
       const notice: PublicNotice = {
         noticeType,
-        address: rowString(row, "address") ?? "Address unavailable",
-        description: plainText(rowString(row, "description") ?? rowString(row, "plain_language")),
+        address,
+        description,
         decision: rowString(row, "decision"),
         meetingDate: parseDate(rowString(row, "meeting_date")),
         distanceDescription: distanceDescription(distance),

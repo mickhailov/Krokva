@@ -24,9 +24,13 @@ export function LocalBusinessCard({ report }: { report: AddressReport }) {
       eyebrow="Daily · Local business"
       title="Local businesses"
       subtitle="Licensed within 500 m"
-      accent={`${business.totalNearby}`}
+      accent={business.totalNearby ? `${business.totalNearby}` : undefined}
     >
-      <Fact label="Licensed businesses nearby" value={business.totalNearby || undefined} />
+      {business.totalNearby ? (
+        <Fact label="Licensed businesses nearby" value={business.totalNearby} />
+      ) : (
+        <p className="card__subtitle">No licensed businesses within 500 m.</p>
+      )}
 
       {categories.length ? (
         <div style={{ marginTop: 12 }}>

@@ -15,6 +15,7 @@ export function KpiStrip({ report }: { report: AddressReport }) {
   const emergency = report.emergency;
   const transit = report.transit;
   const demo = report.demographics;
+  const nearestSchool = report.nearbySchools?.[0];
 
   const tiles = [
     p?.totalAssessedValue != null ? (
@@ -50,16 +51,23 @@ export function KpiStrip({ report }: { report: AddressReport }) {
         tone={crimeLatest.neighbourhood > crimeLatest.citywideAverage * 1.05 ? "bad" : "good"}
       />
     ) : null,
-    emergency?.totalLastYear ? (
+    // Only headline Fire/EMS when we can compare it to the city — a bare "730"
+    // reads as alarming when most of those calls are routine medical response.
+    emergency?.totalLastYear && emergency.citywideMedian != null ? (
       <StatTile
         key="fire"
         label="Fire/EMS calls · 12 mo"
         value={nf.format(emergency.totalLastYear)}
-        sub={
-          emergency.citywideMedian != null
-            ? `city median ${nf.format(Math.round(emergency.citywideMedian))}`
-            : emergency.neighbourhood
-        }
+        sub={`city median ${nf.format(Math.round(emergency.citywideMedian))}`}
+        tone={emergency.totalLastYear > emergency.citywideMedian * 1.15 ? "warn" : "good"}
+      />
+    ) : null,
+    nearestSchool ? (
+      <StatTile
+        key="school"
+        label="Nearest school"
+        value={nearestSchool.distanceDescription}
+        sub={nearestSchool.name}
       />
     ) : null,
     transit?.onTimePercentage != null ? (

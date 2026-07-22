@@ -21,7 +21,19 @@ export function ComparablesCard({ report }: { report: AddressReport }) {
   const values = comparables.map((c) => c.value);
   const average = values.reduce((a, b) => a + b, 0) / values.length;
   const subject = report.property?.totalAssessedValue;
+  const subjectArea = report.property?.livingArea;
   const top = Math.max(...values, subject ?? 0);
+
+  // Per-sq-ft normalises away size, so a small home doesn't look "cheap" just
+  // for being small — the honest way to compare against bigger neighbours.
+  const perSqftValues = comparables
+    .filter((c) => c.livingArea > 0)
+    .map((c) => c.value / c.livingArea);
+  const avgPerSqft = perSqftValues.length
+    ? perSqftValues.reduce((a, b) => a + b, 0) / perSqftValues.length
+    : undefined;
+  const subjectPerSqft =
+    subject != null && subjectArea != null && subjectArea > 0 ? subject / subjectArea : undefined;
 
   return (
     <KrokvaCard
@@ -30,6 +42,26 @@ export function ComparablesCard({ report }: { report: AddressReport }) {
       subtitle="Similar homes assessed in this neighbourhood"
       accent={`avg ${currency(average)}`}
     >
+      {avgPerSqft != null ? (
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 12 }}>
+          {subjectPerSqft != null ? (
+            <div>
+              <div className="eyebrow">This home · $/sq ft</div>
+              <div style={{ fontSize: 20, fontWeight: 650 }}>${Math.round(subjectPerSqft)}</div>
+            </div>
+          ) : null}
+          <div>
+            <div className="eyebrow">Neighbourhood avg · $/sq ft</div>
+            <div style={{ fontSize: 20, fontWeight: 650 }}>${Math.round(avgPerSqft)}</div>
+          </div>
+        </div>
+      ) : null}
+
+      <p className="card__subtitle" style={{ marginBottom: 12 }}>
+        These are the City&apos;s <strong>assessed values</strong> — used to set property tax,
+        not asking prices. Market prices are usually higher and move faster. Compare on
+        $/sq&nbsp;ft rather than the total, since these homes differ in size.
+      </p>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {comparables.slice(0, 12).map((c, i) => (
           <div key={i} style={{ borderBottom: "1px solid var(--line-soft)", paddingBottom: 10 }}>
@@ -54,7 +86,11 @@ export function ComparablesCard({ report }: { report: AddressReport }) {
               ) : null}
             </div>
             <div className="card__subtitle" style={{ marginTop: 4 }}>
-              {[formatArea(c.livingArea), c.yearBuilt != null ? `Built ${c.yearBuilt}` : undefined]
+              {[
+                formatArea(c.livingArea),
+                c.livingArea > 0 ? `$${Math.round(c.value / c.livingArea)}/sq ft` : undefined,
+                c.yearBuilt != null ? `Built ${c.yearBuilt}` : undefined,
+              ]
                 .filter(Boolean)
                 .join(" · ")}
             </div>
