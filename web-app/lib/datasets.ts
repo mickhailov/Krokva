@@ -1,0 +1,87 @@
+// Winnipeg dataset registry — ported verbatim from the iOS app's
+// `WinnipegProvider.datasets` (CityDatasets). The CDS Socrata facade accepts the
+// same 4x4 dataset IDs, so no remapping is needed. See memory
+// `infra-cds-data-backend.md`.
+
+/** CDS Socrata facade host. Serve over https (facade 301-redirects http→https). */
+export const CDS_DOMAIN = "civic.144.217.5.174.sslip.io";
+export const CDS_SCHEME = "https";
+
+export const WINNIPEG_DATASETS = {
+  assessment: "d4mq-wa44",
+  permits: "it4w-cpf4",
+  vacantOrders: "qe3f-4r3j",
+  speedLimits: "j5wn-5wz7",
+  potholes: "4mat-mb3w",
+  trees: "hfwk-jp4h",
+  shortTermRentals: "74hr-f8ai",
+  emergencyCalls: "yg42-q284",
+  naloxone: "qd6b-q49i",
+  substanceUse: "6x82-bz5y",
+  tradePermits: "urbd-qygv",
+  parkAssets: "dk7c-zxyd",
+  parksOpenSpace: "tx3d-pfxq",
+  transitOnTime: "gp3k-am4u",
+  transitPassUps: "mer2-irmb",
+  transitPassengerActivity: "bv6q-du26",
+  bylawInvestigations: "eye3-guud",
+  developmentPermits: "w842-cdeb",
+  developmentPermitProcessingTimes: "3ij3-3hnj",
+  developmentPermitIntake: "jman-p4ya",
+  riverWaterLevels: "tgrf-v2zc",
+  libraries: "bt47-pkkm",
+  neighbourhoods: "8k6x-xxsy",
+  serviceRequests: "u7f6-5326",
+  zoningParcels: "dxrp-w6re",
+  publicNotices: "gnxp-9hpt",
+  accessibilityDisruptions: "fxq5-ign2",
+  laneClosures: "h367-iifg",
+  pavementCondition: "enpg-8cug",
+  schoolSpeedLimits: "k56t-9dvi",
+  schools: "5298-dhjx",
+  cyclingNetwork: "kjd9-dvf5",
+  policeCrimeMaps: "d920a305d0024913a64e61ee1ef1d2a3",
+  addresses: "cam2-ii3u",
+  schoolDivisions: "capx-4rye",
+  recreationComplexes: "bmi4-vvs2",
+  leisureActivities: "a2fq-ufu6",
+  publicAeds: "osm-aeds",
+  snowRouteAddresses: "g3p4-h83y",
+  plowZones: "39ur-higg",
+  wasteCollection: "6rcy-9uik",
+  snowParkingBans: "mfzv-893p",
+  plowZoneSchedule: "tix9-r5tc",
+  businessLicenses: "d5k3-sfzx",
+  seasonalPatios: "cd49-nk9h",
+  waterQuality: "a5ix-gnny",
+  midblockTrafficCounts: "buvf-b9wp",
+  permanentTrafficCounts: "46sc-6jrs",
+  censusAge: "hiqy-dd38",
+  censusHouseholds: "nmk5-uwfw",
+  censusLanguage: "wgmu-db32",
+  censusTransportMode: "ijxa-tybv",
+  censusImmigration: "g66p-wwve",
+  higherPovertyAreas: "ige9-5jxk",
+  electoralWards: "t4cg-yaxs",
+  communityCommittees: "dvqz-nw8j",
+  poolsIndoor: "rnpn-3qku",
+  poolsOutdoor: "dqfv-rh5e",
+  poolsWading: "npmi-43db",
+  poolsSprayPad: "uwfj-6mt2",
+  walkways: "jdeq-xf3y",
+  publicWifi: "rzm8-wh6x",
+  vacantPropertyFires: "tnm5-yaem",
+  roomingHouseEnforcement: "vk2f-xwp7",
+  rushHourTowing: "8phf-9kb6",
+  paidParking: "rmsh-97k4",
+  capitalProjects: "9xar-v8xm",
+  infrastructureFunding: "rwrz-d7hc",
+  facilityClosures: "fxcw-yyy2",
+  heritage: "ptpx-kgiu",
+  mosquitoTraps: "du7c-8488",
+} as const;
+
+export type DatasetKey = keyof typeof WINNIPEG_DATASETS;
+
+export const WINNIPEG_ATTRIBUTION =
+  "Contains information licensed under the Open Government Licence - Winnipeg.";
