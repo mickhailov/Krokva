@@ -140,6 +140,360 @@ a {
   color: var(--ink3);
 }
 
+/* --- Dashboard layout (report page) --- */
+.wrap--wide {
+  max-width: 1140px;
+}
+
+/* Masonry-style packing: tall cards don't leave holes beside them. */
+.report-grid {
+  margin: 10px 0 4px;
+}
+.report-grid > .card { margin: 0 0 14px; }
+
+@media (min-width: 880px) {
+  .report-grid {
+    columns: 2;
+    column-gap: 14px;
+  }
+  .report-grid > .card {
+    break-inside: avoid;
+    width: 100%;
+  }
+  .card--wide { column-span: all; }
+}
+
+/* --- Sticky section nav --- */
+.section-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  margin: 16px 0 4px;
+  background: color-mix(in srgb, var(--paper) 88%, transparent);
+  backdrop-filter: saturate(1.2) blur(8px);
+  -webkit-backdrop-filter: saturate(1.2) blur(8px);
+  border-top: 1px solid var(--line-soft);
+  border-bottom: 1px solid var(--line-soft);
+}
+.section-nav__inner {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 8px 2px;
+}
+.section-nav__inner::-webkit-scrollbar { display: none; }
+.section-nav__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  padding: 6px 12px;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--ink3);
+  text-decoration: none;
+  transition: background 0.15s, color 0.15s;
+}
+.section-nav__link:hover { color: var(--ink); background: var(--surface-alt); }
+.section-nav__link.is-active {
+  color: var(--ink);
+  background: var(--surface);
+  box-shadow: inset 0 0 0 1px var(--line);
+}
+.section-nav__dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--clay);
+  flex: 0 0 auto;
+}
+
+/* --- Digest ("What matters here") --- */
+.digest-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px 32px;
+}
+@media (min-width: 720px) {
+  .digest-grid { grid-template-columns: 1fr 1fr; }
+}
+.digest-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 8px;
+  margin: 0 -8px;
+  border-radius: var(--radius-sm);
+  text-decoration: none;
+  color: var(--ink);
+  transition: background 0.15s;
+}
+.digest-row:hover { background: var(--surface-alt); }
+.digest-row__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.digest-row--warn .digest-row__dot { background: var(--clay); }
+.digest-row--good .digest-row__dot { background: var(--sage); }
+.digest-row__text { font-size: 13.5px; line-height: 1.4; min-width: 0; }
+.digest-row__section {
+  font-size: 10.5px;
+  font-weight: 650;
+  letter-spacing: 0.03em;
+  color: var(--ink3);
+  white-space: nowrap;
+}
+
+/* --- Chart kit --- */
+/* Charts print as rendered — the bars ARE the data. */
+.card { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+
+/* --- Collapsible (quiet / reference) cards --- */
+.card--collapsible { padding: 0; overflow: hidden; }
+.card__summary {
+  list-style: none;
+  cursor: pointer;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+}
+.card__summary::-webkit-details-marker { display: none; }
+.card--collapsible:not([open]) .card__summary:hover { background: var(--surface-alt); }
+.card__collapsed-summary { margin-top: 6px; }
+.card--collapsible[open] .card__collapsed-summary { display: none; }
+.card__chevron {
+  font-size: 22px;
+  line-height: 1;
+  color: var(--ink3);
+  transform: rotate(90deg);
+  transition: transform 0.18s ease;
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+.card--collapsible[open] .card__chevron { transform: rotate(-90deg); }
+.card__body { padding: 0 18px 18px; }
+
+/* Stat tiles */
+.stat-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(145px, 1fr));
+  gap: 10px;
+}
+.stat {
+  background: var(--paper);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  min-width: 0;
+}
+.stat__label {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink3);
+}
+.stat__value {
+  font-size: 21px;
+  font-weight: 750;
+  letter-spacing: -0.01em;
+  margin-top: 4px;
+  line-height: 1.15;
+}
+.stat__sub {
+  font-size: 12px;
+  color: var(--ink3);
+  margin-top: 3px;
+}
+
+/* Delta vs baseline */
+.delta {
+  display: inline-block;
+  font-size: 11.5px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+.delta--good { color: var(--sage); }
+.delta--bad { color: var(--clay); }
+.delta--warn, .delta--accent { color: var(--gold-deep); }
+.delta--default { color: var(--ink3); }
+
+/* Horizontal bars */
+.hbars { display: grid; gap: 7px; }
+.hbar {
+  display: grid;
+  grid-template-columns: minmax(90px, 38%) 1fr 44px;
+  align-items: center;
+  gap: 10px;
+  font-size: 12.5px;
+}
+.hbar__label {
+  color: var(--ink2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.hbar__track {
+  position: relative;
+  height: 8px;
+  background: var(--surface-alt);
+  border-radius: 4px;
+  overflow: visible;
+}
+.hbar__fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--gold-deep);
+  border-radius: 2px 4px 4px 2px;
+  min-width: 2px;
+}
+.hbar__fill--muted { background: #A9A08A; }
+.hbar__tick {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ink3);
+  border-radius: 1px;
+}
+.hbar__value {
+  font-size: 11.5px;
+  color: var(--ink);
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Column trend */
+.cols {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+.col__cap {
+  font-size: 10px;
+  color: var(--ink3);
+  font-variant-numeric: tabular-nums;
+}
+.col__slot {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  max-width: 34px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+.col__bar {
+  width: 100%;
+  max-width: 22px;
+  background: var(--gold-deep);
+  border-radius: 4px 4px 0 0;
+  min-height: 2px;
+}
+.col__bar--muted { background: #A9A08A; }
+.col__tick {
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  height: 2px;
+  background: var(--ink3);
+  border-radius: 1px;
+}
+.col__label {
+  font-size: 10.5px;
+  color: var(--ink3);
+  white-space: nowrap;
+}
+
+/* Legend under emphasis charts */
+.chart-legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--ink3);
+}
+.chart-legend__item { display: inline-flex; align-items: center; gap: 5px; }
+.swatch { display: inline-block; }
+.swatch--bar {
+  width: 10px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--gold-deep);
+}
+.swatch--tick {
+  width: 10px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--ink3);
+}
+
+/* Sparkline */
+.spark__caption {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--ink3);
+  margin-top: 2px;
+}
+
+/* Meter */
+.meter {
+  height: 8px;
+  background: var(--surface-alt);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.meter__fill {
+  height: 100%;
+  border-radius: 2px 4px 4px 2px;
+}
+
+/* Range strip (min–avg–max) */
+.range {
+  position: relative;
+  height: 8px;
+  background: var(--surface-alt);
+  border-radius: 4px;
+}
+.range__band {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: var(--gold-soft);
+  border-radius: 4px;
+}
+.range__dot {
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: var(--gold-deep);
+  border: 2px solid var(--surface);
+  box-sizing: content-box;
+}
+
 /* --- Print / Save-as-PDF --- */
 .no-print { }
 
@@ -158,6 +512,16 @@ a {
     max-width: 100% !important;
     padding: 0 !important;
   }
+  /* Print keeps a single readable column. */
+  .report-grid {
+    columns: 1 !important;
+  }
+  .report-grid > .card {
+    margin: 14px 0;
+  }
+  .stat-row {
+    grid-template-columns: repeat(4, 1fr);
+  }
   .card {
     box-shadow: none;
     border: 1px solid #ddd;
@@ -169,6 +533,15 @@ a {
     break-after: avoid;
     page-break-after: avoid;
   }
+  /* Expand every collapsible card for the PDF (PrintButton also forces `open`;
+     this covers any that slipped through and neutralises the chevron). */
+  .card--collapsible { padding: 20px; }
+  .card__summary { padding: 0; display: block; }
+  .card__body { padding: 12px 0 0; }
+  .card__chevron { display: none !important; }
+  .card--collapsible[open] .card__collapsed-summary,
+  .card__collapsed-summary { display: none !important; }
+  details > .card__body { display: block !important; }
   /* The Leaflet map often can't paint tiles reliably in print; hide it. */
   .leaflet-container {
     display: none !important;

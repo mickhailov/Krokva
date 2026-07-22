@@ -44,6 +44,10 @@ export function TrafficCard({ report }: { report: AddressReport }) {
       eyebrow="Amenities · Street"
       title="Traffic counts"
       accent={accent != null ? accent.toLocaleString() : undefined}
+      collapsible
+      collapsedSummary={
+        accent != null ? `${accent.toLocaleString()} vehicles/day on this street` : "Nearest count station"
+      }
     >
       {traffic.streetStudy ? (
         <StudyBlock heading="Midblock street study" study={traffic.streetStudy} />

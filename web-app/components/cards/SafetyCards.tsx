@@ -1,9 +1,12 @@
 // Safety & health cards — WFPS emergency calls (more modules append here:
 // public health, police crime, neighbourhood risk).
 
-import { EmptyState, ErrorState, Fact, KrokvaCard } from "../KrokvaCard";
+import { EmptyState, ErrorState, KrokvaCard } from "../KrokvaCard";
+import { ColumnTrend, DeltaBadge, HBars, Sparkline, StatRow, StatTile } from "../viz/Viz";
 import { titleCase } from "@/lib/format";
 import { EmergencySummary } from "@/lib/report/types";
+
+const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 
 export function EmergencyCard({
   emergency,
@@ -21,6 +24,8 @@ export function EmergencyCard({
   }
   if (!emergency || emergency.totalLastYear === 0) return null;
   const top = emergency.last12Months.slice(0, 6);
+  const years = emergency.yearlyCalls.slice(-6);
+  const months = emergency.monthlyTrend.slice(-12);
   return (
     <KrokvaCard
       eyebrow="Safety · WFPS"
@@ -28,29 +33,82 @@ export function EmergencyCard({
       subtitle={`${emergency.neighbourhood} · last 12 months`}
       accent={`${emergency.totalLastYear}`}
     >
-      <Fact label="Total calls (last year)" value={emergency.totalLastYear} />
-      <Fact
-        label="Motor-vehicle incidents"
-        value={emergency.motorVehicleLastYear || undefined}
-      />
-      <Fact
-        label="Avg response duration"
-        value={
-          emergency.averageDurationMinutes != null
-            ? `${Math.round(emergency.averageDurationMinutes)} min`
-            : undefined
-        }
-      />
+      <StatRow>
+        <StatTile label="Calls · 12 mo" value={emergency.totalLastYear} />
+        <StatTile
+          label="Motor-vehicle"
+          value={emergency.motorVehicleLastYear || undefined}
+        />
+        <StatTile
+          label="Avg duration"
+          value={
+            emergency.averageDurationMinutes != null
+              ? `${Math.round(emergency.averageDurationMinutes)} min`
+              : undefined
+          }
+        />
+        <StatTile
+          label="Rank in city"
+          value={
+            emergency.neighbourhoodRank != null && emergency.neighbourhoodCount != null
+              ? `${emergency.neighbourhoodRank} / ${emergency.neighbourhoodCount}`
+              : undefined
+          }
+          sub="1 = most calls"
+        />
+      </StatRow>
+
+      {emergency.citywideMedian != null ? (
+        <div style={{ marginTop: 10 }}>
+          <DeltaBadge
+            value={emergency.totalLastYear}
+            baseline={emergency.citywideMedian}
+            baselineLabel={`city median (${Math.round(emergency.citywideMedian)})`}
+          />
+        </div>
+      ) : null}
+
+      {years.length > 1 ? (
+        <div style={{ marginTop: 14 }}>
+          <span className="eyebrow">Calls by year</span>
+          <div style={{ marginTop: 8 }}>
+            <ColumnTrend
+              items={years.map((y) => ({
+                label: `${y.year}`,
+                value: y.count,
+                context: y.citywideAverage,
+              }))}
+              contextLabel="city-wide neighbourhood average"
+            />
+          </div>
+        </div>
+      ) : null}
+
+      {months.length > 2 ? (
+        <div style={{ marginTop: 14 }}>
+          <span className="eyebrow">Monthly trend</span>
+          <div style={{ marginTop: 6 }}>
+            <Sparkline
+              points={months.map((m) => ({
+                label: `${MONTH_SHORT[(m.month - 1 + 12) % 12]} ${m.year}`,
+                value: m.count,
+              }))}
+            />
+          </div>
+        </div>
+      ) : null}
+
       {top.length ? (
-        <div style={{ marginTop: 12 }}>
+        <div style={{ marginTop: 14 }}>
           <span className="eyebrow">Top call types</span>
           <div style={{ marginTop: 8 }}>
-            {top.map((t) => (
-              <div className="kv" key={t.incidentType}>
-                <span className="kv__key">{titleCase(t.incidentType)}</span>
-                <span className="kv__val">{t.count}</span>
-              </div>
-            ))}
+            <HBars
+              items={top.map((t) => ({
+                label: titleCase(t.incidentType) ?? t.incidentType,
+                value: t.count,
+                context: t.citywideAverage > 0 ? t.citywideAverage : undefined,
+              }))}
+            />
           </div>
         </div>
       ) : (

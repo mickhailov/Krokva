@@ -1,8 +1,9 @@
 // Public health card — naloxone/opioid overdose response and substance use for
-// this neighbourhood (vs. citywide average), plus the nearest public AED. Port of
-// the app's public-health section of the Safety & health module.
+// this neighbourhood (vs. citywide average), plus ER/walk-in access and the
+// nearest public AED. Port of the app's public-health section.
 
 import { EmptyState, ErrorState, Fact, KrokvaCard } from "../KrokvaCard";
+import { ColumnTrend, HBars } from "../viz/Viz";
 import { titleCase } from "@/lib/format";
 import { AddressReport } from "@/lib/report/types";
 
@@ -22,15 +23,18 @@ export function PublicHealthCard({ report }: { report: AddressReport }) {
   const latest = health.yearlyEvents.length
     ? health.yearlyEvents[health.yearlyEvents.length - 1]
     : undefined;
+  const years = health.yearlyEvents.slice(-6);
   const topSubstances = health.substances.slice(0, 6);
   const topAges = health.ageGroups.slice(0, 5);
   const aed = health.nearestAED;
+  const er = health.nearestER;
 
   const hasAny =
     latest != null ||
     topSubstances.length > 0 ||
     topAges.length > 0 ||
     aed != null ||
+    er != null ||
     (health.aedsNearby ?? 0) > 0;
   if (!hasAny) return null;
 
@@ -41,7 +45,21 @@ export function PublicHealthCard({ report }: { report: AddressReport }) {
       subtitle="Naloxone administrations & substance use vs. citywide average"
       accent={latest ? `${latest.neighbourhood}` : undefined}
     >
-      {latest ? (
+      {years.length > 1 ? (
+        <div>
+          <span className="eyebrow">Overdose responses by year</span>
+          <div style={{ marginTop: 8 }}>
+            <ColumnTrend
+              items={years.map((y) => ({
+                label: `${y.year}`,
+                value: y.neighbourhood,
+                context: y.citywideAverage > 0 ? y.citywideAverage : undefined,
+              }))}
+              contextLabel="city-wide neighbourhood average"
+            />
+          </div>
+        </div>
+      ) : latest ? (
         <>
           <Fact label={`Overdose responses (${latest.year})`} value={latest.neighbourhood} />
           <Fact
@@ -52,42 +70,65 @@ export function PublicHealthCard({ report }: { report: AddressReport }) {
       ) : null}
 
       {topSubstances.length ? (
-        <div style={{ marginTop: 12 }}>
+        <div style={{ marginTop: 14 }}>
           <span className="eyebrow">Substances involved</span>
           <div style={{ marginTop: 8 }}>
-            {topSubstances.map((s) => (
-              <div className="kv" key={s.incidentType}>
-                <span className="kv__key">{titleCase(s.incidentType)}</span>
-                <span className="kv__val">
-                  {s.count}
-                  {s.citywideAverage > 0 ? (
-                    <span className="card__subtitle" style={{ marginLeft: 6 }}>
-                      city avg {Math.round(s.citywideAverage)}
-                    </span>
-                  ) : null}
-                </span>
-              </div>
-            ))}
+            <HBars
+              items={topSubstances.map((s) => ({
+                label: titleCase(s.incidentType) ?? s.incidentType,
+                value: s.count,
+                context: s.citywideAverage > 0 ? s.citywideAverage : undefined,
+              }))}
+            />
           </div>
         </div>
       ) : null}
 
       {topAges.length ? (
-        <div style={{ marginTop: 12 }}>
+        <div style={{ marginTop: 14 }}>
           <span className="eyebrow">Age groups</span>
           <div style={{ marginTop: 8 }}>
-            {topAges.map((a) => (
-              <div className="kv" key={a.incidentType}>
-                <span className="kv__key">{titleCase(a.incidentType)}</span>
-                <span className="kv__val">{a.count}</span>
-              </div>
-            ))}
+            <HBars
+              items={topAges.map((a) => ({
+                label: titleCase(a.incidentType) ?? a.incidentType,
+                value: a.count,
+              }))}
+            />
           </div>
         </div>
       ) : null}
 
+      {er ? (
+        <div style={{ marginTop: 14 }}>
+          <span className="eyebrow">Nearest emergency room</span>
+          <div style={{ marginTop: 8 }}>
+            <Fact label={er.name} value={er.driveMinutes != null ? `${Math.round(er.driveMinutes)} min drive` : undefined} />
+            <Fact
+              label="Current ER wait"
+              value={er.currentWaitMinutes != null ? `${Math.round(er.currentWaitMinutes)} min` : undefined}
+            />
+            <Fact
+              label="Average ER wait"
+              value={er.avgWaitMinutes != null ? `${Math.round(er.avgWaitMinutes)} min` : undefined}
+            />
+            <Fact label="Patients waiting" value={er.waitingPatients ?? undefined} />
+          </div>
+        </div>
+      ) : null}
+
+      {health.nearestWalkIn ? (
+        <Fact
+          label="Nearest walk-in clinic"
+          value={`${health.nearestWalkIn.name}${
+            health.nearestWalkIn.driveMinutes != null
+              ? ` · ${Math.round(health.nearestWalkIn.driveMinutes)} min drive`
+              : ""
+          }`}
+        />
+      ) : null}
+
       {aed ? (
-        <div style={{ marginTop: 12 }}>
+        <div style={{ marginTop: 14 }}>
           <span className="eyebrow">Nearest public AED</span>
           <div style={{ marginTop: 8 }}>
             <Fact label={aed.name} value={aed.distanceDescription} />
@@ -102,7 +143,7 @@ export function PublicHealthCard({ report }: { report: AddressReport }) {
         </div>
       ) : null}
 
-      {!latest && !topSubstances.length && !topAges.length && !aed ? <EmptyState /> : null}
+      {!latest && !topSubstances.length && !topAges.length && !aed && !er ? <EmptyState /> : null}
     </KrokvaCard>
   );
 }

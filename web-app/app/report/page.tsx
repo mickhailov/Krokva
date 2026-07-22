@@ -49,7 +49,21 @@ import { MosquitoCard } from "@/components/cards/MosquitoCard";
 import { RadonCard, RentalMarketCard } from "@/components/cards/ReferenceCards";
 import { ScoreCard } from "@/components/cards/ScoreCard";
 import { MapCard } from "@/components/cards/MapCard";
+import { KpiStrip } from "@/components/cards/KpiStrip";
+import { DigestCard } from "@/components/cards/DigestCard";
 import { PrintButton } from "@/components/PrintButton";
+import { SectionNav } from "@/components/SectionNav";
+import { computeDigest, SECTION_IDS } from "@/lib/report/digest";
+
+/** Section header + dashboard grid for its cards. `id` anchors the section nav. */
+function Section({ id, title, children }: { id: string; title: string; children: React.ReactNode }) {
+  return (
+    <section id={id} style={{ scrollMarginTop: 76 }}>
+      <div className="section-head">{title}</div>
+      <div className="report-grid">{children}</div>
+    </section>
+  );
+}
 
 export const dynamic = "force-dynamic";
 
@@ -87,9 +101,18 @@ export default async function ReportPage({
 
   const report = await buildWinnipegReport(address);
   const propertyFailed = report.failedModules.includes("property");
+  const digest = computeDigest(report);
+  const navSections = [
+    { id: SECTION_IDS.property, title: "Property" },
+    { id: SECTION_IDS.permits, title: "Permits" },
+    { id: SECTION_IDS.safety, title: "Safety" },
+    { id: SECTION_IDS.daily, title: "Daily" },
+    { id: SECTION_IDS.amenities, title: "Amenities" },
+    { id: SECTION_IDS.reference, title: "Reference" },
+  ].map((s) => ({ ...s, hasConcern: digest.concernSections.has(s.id) }));
 
   return (
-    <main className="wrap" style={{ paddingTop: 28, paddingBottom: 64 }}>
+    <main className="wrap wrap--wide" style={{ paddingTop: 28, paddingBottom: 64 }}>
       <div
         style={{
           display: "flex",
@@ -114,71 +137,86 @@ export default async function ReportPage({
       ) : null}
 
       <ScoreCard report={report} />
+      <div style={{ marginTop: 14 }}>
+        <KpiStrip report={report} />
+      </div>
+      <div style={{ marginTop: 14 }}>
+        <DigestCard report={report} />
+      </div>
 
-      <div className="section-head">Property</div>
-      <HeroPropertyCard property={report.property} failed={propertyFailed} />
-      {report.property ? (
-        <>
-          <PropertyFinancialCard property={report.property} />
-          <PropertyFactsCard property={report.property} />
-        </>
-      ) : null}
+      <SectionNav sections={navSections} />
+
+      <Section id={SECTION_IDS.property} title="Property">
+        <HeroPropertyCard property={report.property} failed={propertyFailed} />
+        {report.property ? (
+          <>
+            <PropertyFinancialCard property={report.property} />
+            <PropertyFactsCard property={report.property} />
+          </>
+        ) : null}
+        <NeighbourhoodValuesCard report={report} />
+        <ComparablesCard report={report} />
+      </Section>
+
       <MapCard report={report} />
-      <NeighbourhoodValuesCard report={report} />
-      <ComparablesCard report={report} />
 
-      <div className="section-head">Permits &amp; development</div>
-      <PermitsCard permits={report.permits} failed={report.failedModules.includes("permits")} />
-      <VacantOrdersCard
-        orders={report.vacantOrders}
-        failed={report.failedModules.includes("vacantOrders")}
-      />
-      <PermitActivityCard activity={report.permitActivity} />
-      <DevelopmentCard report={report} />
-      <PlanningCard report={report} />
-      <BylawCard report={report} />
-      <ShortTermRentalsCard report={report} />
+      <Section id={SECTION_IDS.permits} title="Permits &amp; development">
+        <PermitsCard permits={report.permits} failed={report.failedModules.includes("permits")} />
+        <VacantOrdersCard
+          orders={report.vacantOrders}
+          failed={report.failedModules.includes("vacantOrders")}
+        />
+        <PermitActivityCard activity={report.permitActivity} />
+        <DevelopmentCard report={report} />
+        <PlanningCard report={report} />
+        <BylawCard report={report} />
+        <ShortTermRentalsCard report={report} />
+      </Section>
 
-      <div className="section-head">Safety &amp; health</div>
-      <EmergencyCard
-        emergency={report.emergency}
-        failed={report.failedModules.includes("emergency")}
-      />
-      <PublicHealthCard report={report} />
-      <PoliceCrimeCard report={report} />
-      <NeighbourhoodRiskCard report={report} />
+      <Section id={SECTION_IDS.safety} title="Safety &amp; health">
+        <EmergencyCard
+          emergency={report.emergency}
+          failed={report.failedModules.includes("emergency")}
+        />
+        <PublicHealthCard report={report} />
+        <PoliceCrimeCard report={report} />
+        <NeighbourhoodRiskCard report={report} />
+      </Section>
 
-      <div className="section-head">Daily living</div>
-      <WasteCard report={report} />
-      <DemographicsCard report={report} />
-      <LocalGovernmentCard report={report} />
-      <LocalBusinessCard report={report} />
-      <CivicContextCard report={report} />
-      <ServiceRequestsCard report={report} />
+      <Section id={SECTION_IDS.daily} title="Daily living">
+        <WasteCard report={report} />
+        <DemographicsCard report={report} />
+        <LocalGovernmentCard report={report} />
+        <LocalBusinessCard report={report} />
+        <CivicContextCard report={report} />
+        <ServiceRequestsCard report={report} />
+      </Section>
 
-      <div className="section-head">Amenities &amp; street</div>
-      <InfrastructureCard
-        infrastructure={report.infrastructure}
-        failed={report.failedModules.includes("infrastructure")}
-      />
-      <ParksCard report={report} />
-      <RecreationCard report={report} />
-      <AquaticsCard report={report} />
-      <LibraryCard report={report} />
-      <RiverCard report={report} />
-      <TransitCard report={report} />
-      <SchoolsCard report={report} />
-      <StreetAccessCard report={report} />
-      <TrafficCard report={report} />
-      <WaterQualityCard report={report} />
-      <CapitalWorksCard report={report} />
-      <FacilityClosuresCard report={report} />
-      <HeritageCard report={report} />
-      <MosquitoCard report={report} />
+      <Section id={SECTION_IDS.amenities} title="Amenities &amp; street">
+        <InfrastructureCard
+          infrastructure={report.infrastructure}
+          failed={report.failedModules.includes("infrastructure")}
+        />
+        <ParksCard report={report} />
+        <RecreationCard report={report} />
+        <AquaticsCard report={report} />
+        <LibraryCard report={report} />
+        <RiverCard report={report} />
+        <TransitCard report={report} />
+        <SchoolsCard report={report} />
+        <StreetAccessCard report={report} />
+        <TrafficCard report={report} />
+        <WaterQualityCard report={report} />
+        <CapitalWorksCard report={report} />
+        <FacilityClosuresCard report={report} />
+        <HeritageCard report={report} />
+        <MosquitoCard report={report} />
+      </Section>
 
-      <div className="section-head">Reference</div>
-      <RadonCard report={report} />
-      <RentalMarketCard report={report} />
+      <Section id={SECTION_IDS.reference} title="Reference">
+        <RadonCard report={report} />
+        <RentalMarketCard report={report} />
+      </Section>
 
       <p className="card__subtitle" style={{ marginTop: 32 }}>
         {report.attribution}

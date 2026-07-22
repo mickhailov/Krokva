@@ -32,6 +32,12 @@ export function HeritageCard({ report }: { report: AddressReport }) {
       title="Heritage buildings"
       subtitle="Designated historical resources within 500 m"
       accent={`${nearby.length + (subjectDesignation ? 1 : 0)}`}
+      collapsible
+      collapsedSummary={
+        subjectDesignation
+          ? "This property is heritage-designated"
+          : `${nearby.length} designated nearby`
+      }
     >
       {subjectDesignation ? (
         <div style={{ marginBottom: nearby.length ? 16 : 0 }}>

@@ -2,6 +2,7 @@
 // neighbourhood permit activity, and the street infrastructure summary.
 
 import { EmptyState, ErrorState, Fact, KrokvaCard } from "../KrokvaCard";
+import { ColumnTrend } from "../viz/Viz";
 import { shortDate, titleCase } from "@/lib/format";
 import {
   BuildingPermit,
@@ -63,7 +64,14 @@ export function VacantOrdersCard({ orders, failed }: { orders: VacantOrder[]; fa
         {orders.slice(0, 10).map((o, i) => (
           <div key={i} className="kv">
             <span className="kv__key">{o.address}</span>
-            <span className="kv__val">{titleCase(o.orderType)}</span>
+            <span className="kv__val">
+              {titleCase(o.orderType)}
+              {o.issuedDate ? (
+                <span className="card__subtitle" style={{ marginLeft: 6 }}>
+                  {shortDate(o.issuedDate)}
+                </span>
+              ) : null}
+            </span>
           </div>
         ))}
       </div>
@@ -73,35 +81,20 @@ export function VacantOrdersCard({ orders, failed }: { orders: VacantOrder[]; fa
 
 export function PermitActivityCard({ activity }: { activity: YearCount[] }) {
   if (activity.length === 0) return null;
-  const max = Math.max(...activity.map((a) => a.count), 1);
   return (
     <KrokvaCard
       eyebrow="Permits · Activity"
       title="Neighbourhood permit activity"
       subtitle="Building permits issued per year"
     >
-      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {activity.map((a) => (
-          <div key={a.year} style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span className="mono" style={{ width: 44, color: "var(--ink3)", fontSize: 13 }}>
-              {a.year}
-            </span>
-            <div style={{ flex: 1, height: 10, background: "var(--surface-alt)", borderRadius: 5 }}>
-              <div
-                style={{
-                  width: `${(a.count / max) * 100}%`,
-                  height: "100%",
-                  background: "var(--gold)",
-                  borderRadius: 5,
-                }}
-              />
-            </div>
-            <span className="mono" style={{ width: 40, textAlign: "right", fontSize: 13 }}>
-              {a.count}
-            </span>
-          </div>
-        ))}
-      </div>
+      <ColumnTrend
+        items={activity.map((a) => ({
+          label: `${a.year}`,
+          value: a.count,
+          context: a.citywideAverage > 0 ? a.citywideAverage : undefined,
+        }))}
+        contextLabel="city-wide neighbourhood average"
+      />
     </KrokvaCard>
   );
 }
@@ -125,8 +118,19 @@ export function InfrastructureCard({
     infrastructure.speedLimit != null ||
     infrastructure.potholes > 0 ||
     infrastructure.publicTrees > 0;
+  const summary = [
+    infrastructure.speedLimit ? `${infrastructure.speedLimit} limit` : undefined,
+    infrastructure.publicTrees > 0 ? `${infrastructure.publicTrees} public trees` : undefined,
+  ]
+    .filter(Boolean)
+    .join(" · ");
   return (
-    <KrokvaCard eyebrow="Street · Infrastructure" title="Street infrastructure">
+    <KrokvaCard
+      eyebrow="Street · Infrastructure"
+      title="Street infrastructure"
+      collapsible
+      collapsedSummary={summary || "Street details"}
+    >
       {hasAny ? (
         <>
           <Fact label="Speed limit" value={infrastructure.speedLimit} />

@@ -2,6 +2,7 @@
 // trend, rush-hour towing, paid parking, and graffiti reports nearby.
 
 import { ErrorState, Fact, KrokvaCard } from "../KrokvaCard";
+import { ColumnTrend, HBars } from "../viz/Viz";
 import { AddressReport } from "@/lib/report/types";
 
 export function NeighbourhoodRiskCard({ report }: { report: AddressReport }) {
@@ -42,30 +43,27 @@ export function NeighbourhoodRiskCard({ report }: { report: AddressReport }) {
         <div style={{ marginTop: 12 }}>
           <span className="eyebrow">Rooming-house enforcement · {rooming.year}</span>
           <div style={{ marginTop: 8 }}>
-            <Fact label="Complaint-driven" value={rooming.complaintDriven ?? undefined} />
-            <Fact label="Proactive enforcement" value={rooming.proactive ?? undefined} />
-            <Fact label="In progress" value={rooming.inProgress ?? undefined} />
-            <Fact label="Completed" value={rooming.completed ?? undefined} />
+            <HBars
+              items={[
+                { label: "Complaint-driven", value: rooming.complaintDriven ?? NaN },
+                { label: "Proactive", value: rooming.proactive ?? NaN },
+                { label: "In progress", value: rooming.inProgress ?? NaN },
+                { label: "Completed", value: rooming.completed ?? NaN },
+              ]}
+            />
           </div>
         </div>
       ) : null}
 
       {fires.length ? (
-        <div style={{ marginTop: 12 }}>
-          <span className="eyebrow">Vacant-property fires · citywide</span>
+        <div style={{ marginTop: 14 }}>
+          <span className="eyebrow">
+            Vacant-property fires · citywide{fireTotal > 0 ? ` · ${fireTotal} over ${fires.length} yr` : ""}
+          </span>
           <div style={{ marginTop: 8 }}>
-            {fires.map((y) => (
-              <div className="kv" key={y.year}>
-                <span className="kv__key">{y.year}</span>
-                <span className="kv__val">{y.count}</span>
-              </div>
-            ))}
-            {fireTotal > 0 ? (
-              <div className="kv">
-                <span className="kv__key">Total (6 yr)</span>
-                <span className="kv__val">{fireTotal}</span>
-              </div>
-            ) : null}
+            <ColumnTrend
+              items={fires.map((y) => ({ label: `${y.year}`, value: y.count }))}
+            />
           </div>
         </div>
       ) : null}

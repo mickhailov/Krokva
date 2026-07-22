@@ -1,7 +1,9 @@
-// Police crime card — WPS reported crime for the neighbourhood, with the
-// latest year's counts set against the city-wide per-neighbourhood average.
+// Police crime card — WPS reported crime for the neighbourhood as a yearly
+// column trend against the city-wide per-neighbourhood average, plus top
+// crime/offence breakdowns as bars.
 
-import { ErrorState, Fact, KrokvaCard } from "../KrokvaCard";
+import { ErrorState, KrokvaCard } from "../KrokvaCard";
+import { ColumnTrend, DeltaBadge, HBars } from "../viz/Viz";
 import { titleCase } from "@/lib/format";
 import { AddressReport } from "@/lib/report/types";
 
@@ -43,61 +45,53 @@ export function PoliceCrimeCard({ report }: { report: AddressReport }) {
       eyebrow="Safety · WPS crime"
       title="Reported crime"
       subtitle={`${crime.neighbourhood}${crime.latestMonth ? ` · to ${monthLabel(crime.latestMonth.year, crime.latestMonth.month)}` : ""}`}
-      accent={latestYear ? `${latestYear.neighbourhood}` : undefined}
+      accent={latestYear ? `${latestYear.neighbourhood} in ${latestYear.year}` : undefined}
     >
       {latestYear ? (
-        <>
-          <Fact label={`Incidents (${latestYear.year})`} value={latestYear.neighbourhood} />
-          <Fact
-            label="City-wide neighbourhood avg"
-            value={Math.round(latestYear.citywideAverage)}
+        <div style={{ marginBottom: 10 }}>
+          <DeltaBadge
+            value={latestYear.neighbourhood}
+            baseline={latestYear.citywideAverage}
+            baselineLabel={`city avg (${Math.round(latestYear.citywideAverage)} per neighbourhood)`}
           />
-        </>
-      ) : null}
-
-      {crime.yearlyCounts.length ? (
-        <div style={{ marginTop: 12 }}>
-          <span className="eyebrow">Yearly totals</span>
-          <div style={{ marginTop: 8 }}>
-            {crime.yearlyCounts.map((y) => (
-              <div className="kv" key={y.year}>
-                <span className="kv__key">{y.year}</span>
-                <span className="kv__val">
-                  {y.neighbourhood}
-                  <span className="card__subtitle" style={{ marginLeft: 8 }}>
-                    avg {Math.round(y.citywideAverage)}
-                  </span>
-                </span>
-              </div>
-            ))}
-          </div>
         </div>
       ) : null}
 
+      {crime.yearlyCounts.length ? (
+        <ColumnTrend
+          items={crime.yearlyCounts.map((y) => ({
+            label: `${y.year}`,
+            value: y.neighbourhood,
+            context: y.citywideAverage,
+          }))}
+          contextLabel="city-wide neighbourhood average"
+        />
+      ) : null}
+
       {topCrimeTypes.length ? (
-        <div style={{ marginTop: 12 }}>
+        <div style={{ marginTop: 16 }}>
           <span className="eyebrow">Top crime types</span>
           <div style={{ marginTop: 8 }}>
-            {topCrimeTypes.map((t) => (
-              <div className="kv" key={t.incidentType}>
-                <span className="kv__key">{titleCase(t.incidentType)}</span>
-                <span className="kv__val">{t.count}</span>
-              </div>
-            ))}
+            <HBars
+              items={topCrimeTypes.map((t) => ({
+                label: titleCase(t.incidentType) ?? t.incidentType,
+                value: t.count,
+              }))}
+            />
           </div>
         </div>
       ) : null}
 
       {topOffenceTypes.length ? (
-        <div style={{ marginTop: 12 }}>
+        <div style={{ marginTop: 16 }}>
           <span className="eyebrow">Top offences</span>
           <div style={{ marginTop: 8 }}>
-            {topOffenceTypes.map((t) => (
-              <div className="kv" key={t.incidentType}>
-                <span className="kv__key">{titleCase(t.incidentType)}</span>
-                <span className="kv__val">{t.count}</span>
-              </div>
-            ))}
+            <HBars
+              items={topOffenceTypes.map((t) => ({
+                label: titleCase(t.incidentType) ?? t.incidentType,
+                value: t.count,
+              }))}
+            />
           </div>
         </div>
       ) : null}

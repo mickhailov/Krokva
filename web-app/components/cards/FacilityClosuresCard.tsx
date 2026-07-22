@@ -24,6 +24,8 @@ export function FacilityClosuresCard({ report }: { report: AddressReport }) {
       title="Facility closures"
       subtitle="Health-protection closure reports on this street"
       accent={`${closures.length}`}
+      collapsible
+      collapsedSummary={`${closures.length} closure report${closures.length === 1 ? "" : "s"} on this street`}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {closures.map((c, i) => (

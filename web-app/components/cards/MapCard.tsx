@@ -23,7 +23,7 @@ export function MapCard({ report }: { report: AddressReport }) {
   }
 
   return (
-    <KrokvaCard eyebrow="Report · Map" title="Location & nearby records" subtitle={report.property!.neighbourhood}>
+    <KrokvaCard wide eyebrow="Report · Map" title="Location & nearby records" subtitle={report.property!.neighbourhood}>
       <ReportMap points={points} />
       <div style={{ display: "flex", gap: 14, flexWrap: "wrap", marginTop: 10, fontSize: 12, color: "var(--ink3)" }}>
         <Legend color="#B89455" label="This address" />

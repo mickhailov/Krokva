@@ -62,12 +62,64 @@ export class SocrataError extends Error {
  */
 export const FETCH_TIMEOUT_MS = 12_000;
 
+/**
+ * The CDS facade rate-limits bursts (429/503). A report fans out ~75 queries at
+ * once, so (a) cap concurrent requests with a small pool and (b) retry
+ * rate-limited/transient failures with backoff instead of surfacing a
+ * "Database error" card for what is really back-pressure.
+ */
+const MAX_CONCURRENT_FETCHES = 8;
+const RETRY_STATUS = new Set([429, 502, 503, 504]);
+const RETRY_DELAYS_MS = [400, 1200];
+
+let activeFetches = 0;
+const fetchQueue: (() => void)[] = [];
+
+async function acquireSlot(): Promise<void> {
+  if (activeFetches < MAX_CONCURRENT_FETCHES) {
+    activeFetches += 1;
+    return;
+  }
+  await new Promise<void>((resolve) => fetchQueue.push(resolve));
+  activeFetches += 1;
+}
+
+function releaseSlot(): void {
+  activeFetches -= 1;
+  const next = fetchQueue.shift();
+  if (next) next();
+}
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
 export async function fetchDataset(
   datasetID: string,
   query: SoQLQuery = {},
   init?: { signal?: AbortSignal },
 ): Promise<SocrataRow[]> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+    try {
+      return await fetchDatasetOnce(datasetID, query, init);
+    } catch (e) {
+      lastError = e;
+      const status = e instanceof SocrataError ? e.status : undefined;
+      const retryable = status != null && RETRY_STATUS.has(status);
+      const cancelled = init?.signal?.aborted ?? false;
+      if (!retryable || cancelled || attempt === RETRY_DELAYS_MS.length) throw e;
+      await sleep(RETRY_DELAYS_MS[attempt]);
+    }
+  }
+  throw lastError;
+}
+
+async function fetchDatasetOnce(
+  datasetID: string,
+  query: SoQLQuery = {},
+  init?: { signal?: AbortSignal },
+): Promise<SocrataRow[]> {
   const url = buildURL(datasetID, query);
+  await acquireSlot();
   const timer = new AbortController();
   const timeout = setTimeout(() => timer.abort(), FETCH_TIMEOUT_MS);
   const signal = init?.signal
@@ -85,19 +137,24 @@ export async function fetchDataset(
     });
   } catch (e) {
     clearTimeout(timeout);
+    releaseSlot();
     // Our own timeout fired (not the caller cancelling): degrade to empty.
     if (timer.signal.aborted && !(init?.signal?.aborted ?? false)) return [];
     throw new SocrataError(`Network error fetching ${datasetID}: ${String(e)}`, datasetID);
   }
   clearTimeout(timeout);
-  if (!res.ok) {
-    throw new SocrataError(`HTTP ${res.status} fetching ${datasetID}`, datasetID, res.status);
-  }
   try {
-    return (await res.json()) as SocrataRow[];
-  } catch (e) {
-    // The facade returned a non-JSON body (e.g. an HTML error page).
-    throw new SocrataError(`Non-JSON response from ${datasetID}: ${String(e)}`, datasetID);
+    if (!res.ok) {
+      throw new SocrataError(`HTTP ${res.status} fetching ${datasetID}`, datasetID, res.status);
+    }
+    try {
+      return (await res.json()) as SocrataRow[];
+    } catch (e) {
+      // The facade returned a non-JSON body (e.g. an HTML error page).
+      throw new SocrataError(`Non-JSON response from ${datasetID}: ${String(e)}`, datasetID);
+    }
+  } finally {
+    releaseSlot();
   }
 }
 

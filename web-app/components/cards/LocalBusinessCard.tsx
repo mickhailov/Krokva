@@ -1,6 +1,7 @@
 // Daily living — licensed local businesses within 500 m + seasonal patios.
 
-import { EmptyState, ErrorState, Fact, KrokvaCard } from "../KrokvaCard";
+import { ErrorState, Fact, KrokvaCard } from "../KrokvaCard";
+import { HBars } from "../viz/Viz";
 import { titleCase } from "@/lib/format";
 import { AddressReport } from "@/lib/report/types";
 
@@ -31,12 +32,12 @@ export function LocalBusinessCard({ report }: { report: AddressReport }) {
         <div style={{ marginTop: 12 }}>
           <span className="eyebrow">Top categories</span>
           <div style={{ marginTop: 8 }}>
-            {categories.map((c) => (
-              <div className="kv" key={c.incidentType}>
-                <span className="kv__key">{titleCase(c.incidentType)}</span>
-                <span className="kv__val">{c.count}</span>
-              </div>
-            ))}
+            <HBars
+              items={categories.map((c) => ({
+                label: titleCase(c.incidentType) ?? c.incidentType,
+                value: c.count,
+              }))}
+            />
           </div>
         </div>
       ) : null}

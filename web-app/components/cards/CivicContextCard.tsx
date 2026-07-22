@@ -34,6 +34,13 @@ export function CivicContextCard({ report }: { report: AddressReport }) {
       eyebrow="Daily · Civic"
       title="Address context"
       subtitle={ctx.neighbourhood ? titleCase(ctx.neighbourhood) : undefined}
+      collapsible
+      collapsedSummary={[
+        ctx.ward ? titleCase(ctx.ward) : undefined,
+        ctx.postalCode?.toUpperCase(),
+      ]
+        .filter(Boolean)
+        .join(" · ")}
     >
       <Fact label="Ward" value={ctx.ward ? titleCase(ctx.ward) : undefined} />
       <Fact

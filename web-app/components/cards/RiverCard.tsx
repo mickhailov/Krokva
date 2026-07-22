@@ -23,6 +23,8 @@ export function RiverCard({ report }: { report: AddressReport }) {
       title="River water levels"
       subtitle={`${river.location} · ${river.distanceDescription}`}
       accent={river.riverName}
+      collapsible
+      collapsedSummary={`${river.riverName} · ${river.distanceDescription}`}
     >
       <Fact
         label="James datum"

@@ -6,16 +6,60 @@ export function KrokvaCard({
   title,
   subtitle,
   accent,
+  wide,
+  collapsible,
+  collapsedSummary,
   children,
 }: {
   eyebrow: string;
   title: string;
   subtitle?: string;
   accent?: string;
+  /** Span the full dashboard-grid width (maps, hero modules). */
+  wide?: boolean;
+  /** Render as a collapsed <details> (quiet/reference cards) that expands on
+   *  click and while printing. Requires collapsedSummary for the closed line. */
+  collapsible?: boolean;
+  /** One-line status shown in the collapsed header (e.g. "All in range · 2025"). */
+  collapsedSummary?: React.ReactNode;
   children: React.ReactNode;
 }) {
+  const className = [
+    "card",
+    wide ? "card--wide" : "",
+    collapsible ? "card--collapsible" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (collapsible) {
+    return (
+      <details className={className}>
+        <summary className="card__summary">
+          <div style={{ minWidth: 0 }}>
+            <div className="card__eyebrow" style={{ marginBottom: 6 }}>
+              <span className="eyebrow">{eyebrow}</span>
+              {accent ? <span className="pill">{accent}</span> : null}
+            </div>
+            <h2 className="card__title">{title}</h2>
+            {collapsedSummary ? (
+              <p className="card__subtitle card__collapsed-summary">{collapsedSummary}</p>
+            ) : null}
+          </div>
+          <span className="card__chevron" aria-hidden>
+            ›
+          </span>
+        </summary>
+        <div className="card__body">
+          {subtitle ? <p className="card__subtitle">{subtitle}</p> : null}
+          <div style={{ marginTop: 12 }}>{children}</div>
+        </div>
+      </details>
+    );
+  }
+
   return (
-    <section className="card">
+    <section className={className}>
       <div className="card__eyebrow">
         <span className="eyebrow">{eyebrow}</span>
         {accent ? <span className="pill">{accent}</span> : null}

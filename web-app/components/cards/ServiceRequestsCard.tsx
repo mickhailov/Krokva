@@ -1,22 +1,25 @@
 // Daily living · 311 service requests — neighbourhood totals for the trailing
 // year plus top subjects/types and the most recent requests.
 
-import { EmptyState, ErrorState, Fact, KrokvaCard } from "../KrokvaCard";
+import { EmptyState, ErrorState, KrokvaCard } from "../KrokvaCard";
+import { HBars, Sparkline, StatRow, StatTile } from "../viz/Viz";
 import { shortDate, titleCase } from "@/lib/format";
 import { AddressReport, IncidentBreakdown } from "@/lib/report/types";
 
-function BreakdownList({ label, items }: { label: string; items: IncidentBreakdown[] }) {
+const MONTH_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+function BreakdownBars({ label, items }: { label: string; items: IncidentBreakdown[] }) {
   if (items.length === 0) return null;
   return (
-    <div style={{ marginTop: 12 }}>
+    <div style={{ marginTop: 14 }}>
       <span className="eyebrow">{label}</span>
       <div style={{ marginTop: 8 }}>
-        {items.map((item) => (
-          <div className="kv" key={item.incidentType}>
-            <span className="kv__key">{titleCase(item.incidentType)}</span>
-            <span className="kv__val">{item.count}</span>
-          </div>
-        ))}
+        <HBars
+          items={items.map((item) => ({
+            label: titleCase(item.incidentType) ?? item.incidentType,
+            value: item.count,
+          }))}
+        />
       </div>
     </div>
   );
@@ -46,12 +49,28 @@ export function ServiceRequestsCard({ report }: { report: AddressReport }) {
       subtitle={`${service.neighbourhood} · last 12 months`}
       accent={`${service.totalLastYear}`}
     >
-      <Fact label="Total requests (last year)" value={service.totalLastYear} />
-      <Fact label="Open" value={service.openLastYear || undefined} />
-      <Fact label="Closed" value={service.closedLastYear || undefined} />
+      <StatRow>
+        <StatTile label="Requests · 12 mo" value={service.totalLastYear} />
+        <StatTile label="Open" value={service.openLastYear || undefined} tone="warn" />
+        <StatTile label="Closed" value={service.closedLastYear || undefined} tone="good" />
+      </StatRow>
 
-      <BreakdownList label="Top subjects" items={subjects} />
-      <BreakdownList label="Top request types" items={types} />
+      {service.monthlyTrend.length > 2 ? (
+        <div style={{ marginTop: 14 }}>
+          <span className="eyebrow">Monthly trend</span>
+          <div style={{ marginTop: 6 }}>
+            <Sparkline
+              points={service.monthlyTrend.slice(-12).map((m) => ({
+                label: `${MONTH_SHORT[(m.month - 1 + 12) % 12]} ${m.year}`,
+                value: m.count,
+              }))}
+            />
+          </div>
+        </div>
+      ) : null}
+
+      <BreakdownBars label="Top subjects" items={subjects} />
+      <BreakdownBars label="Top request types" items={types} />
 
       {recent.length ? (
         <div style={{ marginTop: 12 }}>

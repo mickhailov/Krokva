@@ -26,6 +26,8 @@ export function CapitalWorksCard({ report }: { report: AddressReport }) {
       title="Capital projects"
       subtitle="Planned and active works on this street"
       accent={`${projects.length}`}
+      collapsible
+      collapsedSummary={`${projects.length} project${projects.length === 1 ? "" : "s"} on this street`}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {projects.map((p, i) => (

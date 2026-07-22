@@ -28,6 +28,12 @@ export function AquaticsCard({ report }: { report: AddressReport }) {
       title="Pools & amenities"
       subtitle="Within 500 m"
       accent={pools.length ? `${pools.length}` : undefined}
+      collapsible
+      collapsedSummary={
+        pools.length
+          ? `${pools.length} pool${pools.length === 1 ? "" : "s"} within 500 m`
+          : "Walkways & Wi-Fi nearby"
+      }
     >
       {pools.length ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>

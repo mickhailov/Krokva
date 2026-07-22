@@ -2,6 +2,7 @@
 // performance, pass-ups, and estimated daily boardings.
 
 import { EmptyState, ErrorState, Fact, KrokvaCard } from "../KrokvaCard";
+import { Meter } from "../viz/Viz";
 import { AddressReport } from "@/lib/report/types";
 
 export function TransitCard({ report }: { report: AddressReport }) {
@@ -42,10 +43,20 @@ export function TransitCard({ report }: { report: AddressReport }) {
             : undefined
         }
       />
-      <Fact
-        label="On-time performance"
-        value={transit.onTimePercentage != null ? `${Math.round(transit.onTimePercentage)}%` : undefined}
-      />
+      {transit.onTimePercentage != null ? (
+        <div style={{ padding: "9px 0", borderBottom: "1px solid var(--line-soft)" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 16, fontSize: 14 }}>
+            <span style={{ color: "var(--ink3)" }}>On-time performance</span>
+            <span style={{ fontWeight: 600 }}>{Math.round(transit.onTimePercentage)}%</span>
+          </div>
+          <div style={{ marginTop: 6 }}>
+            <Meter
+              value={transit.onTimePercentage}
+              tone={transit.onTimePercentage >= 80 ? "good" : transit.onTimePercentage >= 65 ? "warn" : "bad"}
+            />
+          </div>
+        </div>
+      ) : null}
       <Fact
         label="Avg schedule deviation"
         value={

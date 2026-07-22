@@ -170,7 +170,7 @@ async function fetchLaneClosures(
     init,
   ).catch(() => []);
 
-  return rows.flatMap((row) => {
+  const closures = rows.flatMap((row) => {
     const street = rowString(row, "primary_street");
     if (!street) return [];
     const title = [street, rowString(row, "cross_street")]
@@ -193,6 +193,16 @@ async function fetchLaneClosures(
       coordinate: parseCoordinate(row),
     };
     return [disruption];
+  });
+
+  // The feed repeats one physical closure across several rows (per-day status
+  // entries); collapse to one card row per closure span.
+  const seen = new Set<string>();
+  return closures.filter((c) => {
+    const key = [c.title, c.detail ?? "", c.startDate ?? "", c.endDate ?? ""].join("|");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
   });
 }
 

@@ -2,6 +2,7 @@
 // distribution system. Renders one row per measured parameter (average + range).
 
 import { ErrorState, Fact, KrokvaCard } from "../KrokvaCard";
+import { RangeStrip } from "../viz/Viz";
 import { titleCase } from "@/lib/format";
 import { AddressReport, WaterQualityReading } from "@/lib/report/types";
 
@@ -43,15 +44,32 @@ export function WaterQualityCard({ report }: { report: AddressReport }) {
       title="Water quality"
       subtitle={subtitleParts.length ? subtitleParts.join(" · ") : undefined}
       accent={`${water.parameters.length}`}
+      collapsible
+      collapsedSummary={`${water.parameters.length} parameters tested${water.year != null ? ` · ${water.year}` : ""}`}
     >
       <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
         {water.parameters.map((r) => {
           const value = readingValue(r);
           const range = readingRange(r);
+          const showStrip = r.minimum != null && r.maximum != null && r.maximum > r.minimum;
           return (
-            <div key={r.parameter}>
+            <div key={r.parameter} style={{ paddingBottom: showStrip ? 6 : 0 }}>
               <Fact label={titleCase(r.parameter) ?? r.parameter} value={value} />
-              {range ? (
+              {showStrip ? (
+                <div title={`Min ${r.minimum} · avg ${r.average ?? "—"} · max ${r.maximum}${r.units ? ` ${r.units}` : ""}`}>
+                  <RangeStrip
+                    min={r.minimum}
+                    max={r.maximum}
+                    avg={r.average}
+                    domainMin={0}
+                    domainMax={r.maximum as number}
+                  />
+                  <div className="spark__caption">
+                    <span>0</span>
+                    <span>range {range}</span>
+                  </div>
+                </div>
+              ) : range ? (
                 <div className="card__subtitle" style={{ marginTop: -2 }}>
                   Range {range}
                 </div>

@@ -2,6 +2,7 @@
 // into primary / non-primary residence licences with the most recent listings.
 
 import { ErrorState, Fact, KrokvaCard } from "../KrokvaCard";
+import { HBars } from "../viz/Viz";
 import { shortDate, titleCase } from "@/lib/format";
 import { AddressReport } from "@/lib/report/types";
 
@@ -26,8 +27,16 @@ export function ShortTermRentalsCard({ report }: { report: AddressReport }) {
       accent={`${str.total}`}
     >
       <Fact label="Licensed listings" value={str.total} />
-      <Fact label="Primary residence" value={str.primaryCount || undefined} />
-      <Fact label="Non-primary residence" value={str.nonPrimaryCount || undefined} />
+      {str.primaryCount || str.nonPrimaryCount ? (
+        <div style={{ margin: "10px 0 4px" }}>
+          <HBars
+            items={[
+              { label: "Primary residence", value: str.primaryCount },
+              { label: "Non-primary", value: str.nonPrimaryCount, emphasis: false },
+            ].filter((x) => x.value > 0)}
+          />
+        </div>
+      ) : null}
 
       {str.recent.length > 0 ? (
         <div style={{ display: "flex", flexDirection: "column", gap: 8, marginTop: 10 }}>

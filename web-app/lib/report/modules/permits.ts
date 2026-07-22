@@ -114,11 +114,20 @@ export async function fetchVacantOrders(
     { where: `(${streetClauses})`, order: "order_issued_date DESC", limit: 40 },
     init,
   ).catch(() => []);
-  return rows.map((row) => ({
+  const orders = rows.map((row) => ({
     issuedDate: parseDate(rowString(row, "order_issued_date")),
     address: rowString(row, "address") ?? "Address unavailable",
     orderType: rowString(row, "order_type") ?? "Compliance order",
     distanceDescription: undefined,
     coordinate: parseCoordinate(row),
   }));
+  // One building accrues the same order type across many inspections; keep the
+  // most recent per (address, type) so the card isn't a wall of duplicates.
+  const seen = new Set<string>();
+  return orders.filter((o) => {
+    const key = `${o.address.toUpperCase()}|${o.orderType.toUpperCase()}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }

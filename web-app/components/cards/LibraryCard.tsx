@@ -32,6 +32,8 @@ export function LibraryCard({ report }: { report: AddressReport }) {
       title={library.name}
       subtitle={library.distanceDescription}
       accent={library.distanceDescription}
+      collapsible
+      collapsedSummary={`${library.distanceDescription} away`}
     >
       <Fact label="Address" value={library.address} />
       {features.length ? (

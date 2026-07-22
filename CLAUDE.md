@@ -51,6 +51,7 @@ CKANProvider, SocrataProvider, StubProviders, WinnipegProvider
 - `memory/feature-report-pdf-export.md` — PDF export of Reports — card changes MUST flow into the PDF; ReportCardCatalog is the single source of truth
 - `memory/infra-cds-data-backend.md` — "Krokva's Winnipeg data now comes from the CDS facade (civic.144.217.5.174.sslip.io), not the decommissioned krokva.* mirror"
 - `memory/infra-ovh-krokva-web.md` — "OVH/Lightsail shared host — SSH access, nginx site layout, and how krokva.com landing is deployed"
+- `memory/project-krokva-web.md` — Krokva web service (Next.js) in web-app/ — ports the iOS report to the web; replaces the app. Port is in progress.
 - `memory/project-myhata-spinoff.md` — MyHata — homeowner spin-off of Krokva with a push backend (separate folders)
 
 <!-- AUTOGEN:END -->

@@ -1,7 +1,8 @@
 // Neighbourhood values card — assessed-value distribution ($50k bins) for the
-// address's neighbourhood. Reads report.neighbourhoodValues.
+// address's neighbourhood, with this property's band highlighted.
 
-import { ErrorState, Fact, KrokvaCard } from "../KrokvaCard";
+import { ErrorState, KrokvaCard } from "../KrokvaCard";
+import { HBars } from "../viz/Viz";
 import { AddressReport } from "@/lib/report/types";
 
 export function NeighbourhoodValuesCard({ report }: { report: AddressReport }) {
@@ -18,6 +19,18 @@ export function NeighbourhoodValuesCard({ report }: { report: AddressReport }) {
   if (!bins || bins.length === 0) return null;
 
   const total = bins.reduce((sum, bin) => sum + bin.count, 0);
+  const subjectValue = report.property?.totalAssessedValue;
+  // Highlight the band this property falls into ($50k bins around the midpoint).
+  const subjectBin =
+    subjectValue != null
+      ? bins.reduce(
+          (best, bin) =>
+            Math.abs(bin.midpoint - subjectValue) < Math.abs((best?.midpoint ?? Infinity) - subjectValue)
+              ? bin
+              : best,
+          undefined as (typeof bins)[number] | undefined
+        )
+      : undefined;
 
   return (
     <KrokvaCard
@@ -26,18 +39,20 @@ export function NeighbourhoodValuesCard({ report }: { report: AddressReport }) {
       subtitle="Assessed values across this neighbourhood, in $50k bands"
       accent={`${total} properties`}
     >
-      <Fact label="Properties assessed" value={total} />
-      <div style={{ marginTop: 12 }}>
-        <span className="eyebrow">By assessed value</span>
-        <div style={{ marginTop: 8 }}>
-          {bins.map((bin) => (
-            <div className="kv" key={bin.midpoint}>
-              <span className="kv__key">{bin.bucket}</span>
-              <span className="kv__val">{bin.count}</span>
-            </div>
-          ))}
+      <HBars
+        items={bins.map((bin) => ({
+          label: bin.bucket,
+          value: bin.count,
+          emphasis: subjectBin ? bin.midpoint === subjectBin.midpoint : true,
+        }))}
+      />
+      {subjectBin ? (
+        <div className="chart-legend">
+          <span className="chart-legend__item">
+            <span className="swatch swatch--bar" /> this property&apos;s band ({subjectBin.bucket})
+          </span>
         </div>
-      </div>
+      ) : null}
     </KrokvaCard>
   );
 }
