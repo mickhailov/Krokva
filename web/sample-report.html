@@ -175,9 +175,27 @@ h1.addr{font-size:31px;font-weight:750;letter-spacing:-.02em;margin-top:16px;lin
 .foot{margin-top:28px;border-top:1px solid var(--line);padding-top:14px;font-size:11px;color:var(--ink3)}
 .foot b{color:var(--ink2)}
 
+/* web-only chrome (back link + download bar) */
+.backlink{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:650;color:var(--ink3);
+  text-decoration:none;padding:6px 12px;border:1px solid var(--line);border-radius:999px;background:var(--surface)}
+.backlink:hover{color:var(--ink);background:var(--surface-alt)}
+.brand a{display:flex;align-items:center;gap:10px;text-decoration:none;color:inherit}
+.dlbar{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;align-items:center;justify-content:center;gap:14px;
+  padding:10px 20px;background:color-mix(in srgb, var(--paper) 90%, transparent);
+  backdrop-filter:saturate(1.2) blur(8px);-webkit-backdrop-filter:saturate(1.2) blur(8px);
+  border-top:1px solid var(--line)}
+.dlbar__text{font-size:12.5px;color:var(--ink3)}
+.dlbar__btn{display:inline-flex;align-items:center;gap:8px;padding:9px 16px;border-radius:999px;
+  border:1px solid var(--gold);background:var(--gold-soft);color:var(--gold-deep);
+  font-size:13px;font-weight:700;text-decoration:none}
+.dlbar__btn:hover{background:var(--gold);color:#fff}
+.dlbar__btn svg{flex:none}
+body{padding-bottom:64px}
+
 @page{margin:12mm;size:A4}
 @media print{
-  body{background:#fff}
+  body{background:#fff;padding-bottom:0}
+  .no-print{display:none !important}
   .page{max-width:100%;padding:0}
   .title{min-height:0}
   .card{border:1px solid var(--line)}
@@ -191,12 +209,15 @@ h1.addr{font-size:31px;font-weight:750;letter-spacing:-.02em;margin-top:16px;lin
   <!-- ============ TITLE PAGE ============ -->
   <div class="title">
     <div class="brand">
-      <svg viewBox="0 0 32 32" aria-label="Krokva">
-        <path d="M6 25 L16 7 L26 25" fill="none" stroke="#B89455" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
-        <circle cx="16" cy="18" r="1.7" fill="#B89455"/>
-      </svg>
-      <span class="wordmark">Krokva</span>
-      <span class="sample-tag">Sample report · illustrative data</span>
+      <a href="https://krokva.com/" aria-label="Back to krokva.com">
+        <svg viewBox="0 0 32 32" aria-label="Krokva" style="width:26px;height:26px">
+          <path d="M6 25 L16 7 L26 25" fill="none" stroke="#B89455" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+          <circle cx="16" cy="18" r="1.7" fill="#B89455"/>
+        </svg>
+        <span class="wordmark">Krokva</span>
+      </a>
+      <span class="sample-tag" style="margin-left:auto">Sample report · illustrative data</span>
+      <a class="backlink no-print" href="https://krokva.com/">← Back</a>
     </div>
 
     <div class="title__mid">
@@ -1154,6 +1175,14 @@ h1.addr{font-size:31px;font-weight:750;letter-spacing:-.02em;margin-top:16px;lin
     Winnipeg's open data, Statistics Canada census releases and provincial sources, and each card names its source and date.</p>
     <p style="margin-top:8px">Krokva · krokva.com · hello@krokva.com</p>
   </div>
+</div>
+
+<div class="dlbar no-print">
+  <span class="dlbar__text">Prefer a file? This whole dossier fits in one PDF.</span>
+  <a class="dlbar__btn" href="krokva-sample-report.pdf" target="_blank" rel="noopener">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none"><path d="M12 3v11m0 0 4-4m-4 4-4-4M5 20h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    Download PDF
+  </a>
 </div>
 </body>
 </html>
