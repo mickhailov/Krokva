@@ -215,6 +215,12 @@
   footer{border-top:1px solid var(--line); margin-top:56px; padding:22px 0 34px}
   .foot-row{display:flex; flex-wrap:wrap; gap:8px 20px; align-items:center; color:var(--ink3); font-size:12px}
   .foot-row .mono{font-size:11px; letter-spacing:.04em}
+  .studio{margin-left:auto; display:inline-flex; align-items:center; gap:8px; text-decoration:none; color:var(--ink3)}
+  .studio:hover{color:var(--ink)}
+  .studio-label{font-family:ui-monospace,SFMono-Regular,monospace; font-size:10px; font-weight:700;
+    letter-spacing:.12em; text-transform:uppercase}
+  .studio .tl-mark{height:26px; width:auto; display:block}
+  @media (max-width:560px){ .studio{margin-left:0; width:100%} }
   .sep{color:var(--line)}
 </style>
 </head>
@@ -393,6 +399,17 @@
         <span>Civic address dossiers · Canada</span>
         <span class="sep">/</span>
         <span class="mono">© 2026</span>
+        <a class="studio" href="https://terrikonlabs.com" target="_blank" rel="noopener">
+          <span class="studio-label">Made by</span>
+          <svg class="tl-mark" viewBox="0 0 764 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Terrikon Labs">
+            <defs><clipPath id="tlclip"><circle cx="120" cy="110" r="78"/></clipPath></defs>
+            <circle cx="120" cy="110" r="78" fill="#17140F"/>
+            <g clip-path="url(#tlclip)">
+              <polyline points="42,158 82,104 100,126 138,62 200,168" fill="none" stroke="#F97C1B" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+            <text x="238" y="130" font-family="Futura, 'Avenir Next', Montserrat, 'Trebuchet MS', sans-serif" font-size="54" fill="#17140F"><tspan font-weight="800" letter-spacing="1">TERRIKON</tspan><tspan dx="18" font-weight="300" letter-spacing="8">LABS</tspan></text>
+          </svg>
+        </a>
       </div>
     </footer>
   </div>

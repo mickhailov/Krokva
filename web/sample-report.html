@@ -174,6 +174,10 @@ h1.addr{font-size:31px;font-weight:750;letter-spacing:-.02em;margin-top:16px;lin
 /* footer */
 .foot{margin-top:28px;border-top:1px solid var(--line);padding-top:14px;font-size:11px;color:var(--ink3)}
 .foot b{color:var(--ink2)}
+.foot__studio{display:flex;align-items:center;gap:9px;margin-top:12px;text-decoration:none;color:var(--ink3)}
+.foot__studio .tl-mark{height:24px;width:auto;display:block}
+.foot__studio span{font-family:ui-monospace,SFMono-Regular,monospace;font-size:9.5px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase}
 
 /* web-only chrome (back link + download bar) */
 .backlink{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:650;color:var(--ink3);
@@ -1174,6 +1178,17 @@ body{padding-bottom:64px}
     written to show the shape of a Krokva report on an older, mixed block. A real report is assembled from the City of
     Winnipeg's open data, Statistics Canada census releases and provincial sources, and each card names its source and date.</p>
     <p style="margin-top:8px">Krokva · krokva.com · hello@krokva.com</p>
+    <a class="foot__studio" href="https://terrikonlabs.com" target="_blank" rel="noopener">
+      <span>Made by</span>
+      <svg class="tl-mark" viewBox="0 0 764 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Terrikon Labs">
+            <defs><clipPath id="tlclip"><circle cx="120" cy="110" r="78"/></clipPath></defs>
+            <circle cx="120" cy="110" r="78" fill="#17140F"/>
+            <g clip-path="url(#tlclip)">
+              <polyline points="42,158 82,104 100,126 138,62 200,168" fill="none" stroke="#F97C1B" stroke-width="11" stroke-linecap="round" stroke-linejoin="round"/>
+            </g>
+            <text x="238" y="130" font-family="Futura, 'Avenir Next', Montserrat, 'Trebuchet MS', sans-serif" font-size="54" fill="#17140F"><tspan font-weight="800" letter-spacing="1">TERRIKON</tspan><tspan dx="18" font-weight="300" letter-spacing="8">LABS</tspan></text>
+          </svg>
+    </a>
   </div>
 </div>
 
