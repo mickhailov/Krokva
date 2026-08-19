@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Krokva — sample report · 418 Chalmers Avenue, Winnipeg</title>
+<meta name="description" content="A sample Krokva civic dossier for a Winnipeg address in Elmwood: value, flags, safety, daily life, schools and travel. Illustrative data.">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M6 25 L16 7 L26 25' fill='none' stroke='%23B89455' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'/%3E%3Ccircle cx='16' cy='18' r='1.6' fill='%23B89455'/%3E%3C/svg%3E">
+<style>
+:root{
+  --paper:#EDE7D6; --surface:#F4ECD5; --surface-alt:#E2DBC6;
+  --ink:#1B1E25; --ink2:#2A2E37; --ink3:#6E727C;
+  --line:#D8D0BD; --line-soft:#E2DBC6;
+  --gold:#B89455; --gold-soft:#E5D6B0; --gold-deep:#937539;
+  --navy:#4E5874; --sage:#6B8166; --clay:#B07262;
+  --radius:16px; --radius-sm:10px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{
+  background:var(--paper); color:var(--ink);
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  line-height:1.5; -webkit-font-smoothing:antialiased;
+  print-color-adjust:exact; -webkit-print-color-adjust:exact;
+}
+.mono{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace}
+.eyebrow{font-family:ui-monospace,SFMono-Regular,"SF Mono",Menlo,monospace;font-size:9.5px;font-weight:700;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--ink3)}
+.page{max-width:820px;margin:0 auto;padding:26px 24px 40px}
+
+/* ---- cover ---- */
+.cover{border-bottom:2px solid var(--gold);padding-bottom:18px;margin-bottom:6px}
+.brand{display:flex;align-items:center;gap:10px}
+.brand svg{width:26px;height:26px}
+.wordmark{font-size:18px;font-weight:700;letter-spacing:.02em}
+.sample-tag{margin-left:auto;font-family:ui-monospace,SFMono-Regular,monospace;font-size:9.5px;font-weight:700;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--gold-deep);border:1px solid var(--line);
+  background:var(--surface);border-radius:999px;padding:4px 10px}
+h1.addr{font-size:31px;font-weight:750;letter-spacing:-.02em;margin-top:16px;line-height:1.1}
+.addr-sub{color:var(--ink3);font-size:13px;margin-top:6px}
+
+/* ---- score band ---- */
+.score{display:grid;grid-template-columns:auto 1fr;gap:22px;align-items:center;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:18px 20px;margin-top:16px}
+.score__ring{width:104px;height:104px;position:relative;flex:none}
+.score__num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.score__num b{font-size:30px;font-weight:750;letter-spacing:-.02em;line-height:1}
+.score__num span{font-size:8px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);
+  font-family:ui-monospace,SFMono-Regular,monospace;margin-top:3px}
+.verdict{border-left:3px solid var(--sage);padding:2px 0 2px 14px}
+.verdict__headline{font-size:16.5px;font-weight:700;letter-spacing:-.01em;line-height:1.35}
+.verdict__clauses{display:flex;flex-wrap:wrap;gap:5px 18px;margin-top:9px}
+.verdict__clause{font-size:12.5px;color:var(--ink3)}
+.verdict__clause--good{color:var(--sage)}
+.verdict__clause--bad{color:var(--clay)}
+
+/* ---- kpi strip ---- */
+.stat-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.stat{background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--radius-sm);padding:11px 13px}
+.stat__label{font-family:ui-monospace,SFMono-Regular,monospace;font-size:9px;font-weight:700;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink3)}
+.stat__value{font-size:20px;font-weight:750;letter-spacing:-.01em;margin-top:4px;line-height:1.15}
+.stat__sub{font-size:11.5px;color:var(--ink3);margin-top:2px}
+.delta{font-size:11.5px;font-weight:650}
+.delta--good{color:var(--sage)} .delta--bad{color:var(--clay)} .delta--warn{color:var(--gold-deep)}
+
+/* ---- digest ---- */
+.digest-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px 26px}
+.digest-row{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:9px}
+.digest-row__dot{width:8px;height:8px;border-radius:50%;flex:none}
+.digest-row--warn .digest-row__dot{background:var(--clay)}
+.digest-row--good .digest-row__dot{background:var(--sage)}
+.digest-row--note .digest-row__dot{background:var(--gold-deep)}
+.digest-row__text{font-size:13px;line-height:1.35}
+.digest-row__section{font-size:10px;font-weight:650;color:var(--ink3);white-space:nowrap;letter-spacing:.03em}
+
+/* ---- sections & cards ---- */
+.section-head{margin:26px 0 8px;font-size:11.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--ink3);break-after:avoid}
+.section-head__dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;vertical-align:middle}
+.section-head__dot--good{background:var(--sage)}
+.section-head__dot--warn{background:var(--gold-deep)}
+.section-head__dot--bad{background:var(--clay)}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;
+  break-inside:avoid;page-break-inside:avoid}
+.card--wide{grid-column:1 / -1}
+.card__eyebrow{display:flex;align-items:center;gap:8px;margin-bottom:9px}
+.card__title{font-size:16.5px;font-weight:700;letter-spacing:-.01em}
+.card__subtitle{font-size:12.5px;color:var(--ink3);margin-top:2px}
+.card__status{display:inline-flex;align-items:center;gap:5px;margin-left:auto;font-size:10.5px;font-weight:650}
+.card__status-dot{width:7px;height:7px;border-radius:50%}
+.card__status--good{color:var(--sage)} .card__status--good .card__status-dot{background:var(--sage)}
+.card__status--warn{color:var(--gold-deep)} .card__status--warn .card__status-dot{background:var(--gold-deep)}
+.card__status--bad{color:var(--clay)} .card__status--bad .card__status-dot{background:var(--clay)}
+.kv{display:flex;justify-content:space-between;gap:14px;padding:7px 0;border-bottom:1px solid var(--line-soft);font-size:13px}
+.kv:last-child{border-bottom:none}
+.kv__key{color:var(--ink3)}
+.kv__val{font-weight:600;text-align:right}
+.note{font-size:12px;color:var(--ink3);margin-top:9px}
+.pill{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.04em;padding:3px 9px;border-radius:999px;
+  background:var(--gold-soft);color:var(--gold-deep)}
+
+/* charts */
+.hbars{display:grid;gap:7px;margin-top:4px}
+.hbar{display:grid;grid-template-columns:minmax(84px,36%) 1fr 46px;align-items:center;gap:9px;font-size:12px}
+.hbar__label{color:var(--ink2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hbars--wide .hbar{grid-template-columns:minmax(126px,46%) 1fr 46px}
+.hbar__track{position:relative;height:8px;background:var(--surface-alt);border-radius:4px}
+.hbar__fill{position:absolute;top:0;bottom:0;left:0;background:var(--gold-deep);border-radius:2px 4px 4px 2px}
+.hbar__fill--muted{background:#A9A08A}
+.hbar__tick{position:absolute;top:-2px;bottom:-2px;width:2px;margin-left:-1px;background:var(--ink3);border-radius:1px}
+.hbar__value{font-size:11.5px;font-weight:600;text-align:right;font-variant-numeric:tabular-nums}
+.cols{display:flex;align-items:stretch;gap:8px;height:96px;margin-top:6px}
+.col{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px}
+.col__cap{font-size:10px;color:var(--ink3);font-variant-numeric:tabular-nums;margin-bottom:3px}
+.col__slot{position:relative;flex:1;width:100%;max-width:20px;display:flex;align-items:flex-end;justify-content:center;background:var(--surface-alt);border-radius:4px;overflow:hidden}
+.col__bar{width:100%;max-width:20px;background:var(--gold-deep);border-radius:4px 4px 0 0;min-height:2px}
+.col__label{font-size:10px;color:var(--ink3)}
+.range{position:relative;height:8px;background:var(--surface-alt);border-radius:4px;margin:10px 0 4px}
+.range__band{position:absolute;top:0;bottom:0;background:var(--gold-soft);border-radius:4px}
+.range__dot{position:absolute;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;border-radius:50%;
+  background:var(--gold-deep);border:2px solid var(--surface);box-sizing:content-box}
+.range-caption{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink3)}
+.meter{height:8px;background:var(--surface-alt);border-radius:4px;overflow:hidden;margin-top:8px}
+.meter__fill{height:100%;border-radius:2px 4px 4px 2px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;font-size:10.5px;color:var(--ink3)}
+.legend span.sw{display:inline-block;width:10px;height:8px;border-radius:2px;background:var(--gold-deep);margin-right:5px}
+.legend span.sw--tick{height:2px;background:var(--ink3)}
+
+/* title page */
+.title{display:flex;flex-direction:column;min-height:92vh}
+.title__mid{margin-top:26px}
+.title__addr{font-size:46px;font-weight:800;letter-spacing:-.025em;line-height:1.02;margin-top:14px}
+.toc{margin-top:22px}
+.toc__row{display:flex;align-items:flex-start;gap:12px;padding:9px 0;border-bottom:1px solid var(--line-soft)}
+.toc__row:last-child{border-bottom:none}
+.toc__num{font-family:ui-monospace,SFMono-Regular,monospace;font-size:10px;font-weight:700;color:var(--gold-deep);padding-top:3px;width:20px;flex:none}
+.toc__main{display:flex;flex-direction:column;min-width:0}
+.toc__label{font-size:15px;font-weight:700;letter-spacing:-.01em}
+.toc__sub{font-size:11.5px;color:var(--ink3);margin-top:1px}
+.toc__leader{flex:1;border-bottom:2px dotted var(--line);margin-top:12px}
+.toc__page{font-family:ui-monospace,SFMono-Regular,monospace;font-size:11px;font-weight:700;color:var(--ink2);padding-top:3px}
+.title__note{margin-top:auto;padding-top:14px;font-size:11px;color:var(--ink3)}
+.title__note b{color:var(--ink2)}
+
+/* running header on section pages */
+.runhead{display:flex;justify-content:space-between;gap:12px;font-family:ui-monospace,SFMono-Regular,monospace;font-size:9px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:18px}
+
+/* stack two cards in one grid cell */
+.vstack{display:grid;gap:12px;min-width:0}
+
+/* stacked share bar */
+.stack{display:flex;height:13px;border-radius:7px;overflow:hidden;margin-top:8px}
+.stack span{display:block;height:100%}
+
+/* score breakdown */
+.score__breakdown{grid-column:1/-1;display:grid;grid-template-columns:repeat(5,1fr);gap:14px;border-top:1px solid var(--line-soft);padding-top:12px}
+.sb{min-width:0}
+.sb__label{display:block;font-family:ui-monospace,SFMono-Regular,monospace;font-size:8.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb__row{display:flex;align-items:center;gap:7px;margin-top:6px}
+.sb__track{flex:1;height:6px;background:var(--surface-alt);border-radius:3px;overflow:hidden}
+.sb__fill{display:block;height:100%;border-radius:3px}
+.sb__num{font-size:12px;font-weight:750;font-variant-numeric:tabular-nums}
+
+/* safety spread */
+.safety-head{border-bottom:2px solid var(--gold);padding-bottom:12px;margin-bottom:14px}
+.safety-title{font-size:26px;font-weight:750;letter-spacing:-.02em;margin-top:6px;line-height:1.15}
+.safety-lede{font-size:13px;color:var(--ink3);margin-top:6px;max-width:64ch}
+.verdict--good{border-left-color:var(--sage)}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:14px 26px}
+.col__tick{position:absolute;left:8%;right:8%;height:2px;background:var(--ink3);border-radius:1px}
+
+/* footer */
+.foot{margin-top:28px;border-top:1px solid var(--line);padding-top:14px;font-size:11px;color:var(--ink3)}
+.foot b{color:var(--ink2)}
+
+@page{margin:12mm;size:A4}
+@media print{
+  body{background:#fff}
+  .page{max-width:100%;padding:0}
+  .title{min-height:0}
+  .card{border:1px solid var(--line)}
+  .break{break-before:page;page-break-before:always}
+}
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ============ TITLE PAGE ============ -->
+  <div class="title">
+    <div class="brand">
+      <svg viewBox="0 0 32 32" aria-label="Krokva">
+        <path d="M6 25 L16 7 L26 25" fill="none" stroke="#B89455" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/>
+        <circle cx="16" cy="18" r="1.7" fill="#B89455"/>
+      </svg>
+      <span class="wordmark">Krokva</span>
+      <span class="sample-tag">Sample report · illustrative data</span>
+    </div>
+
+    <div class="title__mid">
+      <span class="eyebrow">Civic address dossier · Winnipeg, MB</span>
+      <h1 class="title__addr">418 Chalmers Avenue</h1>
+      <p class="addr-sub">Glenelm · Elmwood–East Kildonan ward · R2L 0X4 &nbsp;·&nbsp; Report generated 12 Aug 2026</p>
+    </div>
+
+    <div class="score" style="margin-top:20px">
+    <div class="score__ring">
+      <svg viewBox="0 0 120 120" width="104" height="104">
+        <circle cx="60" cy="60" r="52" fill="none" stroke="#E2DBC6" stroke-width="11"/>
+        <circle cx="60" cy="60" r="52" fill="none" stroke="#937539" stroke-width="11" stroke-linecap="round"
+                stroke-dasharray="326.7" stroke-dashoffset="150.3" transform="rotate(-90 60 60)"/>
+      </svg>
+      <div class="score__num"><b>54</b><span>House score</span></div>
+    </div>
+    <div class="verdict verdict--warn">
+      <div class="verdict__headline">A cheap way into a walkable, river-adjacent block — but the house is 110 years old and the area runs above the city on property crime.</div>
+      <div class="verdict__clauses">
+        <span class="verdict__clause verdict__clause--good">Assessed $/sq ft 3% below nearby sales</span>
+        <span class="verdict__clause verdict__clause--good">School across the street, frequent transit 300 m away</span>
+        <span class="verdict__clause verdict__clause--bad">Break-ins run 57% above the city rate</span>
+        <span class="verdict__clause verdict__clause--bad">Lead water service likely · combined sewer district</span>
+      </div>
+    </div>
+    <div class="score__breakdown">
+      <div class="sb"><span class="sb__label">Value for money</span>
+        <span class="sb__row"><span class="sb__track"><span class="sb__fill" style="width:72%;background:#937539"></span></span><span class="sb__num">72</span></span></div>
+      <div class="sb"><span class="sb__label">Condition signals</span>
+        <span class="sb__row"><span class="sb__track"><span class="sb__fill" style="width:41%;background:#B07262"></span></span><span class="sb__num">41</span></span></div>
+      <div class="sb"><span class="sb__label">Safety</span>
+        <span class="sb__row"><span class="sb__track"><span class="sb__fill" style="width:38%;background:#B07262"></span></span><span class="sb__num">38</span></span></div>
+      <div class="sb"><span class="sb__label">Location &amp; amenities</span>
+        <span class="sb__row"><span class="sb__track"><span class="sb__fill" style="width:71%;background:#937539"></span></span><span class="sb__num">71</span></span></div>
+      <div class="sb"><span class="sb__label">Nuisance &amp; risk</span>
+        <span class="sb__row"><span class="sb__track"><span class="sb__fill" style="width:52%;background:#937539"></span></span><span class="sb__num">52</span></span></div>
+    </div>
+    </div>
+
+    <div class="toc">
+      <span class="eyebrow">Contents</span>
+      <div class="toc__row"><span class="toc__num">—</span>
+        <span class="toc__main"><span class="toc__label">At a glance</span><span class="toc__sub">Key numbers · what matters here · site plan</span></span>
+        <span class="toc__leader"></span><span class="toc__page">2</span></div>
+      <div class="toc__row"><span class="toc__num">01</span>
+        <span class="toc__main"><span class="toc__label">What's it worth?</span><span class="toc__sub">Assessment &amp; tax · sale history · comparable sales · block age</span></span>
+        <span class="toc__leader"></span><span class="toc__page">3</span></div>
+      <div class="toc__row"><span class="toc__num">02</span>
+        <span class="toc__main"><span class="toc__label">Anything flagged here?</span><span class="toc__sub">Permits · vacant orders · rooming houses · development nearby</span></span>
+        <span class="toc__leader"></span><span class="toc__page">4</span></div>
+      <div class="toc__row"><span class="toc__num">03</span>
+        <span class="toc__main"><span class="toc__label">Is it safe here?</span><span class="toc__sub">Fire &amp; emergency · crime &amp; break-ins · substances · enforcement</span></span>
+        <span class="toc__leader"></span><span class="toc__page">6</span></div>
+      <div class="toc__row"><span class="toc__num">04</span>
+        <span class="toc__main"><span class="toc__label">What's daily life like?</span><span class="toc__sub">Pipes &amp; sewer · who lives here · 311 · ward &amp; businesses</span></span>
+        <span class="toc__leader"></span><span class="toc__page">10</span></div>
+      <div class="toc__row"><span class="toc__num">05</span>
+        <span class="toc__main"><span class="toc__label">Schools &amp; getting around</span><span class="toc__sub">Distances · schools · transit · traffic &amp; noise · parks</span></span>
+        <span class="toc__leader"></span><span class="toc__page">12</span></div>
+      <div class="toc__row"><span class="toc__num">06</span>
+        <span class="toc__main"><span class="toc__label">Good to know</span><span class="toc__sub">Water · radon · capital works · rental market · sources</span></span>
+        <span class="toc__leader"></span><span class="toc__page">14</span></div>
+    </div>
+
+    <p class="title__note"><b>This is a sample.</b> The address is fictional and every figure is illustrative, written to show
+      the shape of a Krokva report on an older, mixed inner-city block. A real report is assembled live from the City of
+      Winnipeg's open data, Statistics Canada and provincial sources — each card names its dataset and date.</p>
+  </div>
+
+  <!-- ============ AT A GLANCE ============ -->
+  <div class="break"></div>
+  <div class="runhead"><span>Krokva · sample dossier</span><span>418 Chalmers Avenue</span></div>
+
+  <div class="stat-row">
+    <div class="stat">
+      <div class="stat__label">Assessed value</div>
+      <div class="stat__value">$228,000</div>
+      <div class="stat__sub"><span class="delta delta--warn">+9.1%</span> vs 2024 roll</div>
+    </div>
+    <div class="stat">
+      <div class="stat__label">Est. property tax</div>
+      <div class="stat__value">$3,050</div>
+      <div class="stat__sub">2026, municipal + school</div>
+    </div>
+    <div class="stat">
+      <div class="stat__label">Price per sq ft</div>
+      <div class="stat__value">$239</div>
+      <div class="stat__sub"><span class="delta delta--good">−3%</span> vs 4 comparables</div>
+    </div>
+    <div class="stat">
+      <div class="stat__label">Open flags</div>
+      <div class="stat__value">3</div>
+      <div class="stat__sub">Within 500 m — none on this parcel</div>
+    </div>
+  </div>
+
+  <!-- ============ DIGEST ============ -->
+  <div class="section-head">What matters here</div>
+  <div class="card card--wide">
+    <div class="digest-grid">
+      <div class="digest-row digest-row--warn"><span class="digest-row__dot"></span>
+        <span class="digest-row__text">Break-ins run at 14.8 per 1,000 homes — 57% above the city rate; garages off the back lane are the target.</span>
+        <span class="digest-row__section">Safety</span></div>
+      <div class="digest-row digest-row--good"><span class="digest-row__dot"></span>
+        <span class="digest-row__text">Assessed $/sq ft sits 3% below four recent sales — the entry price is the good news here.</span>
+        <span class="digest-row__section">Value</span></div>
+      <div class="digest-row digest-row--warn"><span class="digest-row__dot"></span>
+        <span class="digest-row__text">Built 1916: the water service is likely lead and the block sits on a combined sewer (renewal 2029).</span>
+        <span class="digest-row__section">Daily life</span></div>
+      <div class="digest-row digest-row--warn"><span class="digest-row__dot"></span>
+        <span class="digest-row__text">Two vacant-building orders and one open bylaw investigation within 500 m — one is four doors down.</span>
+        <span class="digest-row__section">Flags</span></div>
+      <div class="digest-row digest-row--good"><span class="digest-row__dot"></span>
+        <span class="digest-row__text">Elementary school 180 m across the street; frequent Henderson bus 300 m; downtown in 18 minutes.</span>
+        <span class="digest-row__section">Schools</span></div>
+      <div class="digest-row digest-row--note"><span class="digest-row__dot"></span>
+        <span class="digest-row__text">2026 reassessment jumped 9.1% — the appeal window is open until late June.</span>
+        <span class="digest-row__section">Value</span></div>
+    </div>
+  </div>
+
+  <div class="card card--wide" style="margin-top:14px">
+    <div class="card__eyebrow"><span class="eyebrow">Site &amp; surroundings</span></div>
+    <div class="card__title">Where it sits</div>
+    <div class="card__subtitle">Stylized plan, straight-line distances — the online report carries a full interactive map</div>
+    <svg viewBox="0 0 720 250" style="width:100%;margin-top:10px" role="img" aria-label="Site plan">
+      <!-- rail line -->
+      <line x1="480" y1="0" x2="720" y2="70" stroke="#6E727C" stroke-width="3" stroke-dasharray="10 5" opacity="0.6"/>
+      <text x="712" y="20" font-size="9" fill="#6E727C" text-anchor="end">CN main line · 400 m · ~14 trains/day</text>
+      <!-- roads -->
+      <line x1="110" y1="0" x2="110" y2="250" stroke="#D8D0BD" stroke-width="16"/>
+      <line x1="110" y1="70" x2="700" y2="70" stroke="#D8D0BD" stroke-width="9"/>
+      <line x1="110" y1="130" x2="700" y2="130" stroke="#D8D0BD" stroke-width="10"/>
+      <line x1="110" y1="195" x2="700" y2="195" stroke="#D8D0BD" stroke-width="9"/>
+      <text x="118" y="244" font-size="9" fill="#6E727C" font-family="ui-monospace,monospace" letter-spacing="1" transform="rotate(-90 118 244)"> </text>
+      <text x="96" y="120" font-size="9" fill="#6E727C" font-family="ui-monospace,monospace" letter-spacing="1" transform="rotate(90 96 120)">HENDERSON HWY</text>
+      <text x="380" y="122" font-size="8.5" fill="#6E727C" font-family="ui-monospace,monospace" letter-spacing="1">CHALMERS AVE</text>
+      <text x="380" y="63" font-size="8.5" fill="#6E727C" font-family="ui-monospace,monospace" letter-spacing="1">MARTIN AVE</text>
+      <text x="380" y="188" font-size="8.5" fill="#6E727C" font-family="ui-monospace,monospace" letter-spacing="1">UNION AVE</text>
+      <!-- river hint -->
+      <rect x="0" y="0" width="34" height="250" fill="#4E5874" opacity="0.14"/>
+      <text x="18" y="130" font-size="8.5" fill="#4E5874" text-anchor="middle" transform="rotate(-90 18 130)">RED RIVER · 600 m</text>
+      <!-- address lot mid-block -->
+      <rect x="318" y="102" width="24" height="20" rx="3" fill="#E5D6B0" stroke="#B89455" stroke-width="1.5"/>
+      <circle cx="330" cy="112" r="4" fill="#937539"/>
+      <text x="330" y="94" font-size="10" font-weight="700" fill="#1B1E25" text-anchor="middle">418 Chalmers</text>
+      <!-- school across street -->
+      <rect x="352" y="138" width="16" height="16" rx="3" fill="#4E5874"/>
+      <text x="376" y="150" font-size="9" fill="#6E727C">Elementary (K–6) · 180 m</text>
+      <!-- vacant orders -->
+      <circle cx="262" cy="112" r="5" fill="#B07262"/>
+      <text x="196" y="94" font-size="9" fill="#B07262" text-anchor="middle">Vacant order · 140 m</text>
+      <circle cx="470" cy="205" r="5" fill="#B07262"/>
+      <text x="482" y="215" font-size="9" fill="#B07262">Vacant order · 330 m</text>
+      <!-- park -->
+      <rect x="560" y="85" width="110" height="70" rx="12" fill="#6B8166" opacity="0.16"/>
+      <circle cx="590" cy="110" r="6" fill="#6B8166" opacity="0.55"/>
+      <circle cx="625" cy="132" r="6" fill="#6B8166" opacity="0.55"/>
+      <text x="615" y="168" font-size="9" fill="#6B8166" text-anchor="middle">Glenelm Park · 350 m</text>
+      <!-- transit + grocery on Henderson -->
+      <circle cx="110" cy="150" r="5" fill="#937539" stroke="#F4ECD5" stroke-width="2"/>
+      <text x="122" y="163" font-size="9" fill="#6E727C">Henderson bus · 300 m</text>
+      <circle cx="110" cy="55" r="5" fill="#937539" stroke="#F4ECD5" stroke-width="2"/>
+      <text x="122" y="48" font-size="9" fill="#6E727C">Grocery · 200 m</text>
+      <!-- community centre -->
+      <circle cx="240" cy="205" r="5" fill="#937539" stroke="#F4ECD5" stroke-width="2"/>
+      <text x="252" y="218" font-size="9" fill="#6E727C">Community centre · 400 m</text>
+      <!-- north + scale -->
+      <path d="M666 214 L670 200 L674 214 L670 210 Z" fill="#6E727C"/>
+      <text x="678" y="212" font-size="9" fill="#6E727C">N</text>
+      <line x1="560" y1="238" x2="640" y2="238" stroke="#6E727C" stroke-width="1.5"/>
+      <line x1="560" y1="234" x2="560" y2="242" stroke="#6E727C" stroke-width="1.5"/>
+      <line x1="640" y1="234" x2="640" y2="242" stroke="#6E727C" stroke-width="1.5"/>
+      <text x="648" y="241" font-size="9" fill="#6E727C">200 m</text>
+    </svg>
+  </div>
+
+  <!-- ============ VALUE ============ -->
+  <div class="break"></div>
+  <div class="runhead"><span>01 · What's it worth?</span><span>418 Chalmers Avenue</span></div>
+  <div class="section-head"><span class="section-head__dot section-head__dot--warn"></span>01 · What's it worth?</div>
+  <div class="grid">
+
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">Assessment</span>
+        <span class="card__status card__status--warn"><span class="card__status-dot"></span>+9.1% jump</span></div>
+      <div class="card__title">$228,000</div>
+      <div class="card__subtitle">2026 assessed value · single-family detached</div>
+      <div style="margin-top:12px">
+        <div class="kv"><span class="kv__key">Land</span><span class="kv__val">$45,000</span></div>
+        <div class="kv"><span class="kv__key">Building</span><span class="kv__val">$183,000</span></div>
+        <div class="kv"><span class="kv__key">Assessment class</span><span class="kv__val">Residential 1</span></div>
+        <div class="kv"><span class="kv__key">Est. 2026 tax</span><span class="kv__val">$3,050</span></div>
+      </div>
+      <span class="eyebrow" style="display:block;margin-top:14px">Assessment history · +22% since 2020</span>
+      <div class="cols" style="height:60px;margin-top:6px">
+        <div class="col"><span class="col__cap">$187k</span><span class="col__slot"><span class="col__bar" style="height:82%"></span></span><span class="col__label">2020</span></div>
+        <div class="col"><span class="col__cap">$196k</span><span class="col__slot"><span class="col__bar" style="height:86%"></span></span><span class="col__label">2022</span></div>
+        <div class="col"><span class="col__cap">$209k</span><span class="col__slot"><span class="col__bar" style="height:92%"></span></span><span class="col__label">2024</span></div>
+        <div class="col"><span class="col__cap">$228k</span><span class="col__slot"><span class="col__bar" style="height:100%"></span></span><span class="col__label">2026</span></div>
+      </div>
+      <p class="note">The 2026 step is the largest on record for this parcel. The appeal window is open until late June — comparables below are the evidence you would bring.</p>
+      <span class="eyebrow" style="display:block;margin-top:12px">Where the tax goes</span>
+      <div class="stack">
+        <span style="width:47%;background:#937539"></span>
+        <span style="width:49%;background:#4E5874"></span>
+        <span style="width:4%;background:#A9A08A"></span>
+      </div>
+      <div class="legend"><span><span class="sw" style="background:#937539"></span>Municipal $1,430</span><span><span class="sw" style="background:#4E5874"></span>School $1,500</span><span><span class="sw" style="background:#A9A08A"></span>Frontage $120</span></div>
+      <div class="range" style="margin-top:14px"><div class="range__band" style="left:18%;right:24%"></div><div class="range__dot" style="left:49%"></div></div>
+      <div class="range-caption"><span>$148k</span><span>Neighbourhood range</span><span>$318k</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">Property facts</span>
+        <span class="card__status card__status--warn"><span class="card__status-dot"></span>Century home</span></div>
+      <div class="card__title">Built 1916 · 912 sq ft</div>
+      <div class="card__subtitle">1¾ storey, single detached garage (1978)</div>
+      <div style="margin-top:12px">
+        <div class="kv"><span class="kv__key">Lot size</span><span class="kv__val">33 × 99 ft · 3,270 sq ft</span></div>
+        <div class="kv"><span class="kv__key">Rooms / baths</span><span class="kv__val">5 / 1</span></div>
+        <div class="kv"><span class="kv__key">Basement</span><span class="kv__val">Partial · rubble foundation</span></div>
+        <div class="kv"><span class="kv__key">Zoning</span><span class="kv__val">R2 — two-family</span></div>
+        <div class="kv"><span class="kv__key">Heating</span><span class="kv__val">Forced air · gas (furnace 2011)</span></div>
+        <div class="kv"><span class="kv__key">Air conditioning</span><span class="kv__val">None</span></div>
+      </div>
+      <span class="eyebrow" style="display:block;margin-top:14px">Sale history on record</span>
+      <svg viewBox="0 0 320 58" style="width:100%;margin-top:6px" role="img" aria-label="Sale history 1998–2026">
+        <line x1="10" y1="38" x2="310" y2="38" stroke="#D8D0BD" stroke-width="2"/>
+        <text x="10" y="52" font-size="9" fill="#6E727C">1998</text>
+        <text x="310" y="52" font-size="9" fill="#6E727C" text-anchor="end">2026</text>
+        <circle cx="10" cy="38" r="5" fill="#937539"/>
+        <text x="14" y="24" font-size="9" fill="#2A2E37">$54k</text>
+        <circle cx="106" cy="38" r="5" fill="#937539"/>
+        <text x="106" y="52" font-size="9" fill="#6E727C" text-anchor="middle">2007</text>
+        <text x="106" y="24" font-size="9" fill="#2A2E37" text-anchor="middle">$118k</text>
+        <circle cx="235" cy="38" r="5" fill="#937539"/>
+        <text x="235" y="52" font-size="9" fill="#6E727C" text-anchor="middle">2019</text>
+        <text x="235" y="24" font-size="9" fill="#2A2E37" text-anchor="middle">$212k</text>
+      </svg>
+      <p class="note">Roof and wiring era are not in the municipal record. For a 1916 house, ask specifically about knob-and-tube wiring, the electrical panel, and insulation.</p>
+    </div>
+
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">Comparable sales</span>
+        <span class="card__status card__status--good"><span class="card__status-dot"></span>−3%</span></div>
+      <div class="card__title">$239 / sq ft here</div>
+      <div class="card__subtitle">vs $247 median across four nearby sales, 2025–26</div>
+      <div class="hbars hbars--wide" style="margin-top:12px">
+        <div class="hbar"><span class="hbar__label">This address</span>
+          <span class="hbar__track"><span class="hbar__fill" style="width:88%"></span><span class="hbar__tick" style="left:91%"></span></span>
+          <span class="hbar__value">$239</span></div>
+        <div class="hbar"><span class="hbar__label">366 Chalmers · Jan 26</span>
+          <span class="hbar__track"><span class="hbar__fill hbar__fill--muted" style="width:93%"></span></span>
+          <span class="hbar__value">$252</span></div>
+        <div class="hbar"><span class="hbar__label">129 Bredin · Nov 25</span>
+          <span class="hbar__track"><span class="hbar__fill hbar__fill--muted" style="width:92%"></span></span>
+          <span class="hbar__value">$249</span></div>
+        <div class="hbar"><span class="hbar__label">215 Union · Feb 26</span>
+          <span class="hbar__track"><span class="hbar__fill hbar__fill--muted" style="width:91%"></span></span>
+          <span class="hbar__value">$245</span></div>
+        <div class="hbar"><span class="hbar__label">58 Martin · Sep 25</span>
+          <span class="hbar__track"><span class="hbar__fill hbar__fill--muted" style="width:89%"></span></span>
+          <span class="hbar__value">$241</span></div>
+      </div>
+      <div class="legend"><span><span class="sw"></span>This address</span><span><span class="sw sw--tick"></span>Comparable median</span></div>
+      <p class="note">Comparables sold for $198k–$232k between Sep 2025 and Feb 2026 — pre-war 1½–1¾ storey homes within 600 m. The market here is tight: the spread is only 5%.</p>
+    </div>
+
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">Neighbourhood values</span></div>
+      <div class="card__title">Where the block sits</div>
+      <div class="card__subtitle">Assessed value distribution, Glenelm</div>
+      <div class="cols">
+        <div class="col"><span class="col__cap">6%</span><span class="col__slot"><span class="col__bar" style="height:15%"></span></span><span class="col__label">&lt;150k</span></div>
+        <div class="col"><span class="col__cap">24%</span><span class="col__slot"><span class="col__bar" style="height:59%"></span></span><span class="col__label">150–200</span></div>
+        <div class="col"><span class="col__cap">41%</span><span class="col__slot"><span class="col__bar" style="height:100%"></span></span><span class="col__label">200–250</span></div>
+        <div class="col"><span class="col__cap">21%</span><span class="col__slot"><span class="col__bar" style="height:51%"></span></span><span class="col__label">250–300</span></div>
+        <div class="col"><span class="col__cap">8%</span><span class="col__slot"><span class="col__bar" style="height:20%"></span></span><span class="col__label">300k+</span></div>
+      </div>
+      <p class="note">This home falls in the 200–250k band — the largest on the street.</p>
+      <span class="eyebrow" style="display:block;margin-top:14px">When the block was built</span>
+      <div class="cols" style="height:64px;margin-top:6px">
+        <div class="col"><span class="col__cap">46%</span><span class="col__slot"><span class="col__bar" style="height:100%"></span></span><span class="col__label">&lt;1920</span></div>
+        <div class="col"><span class="col__cap">31%</span><span class="col__slot"><span class="col__bar" style="height:67%"></span></span><span class="col__label">20–45</span></div>
+        <div class="col"><span class="col__cap">14%</span><span class="col__slot"><span class="col__bar" style="height:30%"></span></span><span class="col__label">46–70</span></div>
+        <div class="col"><span class="col__cap">6%</span><span class="col__slot"><span class="col__bar" style="height:13%"></span></span><span class="col__label">71–00</span></div>
+        <div class="col"><span class="col__cap">3%</span><span class="col__slot"><span class="col__bar" style="height:7%"></span></span><span class="col__label">2000+</span></div>
+      </div>
+      <p class="note">Three quarters of the block predates 1945 — which is why lead pipes, wiring and foundations dominate the questions later in this report.</p>
+    </div>
+  </div>
+
+  <!-- ============ FLAGS ============ -->
+  <div class="break"></div>
+  <div class="runhead"><span>02 · Anything flagged here?</span><span>418 Chalmers Avenue</span></div>
+  <div class="section-head"><span class="section-head__dot section-head__dot--warn"></span>02 · Anything flagged here?</div>
+  <div class="grid">
+
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">Building permits</span>
+        <span class="card__status card__status--warn"><span class="card__status-dot"></span>Thin record</span></div>
+      <div class="card__title">2 permits since 2010</div>
+      <div class="card__subtitle">Both closed — but the record is thin for a house this age</div>
+      <div style="margin-top:12px">
+        <div class="kv"><span class="kv__key">2016 · Rear deck</span><span class="kv__val">$3,100 · closed</span></div>
+        <div class="kv"><span class="kv__key">2011 · Furnace replacement</span><span class="kv__val">$4,200 · closed</span></div>
+      </div>
+      <svg viewBox="0 0 320 58" style="width:100%;margin-top:12px" role="img" aria-label="Permit timeline 2010–2026">
+        <line x1="10" y1="38" x2="310" y2="38" stroke="#D8D0BD" stroke-width="2"/>
+        <text x="10" y="52" font-size="9" fill="#6E727C">2010</text>
+        <text x="310" y="52" font-size="9" fill="#6E727C" text-anchor="end">2026</text>
+        <circle cx="29" cy="38" r="5" fill="#6B8166"/>
+        <text x="29" y="52" font-size="9" fill="#6E727C" text-anchor="middle">2011</text>
+        <text x="29" y="24" font-size="9" fill="#2A2E37" text-anchor="middle">Furnace</text>
+        <circle cx="122" cy="38" r="5" fill="#6B8166"/>
+        <text x="122" y="52" font-size="9" fill="#6E727C" text-anchor="middle">2016</text>
+        <text x="122" y="24" font-size="9" fill="#2A2E37" text-anchor="middle">Deck</text>
+      </svg>
+      <p class="note">No electrical or plumbing permits on record. If the kitchen or bathroom look renovated, the work may have been done without permits — worth asking for paperwork.</p>
+    </div>
+
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">Orders &amp; investigations</span>
+        <span class="card__status card__status--bad"><span class="card__status-dot"></span>3 within 500 m</span></div>
+      <div class="card__title">Nothing on this parcel — three nearby</div>
+      <div class="card__subtitle">Vacant-building, derelict and bylaw registries</div>
+      <div style="margin-top:12px">
+        <div class="kv"><span class="kv__key">391 Chalmers · 140 m</span><span class="kv__val">Vacant-building order · since 2023</span></div>
+        <div class="kv"><span class="kv__key">27 Union · 330 m</span><span class="kv__val">Vacant-building order · boarded 2024</span></div>
+        <div class="kv"><span class="kv__key">This block</span><span class="kv__val">1 bylaw investigation — derelict vehicle, open</span></div>
+        <div class="kv"><span class="kv__key">This parcel</span><span class="kv__val">Clear — no orders on record</span></div>
+      </div>
+      <p class="note">The 391 Chalmers order is four doors down and had a fire call in 2024 — see the safety section. Vacant houses are the strongest single predictor of block-level fire risk.</p>
+    </div>
+
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">Rooming houses</span>
+        <span class="card__status card__status--warn"><span class="card__status-dot"></span>4 licensed nearby</span></div>
+      <div class="card__title">4 licensed within 500 m</div>
+      <div class="card__subtitle">Pre-war blocks convert easily — enforcement is active here</div>
+      <span class="eyebrow" style="display:block;margin-top:12px">Rooming-house enforcement · Elmwood · 2025</span>
+      <div class="hbars" style="margin-top:8px">
+        <div class="hbar"><span class="hbar__label">Complaint-driven</span>
+          <span class="hbar__track"><span class="hbar__fill" style="width:100%"></span></span><span class="hbar__value">9</span></div>
+        <div class="hbar"><span class="hbar__label">Proactive</span>
+          <span class="hbar__track"><span class="hbar__fill" style="width:44%"></span></span><span class="hbar__value">4</span></div>
+        <div class="hbar"><span class="hbar__label">In progress</span>
+          <span class="hbar__track"><span class="hbar__fill" style="width:56%"></span></span><span class="hbar__value">5</span></div>
+        <div class="hbar"><span class="hbar__label">Completed</span>
+          <span class="hbar__track"><span class="hbar__fill" style="width:89%"></span></span><span class="hbar__value">8</span></div>
+      </div>
+      <p class="note">A licensed rooming house next door is not itself a problem — unlicensed conversions are what drive complaints. None of the four is on this block face.</p>
+    </div>
+
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">Short-term rentals</span>
+        <span class="card__status card__status--warn"><span class="card__status-dot"></span>1 complaint</span></div>
+      <div class="card__title">2 licensed within 250 m</div>
+      <div class="card__subtitle">One drew a noise complaint in 2025</div>
+      <div style="margin-top:12px">
+        <div class="kv"><span class="kv__key">Licensed STRs, 250 m</span><span class="kv__val">2</span></div>
+        <div class="kv"><span class="kv__key">Complaints, 12 mo</span><span class="kv__val">1 — noise, resolved</span></div>
+        <div class="kv"><span class="kv__key">On this block face</span><span class="kv__val">None</span></div>
+      </div>
+    </div>
+
+    <div class="card card--wide">
+      <div class="card__eyebrow"><span class="eyebrow">Development nearby</span>
+        <span class="card__status card__status--good"><span class="card__status-dot"></span>Investment signal</span></div>
+      <div class="card__title">11 permits within 500 m in 24 months</div>
+      <div class="card__subtitle">Renovation and infill activity is the counterweight to the vacant orders</div>
+      <div class="split" style="margin-top:10px">
+        <div>
+          <div class="kv"><span class="kv__key">Residential renovations</span><span class="kv__val">7 permits · $412k combined</span></div>
+          <div class="kv"><span class="kv__key">Infill (new builds)</span><span class="kv__val">2 — both duplexes</span></div>
+          <div class="kv"><span class="kv__key">Commercial (Henderson)</span><span class="kv__val">2</span></div>
+        </div>
+        <div>
+          <div class="kv"><span class="kv__key">DAV-2025-207 · 2 blocks</span><span class="kv__val">4-unit conversion — approved</span></div>
+          <div class="kv"><span class="kv__key">Planning notices, 500 m</span><span class="kv__val">1 active</span></div>
+          <div class="kv"><span class="kv__key">Zoning here</span><span class="kv__val">R2 — duplex conversion possible</span></div>
+        </div>
+      </div>
+      <p class="note">Money is moving into the block: renovation permits doubled vs the prior two years. R2 zoning means your neighbour — or you — can add a second unit.</p>
+    </div>
+  </div>
+
+  <!-- ============ SAFETY (own spread) ============ -->
+  <div class="break"></div>
+  <div class="runhead"><span>03 · Is it safe here?</span><span>418 Chalmers Avenue</span></div>
+  <div class="safety-head">
+    <span class="eyebrow">Section 03 of 06 · Safety</span>
+    <h2 class="safety-title">Is it safe here?</h2>
+    <p class="safety-lede">Everything the city and the province record about risk on this block — fire and medical
+      calls, police-reported crime, break-ins, overdose response and enforcement. Compared to the neighbourhood
+      the address sits in, and to the city-wide average per neighbourhood.</p>
+  </div>
+
+  <div class="stat-row">
+    <div class="stat">
+      <div class="stat__label">Emergency calls</div>
+      <div class="stat__value">31</div>
+      <div class="stat__sub">500 m, 12 mo · <span class="delta delta--bad">+63%</span> vs median</div>
+    </div>
+    <div class="stat">
+      <div class="stat__label">Structure fires</div>
+      <div class="stat__value">4</div>
+      <div class="stat__sub">500 m, 3 yr · one in a vacant house</div>
+    </div>
+    <div class="stat">
+      <div class="stat__label">Break-ins</div>
+      <div class="stat__value">14.8</div>
+      <div class="stat__sub">per 1,000 homes · city 9.4</div>
+    </div>
+    <div class="stat">
+      <div class="stat__label">Overdose calls</div>
+      <div class="stat__value">41</div>
+      <div class="stat__sub">2025, neighbourhood · city avg 27</div>
+    </div>
+  </div>
+
+  <div class="card card--wide" style="margin-top:12px">
+    <div class="verdict verdict--bad">
+      <div class="verdict__headline">Runs above the city on property crime and fire calls — typical of a pre-war, part-rental block. Violent crime is closer to average, and the trend is improving.</div>
+      <div class="verdict__clauses">
+        <span class="verdict__clause verdict__clause--bad">Break-ins 57% above the city rate — garages off the back lane</span>
+        <span class="verdict__clause verdict__clause--bad">Overdose responses crossed the city average in 2024</span>
+        <span class="verdict__clause verdict__clause--good">Total reported crime has fallen four years in a row</span>
+        <span class="verdict__clause">Nearest ER is 9 min away; a fire hall is 1.1 km</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- fire & emergency -->
+  <div class="section-head"><span class="section-head__dot section-head__dot--bad"></span>Fire &amp; emergency response</div>
+  <div class="grid">
+
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">WFPS · Emergency calls</span>
+        <span class="card__status card__status--bad"><span class="card__status-dot"></span>Above median</span></div>
+      <div class="card__title">31 calls in 12 months</div>
+      <div class="card__subtitle">Within 500 m · city block median 19</div>
+      <span class="eyebrow" style="display:block;margin-top:12px">Calls by year</span>
+      <div class="cols" style="height:76px">
+        <div class="col"><span class="col__cap">26</span><span class="col__slot"><span class="col__bar" style="height:76%"></span><span class="col__tick" style="bottom:56%"></span></span><span class="col__label">2022</span></div>
+        <div class="col"><span class="col__cap">29</span><span class="col__slot"><span class="col__bar" style="height:85%"></span><span class="col__tick" style="bottom:56%"></span></span><span class="col__label">2023</span></div>
+        <div class="col"><span class="col__cap">33</span><span class="col__slot"><span class="col__bar" style="height:97%"></span><span class="col__tick" style="bottom:56%"></span></span><span class="col__label">2024</span></div>
+        <div class="col"><span class="col__cap">34</span><span class="col__slot"><span class="col__bar" style="height:100%"></span><span class="col__tick" style="bottom:56%"></span></span><span class="col__label">2025</span></div>
+        <div class="col"><span class="col__cap">31</span><span class="col__slot"><span class="col__bar" style="height:91%"></span><span class="col__tick" style="bottom:56%"></span></span><span class="col__label">2026</span></div>
+      </div>
+      <div class="legend"><span><span class="sw"></span>This block</span><span><span class="sw sw--tick"></span>City-wide block median (19)</span></div>
+      <span class="eyebrow" style="display:block;margin-top:14px">Top call types · 12 mo</span>
+      <div class="hbars">
+        <div class="hbar"><span class="hbar__label">Medical</span>
+          <span class="hbar__track"><span class="hbar__fill" style="width:100%"></span></span><span class="hbar__value">19</span></div>
+        <div class="hbar"><span class="hbar__label">Alarm / check</span>
+          <span class="hbar__track"><span class="hbar__fill" style="width:32%"></span></span><span class="hbar__value">6</span></div>
+        <div class="hbar"><span class="hbar__label">Fire</span>
+          <span class="hbar__track"><span class="hbar__fill" style="width:21%"></span></span><span class="hbar__value">4</span></div>
+        <div class="hbar"><span class="hbar__label">Other</span>
+          <span class="hbar__track"><span class="hbar__fill" style="width:11%"></span></span><span class="hbar__value">2</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">WFPS · Fires</span>
+        <span class="card__status card__status--warn"><span class="card__status-dot"></span>One vacant-house fire</span></div>
+      <div class="card__title">4 structure fires in 3 years</div>
+      <div class="card__subtitle">Within 500 m · one in the vacant house at 391 Chalmers (2024)</div>
+      <div style="margin-top:12px">
+        <div class="kv"><span class="kv__key">Structure fires, 500 m, 3 yr</span><span class="kv__val">4</span></div>
+        <div class="kv"><span class="kv__key">— of which vacant properties</span><span class="kv__val">1 · 140 m away</span></div>
+        <div class="kv"><span class="kv__key">Vehicle / outdoor fires, 3 yr</span><span class="kv__val">7</span></div>
+        <div class="kv"><span class="kv__key">Nearest fire hall</span><span class="kv__val">Station 24 · 1.1 km</span></div>
+        <div class="kv"><span class="kv__key">Median response time in this zone</span><span class="kv__val">4 min 40 s</span></div>
+        <div class="kv"><span class="kv__key">Nearest hydrant</span><span class="kv__val">Two doors east · 55 m</span></div>
+      </div>
+      <span class="eyebrow" style="display:block;margin-top:14px">Vacant-property fires · citywide trend</span>
+      <div class="cols" style="height:64px">
+        <div class="col"><span class="col__cap">118</span><span class="col__slot"><span class="col__bar" style="height:82%"></span></span><span class="col__label">2022</span></div>
+        <div class="col"><span class="col__cap">143</span><span class="col__slot"><span class="col__bar" style="height:100%"></span></span><span class="col__label">2023</span></div>
+        <div class="col"><span class="col__cap">126</span><span class="col__slot"><span class="col__bar" style="height:88%"></span></span><span class="col__label">2024</span></div>
+        <div class="col"><span class="col__cap">97</span><span class="col__slot"><span class="col__bar" style="height:68%"></span></span><span class="col__label">2025</span></div>
+      </div>
+      <p class="note">One of the 2024 citywide fires was the boarded house four doors down. Its order is still open — a resolved order (demolition or renovation) would remove this block's main fire risk.</p>
+    </div>
+  </div>
+
+  <!-- crime -->
+  <div class="section-head"><span class="section-head__dot section-head__dot--bad"></span>Police-reported crime</div>
+  <div class="grid">
+
+    <div class="card card--wide">
+      <div class="card__eyebrow"><span class="eyebrow">WPS · Reported crime</span>
+        <span class="card__status card__status--warn"><span class="card__status-dot"></span>Above average, falling</span></div>
+      <div class="card__title">187 incidents in 2025</div>
+      <div class="card__subtitle">Glenelm neighbourhood · city-wide average is 138 per neighbourhood · down four years straight</div>
+      <div class="cols" style="height:86px">
+        <div class="col"><span class="col__cap">214</span><span class="col__slot"><span class="col__bar" style="height:93%"></span><span class="col__tick" style="bottom:60%"></span></span><span class="col__label">2021</span></div>
+        <div class="col"><span class="col__cap">231</span><span class="col__slot"><span class="col__bar" style="height:100%"></span><span class="col__tick" style="bottom:60%"></span></span><span class="col__label">2022</span></div>
+        <div class="col"><span class="col__cap">205</span><span class="col__slot"><span class="col__bar" style="height:89%"></span><span class="col__tick" style="bottom:60%"></span></span><span class="col__label">2023</span></div>
+        <div class="col"><span class="col__cap">196</span><span class="col__slot"><span class="col__bar" style="height:85%"></span><span class="col__tick" style="bottom:60%"></span></span><span class="col__label">2024</span></div>
+        <div class="col"><span class="col__cap">187</span><span class="col__slot"><span class="col__bar" style="height:81%"></span><span class="col__tick" style="bottom:60%"></span></span><span class="col__label">2025</span></div>
+      </div>
+      <div class="legend"><span><span class="sw"></span>Glenelm</span><span><span class="sw sw--tick"></span>City-wide neighbourhood average (138)</span></div>
+
+      <div class="split" style="margin-top:16px">
+        <div>
+          <span class="eyebrow">Top crime types · 2021–2025 total</span>
+          <div class="hbars" style="margin-top:8px">
+            <div class="hbar"><span class="hbar__label">Property</span>
+              <span class="hbar__track"><span class="hbar__fill" style="width:100%"></span></span><span class="hbar__value">811</span></div>
+            <div class="hbar"><span class="hbar__label">Other criminal code</span>
+              <span class="hbar__track"><span class="hbar__fill" style="width:26%"></span></span><span class="hbar__value">214</span></div>
+            <div class="hbar"><span class="hbar__label">Violent</span>
+              <span class="hbar__track"><span class="hbar__fill" style="width:21%"></span></span><span class="hbar__value">168</span></div>
+            <div class="hbar"><span class="hbar__label">Traffic</span>
+              <span class="hbar__track"><span class="hbar__fill" style="width:5%"></span></span><span class="hbar__value">41</span></div>
+            <div class="hbar"><span class="hbar__label">Drug</span>
+              <span class="hbar__track"><span class="hbar__fill" style="width:3%"></span></span><span class="hbar__value">22</span></div>
+          </div>
+        </div>
+        <div>
+          <span class="eyebrow">Top offences · 2021–2025 total</span>
+          <div class="hbars" style="margin-top:8px">
+            <div class="hbar"><span class="hbar__label">Theft from vehicle</span>
+              <span class="hbar__track"><span class="hbar__fill" style="width:100%"></span></span><span class="hbar__value">231</span></div>
+            <div class="hbar"><span class="hbar__label">Break &amp; enter</span>
+              <span class="hbar__track"><span class="hbar__fill" style="width:81%"></span></span><span class="hbar__value">187</span></div>
+            <div class="hbar"><span class="hbar__label">Mischief / damage</span>
+              <span class="hbar__track"><span class="hbar__fill" style="width:75%"></span></span><span class="hbar__value">173</span></div>
+            <div class="hbar"><span class="hbar__label">Theft of vehicle</span>
+              <span class="hbar__track"><span class="hbar__fill" style="width:36%"></span></span><span class="hbar__value">84</span></div>
+            <div class="hbar"><span class="hbar__label">Assault</span>
+              <span class="hbar__track"><span class="hbar__fill" style="width:31%"></span></span><span class="hbar__value">71</span></div>
+            <div class="hbar"><span class="hbar__label">Robbery</span>
+              <span class="hbar__track"><span class="hbar__fill" style="width:12%"></span></span><span class="hbar__value">28</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">Break &amp; enter</span>
+        <span class="card__status card__status--bad"><span class="card__status-dot"></span>57% above city</span></div>
+      <div class="card__title">14.8 per 1,000 homes</div>
+      <div class="card__subtitle">Residential break-ins, 2025 · city rate 9.4</div>
+      <div class="hbars" style="margin-top:12px">
+        <div class="hbar"><span class="hbar__label">Glenelm</span>
+          <span class="hbar__track"><span class="hbar__fill" style="width:100%"></span></span><span class="hbar__value">14.8</span></div>
+        <div class="hbar"><span class="hbar__label">Elmwood</span>
+          <span class="hbar__track"><span class="hbar__fill hbar__fill--muted" style="width:89%"></span></span><span class="hbar__value">13.2</span></div>
+        <div class="hbar"><span class="hbar__label">East district</span>
+          <span class="hbar__track"><span class="hbar__fill hbar__fill--muted" style="width:74%"></span></span><span class="hbar__value">11.0</span></div>
+        <div class="hbar"><span class="hbar__label">Winnipeg</span>
+          <span class="hbar__track"><span class="hbar__fill hbar__fill--muted" style="width:64%"></span></span><span class="hbar__value">9.4</span></div>
+      </div>
+      <div style="margin-top:12px">
+        <div class="kv"><span class="kv__key">Residential B&amp;E, 500 m, 12 mo</span><span class="kv__val">9</span></div>
+        <div class="kv"><span class="kv__key">Garage / shed entries</span><span class="kv__val">5 of the 9</span></div>
+        <div class="kv"><span class="kv__key">Most common entry point</span><span class="kv__val">Back lane · garage</span></div>
+        <div class="kv"><span class="kv__key">Peak months</span><span class="kv__val">Dec–Feb</span></div>
+      </div>
+      <p class="note">The pattern is back-lane garages, not house entries. A garage-door sensor and lane lighting address the specific local risk.</p>
+    </div>
+
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">Vehicle crime</span>
+        <span class="card__status card__status--warn"><span class="card__status-dot"></span>Winter peak</span></div>
+      <div class="card__title">21 thefts from vehicles in 12 months</div>
+      <div class="card__subtitle">Monthly reports within 500 m</div>
+      <div class="cols" style="height:64px;margin-top:8px">
+        <div class="col"><span class="col__slot"><span class="col__bar" style="height:30%"></span></span><span class="col__label">S</span></div>
+        <div class="col"><span class="col__slot"><span class="col__bar" style="height:60%"></span></span><span class="col__label">O</span></div>
+        <div class="col"><span class="col__slot"><span class="col__bar" style="height:85%"></span></span><span class="col__label">N</span></div>
+        <div class="col"><span class="col__slot"><span class="col__bar" style="height:100%"></span></span><span class="col__label">D</span></div>
+        <div class="col"><span class="col__slot"><span class="col__bar" style="height:80%"></span></span><span class="col__label">J</span></div>
+        <div class="col"><span class="col__slot"><span class="col__bar" style="height:55%"></span></span><span class="col__label">F</span></div>
+        <div class="col"><span class="col__slot"><span class="col__bar" style="height:35%"></span></span><span class="col__label">M</span></div>
+        <div class="col"><span class="col__slot"><span class="col__bar" style="height:20%"></span></span><span class="col__label">A</span></div>
+        <div class="col"><span class="col__slot"><span class="col__bar" style="height:25%"></span></span><span class="col__label">M</span></div>
+        <div class="col"><span class="col__slot"><span class="col__bar" style="height:30%"></span></span><span class="col__label">J</span></div>
+        <div class="col"><span class="col__slot"><span class="col__bar" style="height:25%"></span></span><span class="col__label">J</span></div>
+        <div class="col"><span class="col__slot"><span class="col__bar" style="height:15%"></span></span><span class="col__label">A</span></div>
+      </div>
+      <div style="margin-top:10px">
+        <div class="kv"><span class="kv__key">Theft from vehicle, 500 m, 12 mo</span><span class="kv__val">21</span></div>
+        <div class="kv"><span class="kv__key">Theft of vehicle, 500 m, 12 mo</span><span class="kv__val">4 — 2 recovered</span></div>
+        <div class="kv"><span class="kv__key">Forced entry involved</span><span class="kv__val">8 of 21 reports</span></div>
+      </div>
+      <p class="note">Unlike the suburbs, a third of reports here involve forced entry — street parking overnight is the exposure. The garage matters more on this block than most.</p>
+    </div>
+  </div>
+
+  <!-- substances & health response -->
+  <div class="section-head"><span class="section-head__dot section-head__dot--bad"></span>Substances &amp; health response</div>
+  <div class="grid">
+
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">Overdose response</span>
+        <span class="card__status card__status--bad"><span class="card__status-dot"></span>Above average since 2024</span></div>
+      <div class="card__title">41 naloxone responses in 2025</div>
+      <div class="card__subtitle">Glenelm · city-wide average 27 per neighbourhood</div>
+      <div class="cols" style="height:70px;margin-top:8px">
+        <div class="col"><span class="col__cap">18</span><span class="col__slot"><span class="col__bar" style="height:44%"></span><span class="col__tick" style="bottom:66%"></span></span><span class="col__label">2021</span></div>
+        <div class="col"><span class="col__cap">24</span><span class="col__slot"><span class="col__bar" style="height:59%"></span><span class="col__tick" style="bottom:66%"></span></span><span class="col__label">2022</span></div>
+        <div class="col"><span class="col__cap">29</span><span class="col__slot"><span class="col__bar" style="height:71%"></span><span class="col__tick" style="bottom:66%"></span></span><span class="col__label">2023</span></div>
+        <div class="col"><span class="col__cap">37</span><span class="col__slot"><span class="col__bar" style="height:90%"></span><span class="col__tick" style="bottom:66%"></span></span><span class="col__label">2024</span></div>
+        <div class="col"><span class="col__cap">41</span><span class="col__slot"><span class="col__bar" style="height:100%"></span><span class="col__tick" style="bottom:66%"></span></span><span class="col__label">2025</span></div>
+      </div>
+      <div class="legend"><span><span class="sw"></span>Glenelm</span><span><span class="sw sw--tick"></span>City-wide neighbourhood average (27)</span></div>
+      <span class="eyebrow" style="display:block;margin-top:14px">Substances involved · 5 yr</span>
+      <div class="hbars">
+        <div class="hbar"><span class="hbar__label">Opioid (unspecified)</span>
+          <span class="hbar__track"><span class="hbar__fill" style="width:100%"></span><span class="hbar__tick" style="left:86%"></span></span><span class="hbar__value">44</span></div>
+        <div class="hbar"><span class="hbar__label">Fentanyl</span>
+          <span class="hbar__track"><span class="hbar__fill" style="width:86%"></span><span class="hbar__tick" style="left:75%"></span></span><span class="hbar__value">38</span></div>
+        <div class="hbar"><span class="hbar__label">Methamphetamine</span>
+          <span class="hbar__track"><span class="hbar__fill" style="width:70%"></span><span class="hbar__tick" style="left:66%"></span></span><span class="hbar__value">31</span></div>
+        <div class="hbar"><span class="hbar__label">Alcohol</span>
+          <span class="hbar__track"><span class="hbar__fill" style="width:20%"></span><span class="hbar__tick" style="left:27%"></span></span><span class="hbar__value">9</span></div>
+      </div>
+      <div class="legend"><span><span class="sw"></span>Here</span><span><span class="sw sw--tick"></span>City-wide neighbourhood average</span></div>
+      <p class="note">Most responses cluster along Henderson, not on residential streets. The trend crossed the city average in 2024 and is still rising — the honest read is: this is a real, worsening signal.</p>
+    </div>
+
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">Health access</span>
+        <span class="card__status card__status--good"><span class="card__status-dot"></span>Close by</span></div>
+      <div class="card__title">Emergency care 9 min away</div>
+      <div class="card__subtitle">Nearest ER, walk-in clinic and public AED</div>
+      <div style="margin-top:12px">
+        <div class="kv"><span class="kv__key">Nearest ER</span><span class="kv__val">Concordia Hospital · 9 min drive</span></div>
+        <div class="kv"><span class="kv__key">Current ER wait</span><span class="kv__val">1 h 50</span></div>
+        <div class="kv"><span class="kv__key">Average ER wait, last quarter</span><span class="kv__val">2 h 20</span></div>
+        <div class="kv"><span class="kv__key">Patients waiting now</span><span class="kv__val">14</span></div>
+        <div class="kv"><span class="kv__key">Nearest walk-in clinic</span><span class="kv__val">Henderson clinic · 4 min drive</span></div>
+        <div class="kv"><span class="kv__key">Nearest public AED</span><span class="kv__val">Community centre · 400 m</span></div>
+        <div class="kv"><span class="kv__key">AEDs within 500 m</span><span class="kv__val">2</span></div>
+      </div>
+      <p class="note">Wait times are a live feed in a real report — the figures here are a snapshot for illustration.</p>
+    </div>
+  </div>
+
+  <!-- enforcement / risk -->
+  <div class="section-head"><span class="section-head__dot section-head__dot--warn"></span>Enforcement &amp; neighbourhood risk</div>
+  <div class="grid">
+
+    <div class="card card--wide">
+      <div class="card__eyebrow"><span class="eyebrow">Neighbourhood risk</span>
+        <span class="card__status card__status--warn"><span class="card__status-dot"></span>Several signals</span></div>
+      <div class="card__title">Elevated signals within 500 m</div>
+      <div class="card__subtitle">Enforcement, vacant property, towing and parking pressure</div>
+      <div class="split" style="margin-top:10px">
+        <div>
+          <div class="kv"><span class="kv__key">Vacant-building orders, 500 m</span><span class="kv__val">2 — one had a fire in 2024</span></div>
+          <div class="kv"><span class="kv__key">Rooming-house enforcement</span><span class="kv__val">Active — 13 cases in 2025</span></div>
+          <div class="kv"><span class="kv__key">Graffiti reports, 500 m, 12 mo</span><span class="kv__val">14 — mostly Henderson-facing</span></div>
+          <div class="kv"><span class="kv__key">Derelict-vehicle investigation</span><span class="kv__val">1 open, this block</span></div>
+        </div>
+        <div>
+          <div class="kv"><span class="kv__key">Rush-hour tow zone</span><span class="kv__val">Henderson · 300 m — not this street</span></div>
+          <div class="kv"><span class="kv__key">Paid parking nearby</span><span class="kv__val">None — free street parking</span></div>
+          <div class="kv"><span class="kv__key">311 safety-related requests, 12 mo</span><span class="kv__val">9 — lights 4 · needles 3 · dumping 2</span></div>
+          <div class="kv"><span class="kv__key">Photo enforcement</span><span class="kv__val">Mobile radar in school zone · camera 600 m</span></div>
+        </div>
+      </div>
+      <p class="note">Empty categories are shown, not hidden: a blank line here means the registry loaded and had nothing
+        for this address — not that the check was skipped.</p>
+    </div>
+  </div>
+
+  <!-- ============ DAILY LIFE ============ -->
+  <div class="break"></div>
+  <div class="runhead"><span>04 · What's daily life like?</span><span>418 Chalmers Avenue</span></div>
+  <div class="section-head"><span class="section-head__dot section-head__dot--warn"></span>04 · What's daily life like?</div>
+  <div class="grid">
+
+    <div class="card card--wide">
+      <div class="card__eyebrow"><span class="eyebrow">Pipes, water &amp; sewer</span>
+        <span class="card__status card__status--bad"><span class="card__status-dot"></span>Two flags</span></div>
+      <div class="card__title">Lead service likely · combined sewer</div>
+      <div class="card__subtitle">The two infrastructure questions that matter most on a 1916 block</div>
+      <div class="split" style="margin-top:10px">
+        <div>
+          <div class="kv"><span class="kv__key">Water service installed</span><span class="kv__val">1916 · this block is on the city lead registry</span></div>
+          <div class="kv"><span class="kv__key">Lead service line</span><span class="kv__val">Likely — confirm via city lookup</span></div>
+          <div class="kv"><span class="kv__key">City replacement program</span><span class="kv__val">Eligible · city side free, private side owner-paid</span></div>
+          <div class="kv"><span class="kv__key">Interim measure</span><span class="kv__val">Filter certified for lead (NSF-53)</span></div>
+        </div>
+        <div>
+          <div class="kv"><span class="kv__key">Sewer district</span><span class="kv__val">Combined — storm + sanitary share one pipe</span></div>
+          <div class="kv"><span class="kv__key">Basement backup risk</span><span class="kv__val">Elevated in heavy rain · check for backwater valve</span></div>
+          <div class="kv"><span class="kv__key">Sewer relief project</span><span class="kv__val">This basin · design 2027 · construction 2029</span></div>
+          <div class="kv"><span class="kv__key">Sump pump / pit</span><span class="kv__val">Not in municipal record — ask</span></div>
+        </div>
+      </div>
+      <p class="note">Neither flag is a dealbreaker — both are priced into the neighbourhood. But each is a $5–15k conversation to have before an offer, not after.</p>
+    </div>
+
+    <div class="vstack">
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">Waste &amp; winter</span></div>
+      <div class="card__title">Collection Wednesday</div>
+      <div class="card__subtitle">Garbage &amp; recycling weekly, yard waste seasonal</div>
+      <div style="margin-top:12px">
+        <div class="kv"><span class="kv__key">Garbage / recycling</span><span class="kv__val">Wednesday</span></div>
+        <div class="kv"><span class="kv__key">Yard waste</span><span class="kv__val">Wednesday, Apr–Nov</span></div>
+        <div class="kv"><span class="kv__key">Plow zone</span><span class="kv__val">Priority 2 · residential</span></div>
+        <div class="kv"><span class="kv__key">Snow-ban exposure</span><span class="kv__val">Henderson (P1) · 300 m — move the car</span></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">Local government</span></div>
+      <div class="card__title">Elmwood–East Kildonan ward</div>
+      <div class="card__subtitle">East Kildonan–Transcona community committee</div>
+      <div style="margin-top:12px">
+        <div class="kv"><span class="kv__key">Councillor</span><span class="kv__val">Ward office (sample)</span></div>
+        <div class="kv"><span class="kv__key">Community committee</span><span class="kv__val">EK–Transcona</span></div>
+        <div class="kv"><span class="kv__key">Higher-poverty area flag</span><span class="kv__val">Yes — this census tract is flagged</span></div>
+      </div>
+    </div>
+    </div>
+
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">Who lives here</span></div>
+      <div class="card__title">Younger, half renters, below-median income</div>
+      <div class="card__subtitle">Census profile · Glenelm vs Winnipeg</div>
+      <span class="eyebrow" style="display:block;margin-top:12px">Age structure</span>
+      <div class="hbars" style="margin-top:8px">
+        <div class="hbar"><span class="hbar__label">0–14</span><span class="hbar__track"><span class="hbar__fill" style="width:53%"></span><span class="hbar__tick" style="left:47%"></span></span><span class="hbar__value">19%</span></div>
+        <div class="hbar"><span class="hbar__label">15–39</span><span class="hbar__track"><span class="hbar__fill" style="width:100%"></span><span class="hbar__tick" style="left:92%"></span></span><span class="hbar__value">39%</span></div>
+        <div class="hbar"><span class="hbar__label">40–64</span><span class="hbar__track"><span class="hbar__fill" style="width:78%"></span><span class="hbar__tick" style="left:89%"></span></span><span class="hbar__value">28%</span></div>
+        <div class="hbar"><span class="hbar__label">65+</span><span class="hbar__track"><span class="hbar__fill" style="width:39%"></span><span class="hbar__tick" style="left:50%"></span></span><span class="hbar__value">14%</span></div>
+      </div>
+      <div class="legend"><span><span class="sw"></span>Glenelm</span><span><span class="sw sw--tick"></span>Winnipeg</span></div>
+      <span class="eyebrow" style="display:block;margin-top:12px">How people get to work</span>
+      <div class="stack">
+        <span style="width:61%;background:#937539"></span>
+        <span style="width:18%;background:#4E5874"></span>
+        <span style="width:13%;background:#6B8166"></span>
+        <span style="width:8%;background:#A9A08A"></span>
+      </div>
+      <div class="legend"><span><span class="sw" style="background:#937539"></span>Drive 61%</span><span><span class="sw" style="background:#4E5874"></span>Transit 18%</span><span><span class="sw" style="background:#6B8166"></span>Walk/bike 13%</span><span><span class="sw" style="background:#A9A08A"></span>Home 8%</span></div>
+      <div style="margin-top:10px">
+        <div class="kv"><span class="kv__key">Median household income</span><span class="kv__val">$61,800 · −12% vs city</span></div>
+        <div class="kv"><span class="kv__key">Owner-occupied</span><span class="kv__val">46% — half the block rents</span></div>
+        <div class="kv"><span class="kv__key">Households with children</span><span class="kv__val">31%</span></div>
+        <div class="kv"><span class="kv__key">Top language after English</span><span class="kv__val">Tagalog · 9%</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">311 service requests</span>
+        <span class="card__status card__status--warn"><span class="card__status-dot"></span>Busy block</span></div>
+      <div class="card__title">68 requests within 500 m</div>
+      <div class="card__subtitle">Last 12 months, by category</div>
+      <div class="hbars" style="margin-top:12px">
+        <div class="hbar"><span class="hbar__label">Garbage / missed pickup</span>
+          <span class="hbar__track"><span class="hbar__fill" style="width:100%"></span></span><span class="hbar__value">19</span></div>
+        <div class="hbar"><span class="hbar__label">Rodents</span>
+          <span class="hbar__track"><span class="hbar__fill" style="width:63%"></span></span><span class="hbar__value">12</span></div>
+        <div class="hbar"><span class="hbar__label">Boulevard trees</span>
+          <span class="hbar__track"><span class="hbar__fill" style="width:58%"></span></span><span class="hbar__value">11</span></div>
+        <div class="hbar"><span class="hbar__label">Snow &amp; ice</span>
+          <span class="hbar__track"><span class="hbar__fill" style="width:47%"></span></span><span class="hbar__value">9</span></div>
+        <div class="hbar"><span class="hbar__label">Streetlights</span>
+          <span class="hbar__track"><span class="hbar__fill" style="width:42%"></span></span><span class="hbar__value">8</span></div>
+        <div class="hbar"><span class="hbar__label">Other</span>
+          <span class="hbar__track"><span class="hbar__fill" style="width:47%"></span></span><span class="hbar__value">9</span></div>
+      </div>
+      <p class="note">Rodent calls track the vacant houses and back-lane bins — they cluster on the 300-block, not here. Tree calls are elms (see parks card).</p>
+    </div>
+
+    <div class="card card--wide">
+      <div class="card__eyebrow"><span class="eyebrow">Local businesses</span>
+        <span class="card__status card__status--good"><span class="card__status-dot"></span>Walkable</span></div>
+      <div class="card__title">26 licensed within 500 m</div>
+      <div class="card__subtitle">Henderson is a real main street — errands on foot</div>
+      <div class="split" style="margin-top:10px">
+        <div>
+          <div class="kv"><span class="kv__key">Grocery</span><span class="kv__val">2 · nearest 200 m</span></div>
+          <div class="kv"><span class="kv__key">Food service</span><span class="kv__val">9 · 2 with patios</span></div>
+        </div>
+        <div>
+          <div class="kv"><span class="kv__key">Personal services</span><span class="kv__val">8</span></div>
+          <div class="kv"><span class="kv__key">Health inspection closures, 2 yr</span><span class="kv__val">1 — reopened after re-inspection</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ SCHOOLS & TRAVEL ============ -->
+  <div class="break"></div>
+  <div class="runhead"><span>05 · Schools &amp; getting around</span><span>418 Chalmers Avenue</span></div>
+  <div class="section-head"><span class="section-head__dot section-head__dot--good"></span>05 · Schools &amp; getting around</div>
+  <div class="grid">
+
+    <div class="card card--wide">
+      <div class="card__eyebrow"><span class="eyebrow">Everything within reach</span></div>
+      <div class="card__title">What's how far</div>
+      <div class="card__subtitle">Straight-line distance from the front door</div>
+      <svg viewBox="0 0 680 108" style="width:100%;margin-top:8px" role="img" aria-label="Distances to amenities">
+        <line x1="40" y1="60" x2="650" y2="60" stroke="#D8D0BD" stroke-width="2"/>
+        <line x1="40" y1="55" x2="40" y2="65" stroke="#D8D0BD" stroke-width="1.5"/>
+        <line x1="345" y1="56" x2="345" y2="64" stroke="#D8D0BD" stroke-width="1.5"/>
+        <line x1="650" y1="55" x2="650" y2="65" stroke="#D8D0BD" stroke-width="1.5"/>
+        <text x="40" y="78" font-size="9" fill="#6E727C" text-anchor="middle">home</text>
+        <text x="345" y="78" font-size="9" fill="#6E727C" text-anchor="middle">1 km</text>
+        <text x="650" y="78" font-size="9" fill="#6E727C" text-anchor="middle">2 km</text>
+        <!-- above axis: x = 40 + km*305 -->
+        <line x1="95" y1="18" x2="95" y2="56" stroke="#D8D0BD" stroke-width="1"/>
+        <circle cx="95" cy="60" r="4.5" fill="#4E5874"/>
+        <text x="95" y="12" font-size="9" fill="#2A2E37" text-anchor="middle">School K–6</text>
+        <line x1="162" y1="34" x2="162" y2="56" stroke="#D8D0BD" stroke-width="1"/>
+        <circle cx="162" cy="60" r="4.5" fill="#937539"/>
+        <text x="162" y="28" font-size="9" fill="#2A2E37" text-anchor="middle">Comm. centre</text>
+        <line x1="192" y1="18" x2="192" y2="56" stroke="#D8D0BD" stroke-width="1"/>
+        <circle cx="192" cy="60" r="4.5" fill="#6B8166"/>
+        <text x="200" y="12" font-size="9" fill="#2A2E37" text-anchor="middle">River trail</text>
+        <line x1="315" y1="34" x2="315" y2="56" stroke="#D8D0BD" stroke-width="1"/>
+        <circle cx="315" cy="60" r="4.5" fill="#4E5874"/>
+        <text x="315" y="28" font-size="9" fill="#2A2E37" text-anchor="middle">Gr 7–9 · 900 m</text>
+        <line x1="406" y1="18" x2="406" y2="56" stroke="#D8D0BD" stroke-width="1"/>
+        <circle cx="406" cy="60" r="4.5" fill="#937539"/>
+        <text x="406" y="12" font-size="9" fill="#2A2E37" text-anchor="middle">Library · 1.2 km</text>
+        <line x1="589" y1="34" x2="589" y2="56" stroke="#D8D0BD" stroke-width="1"/>
+        <circle cx="589" cy="60" r="4.5" fill="#937539"/>
+        <text x="589" y="28" font-size="9" fill="#2A2E37" text-anchor="middle">Indoor pool · 1.8 km</text>
+        <!-- below axis -->
+        <line x1="101" y1="64" x2="101" y2="88" stroke="#D8D0BD" stroke-width="1"/>
+        <circle cx="101" cy="60" r="4.5" fill="#937539"/>
+        <text x="105" y="99" font-size="9" fill="#2A2E37" text-anchor="middle">Grocery</text>
+        <line x1="132" y1="64" x2="132" y2="88" stroke="#D8D0BD" stroke-width="1"/>
+        <circle cx="132" cy="60" r="4.5" fill="#937539"/>
+        <text x="150" y="99" font-size="9" fill="#2A2E37" text-anchor="middle">Bus · park</text>
+        <line x1="375" y1="64" x2="375" y2="88" stroke="#D8D0BD" stroke-width="1"/>
+        <circle cx="375" cy="60" r="4.5" fill="#4E5874"/>
+        <text x="375" y="99" font-size="9" fill="#2A2E37" text-anchor="middle">High school · 1.1 km</text>
+      </svg>
+      <div class="legend"><span><span class="sw" style="background:#4E5874"></span>Schools</span><span><span class="sw" style="background:#6B8166"></span>Green space</span><span><span class="sw" style="background:#937539"></span>Everything else</span></div>
+    </div>
+
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">Schools</span>
+        <span class="card__status card__status--good"><span class="card__status-dot"></span>K–6 across the street</span></div>
+      <div class="card__title">Everything walkable</div>
+      <div style="margin-top:10px">
+        <div class="kv"><span class="kv__key">Elementary (K–6)</span><span class="kv__val">180 m · across the street</span></div>
+        <div class="kv"><span class="kv__key">Middle years (7–9)</span><span class="kv__val">900 m</span></div>
+        <div class="kv"><span class="kv__key">High school (9–12)</span><span class="kv__val">1.1 km</span></div>
+        <div class="kv"><span class="kv__key">School zone on street</span><span class="kv__val">30 km/h · school hours</span></div>
+      </div>
+      <p class="note">A school across the street means drop-off traffic twice a day and no parking 8–9 am — the trade for the two-minute walk.</p>
+    </div>
+
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">Transit &amp; street</span>
+        <span class="card__status card__status--warn"><span class="card__status-dot"></span>Street due for renewal</span></div>
+      <div class="card__title">Frequent bus 300 m away</div>
+      <div class="card__subtitle">Henderson corridor · 18 min to downtown at peak</div>
+      <div style="margin-top:10px">
+        <div class="kv"><span class="kv__key">Nearest stop</span><span class="kv__val">90 m · local route</span></div>
+        <div class="kv"><span class="kv__key">Frequent corridor</span><span class="kv__val">Henderson · 300 m · every 10 min</span></div>
+        <div class="kv"><span class="kv__key">Pavement</span><span class="kv__val">Asphalt 1998 · rated poor</span></div>
+        <div class="kv"><span class="kv__key">Street renewal</span><span class="kv__val">Scheduled with sewer work · 2029</span></div>
+        <div class="kv"><span class="kv__key">Active disruptions</span><span class="kv__val">Watermain work on Union · this fall</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">Traffic &amp; noise</span>
+        <span class="card__status card__status--warn"><span class="card__status-dot"></span>Busier street + rail</span></div>
+      <div class="card__title">~2,900 vehicles / day</div>
+      <div class="card__subtitle">Chalmers carries through-traffic between Henderson and the yards</div>
+      <div class="cols" style="height:78px">
+        <div class="col"><span class="col__cap">1.1k</span><span class="col__slot"><span class="col__bar" style="height:6%"></span></span><span class="col__label">Union</span></div>
+        <div class="col"><span class="col__cap">2.9k</span><span class="col__slot"><span class="col__bar" style="height:14%"></span></span><span class="col__label">Chalmers</span></div>
+        <div class="col"><span class="col__cap">8k</span><span class="col__slot"><span class="col__bar" style="height:34%"></span></span><span class="col__label">Talbot</span></div>
+        <div class="col"><span class="col__cap">24k</span><span class="col__slot"><span class="col__bar" style="height:100%"></span></span><span class="col__label">Henderson</span></div>
+      </div>
+      <div style="margin-top:10px">
+        <div class="kv"><span class="kv__key">85th-percentile speed</span><span class="kv__val">51 km/h — above the 50 limit</span></div>
+        <div class="kv"><span class="kv__key">CN main line</span><span class="kv__val">400 m · ~14 trains/day, some at night</span></div>
+        <div class="kv"><span class="kv__key">Photo enforcement</span><span class="kv__val">Mobile radar in the school zone</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card__eyebrow"><span class="eyebrow">Parks, trees &amp; leisure</span></div>
+      <div class="card__title">River trail at the end of the street</div>
+      <div style="margin-top:10px">
+        <div class="kv"><span class="kv__key">Nearest park</span><span class="kv__val">Glenelm Park · 350 m · playground</span></div>
+        <div class="kv"><span class="kv__key">Red River trail access</span><span class="kv__val">500 m</span></div>
+        <div class="kv"><span class="kv__key">Community centre</span><span class="kv__val">400 m</span></div>
+        <div class="kv"><span class="kv__key">Indoor pool</span><span class="kv__val">1.8 km</span></div>
+        <div class="kv"><span class="kv__key">Library</span><span class="kv__val">1.2 km</span></div>
+        <div class="kv"><span class="kv__key">Boulevard elms on block</span><span class="kv__val">14 · 2 removed for Dutch elm, 2024–25</span></div>
+      </div>
+      <p class="note">The elm canopy is the block's best feature and its slowest-moving risk: replacements take 30 years to matter.</p>
+    </div>
+  </div>
+
+  <!-- ============ REFERENCE ============ -->
+  <div class="break"></div>
+  <div class="runhead"><span>06 · Good to know</span><span>418 Chalmers Avenue</span></div>
+  <div class="section-head"><span class="section-head__dot section-head__dot--good"></span>06 · Good to know</div>
+  <div class="grid">
+    <div class="card card--wide">
+      <div class="card__eyebrow"><span class="eyebrow">Reference</span></div>
+      <div class="card__title">Worth checking once, not weekly</div>
+      <div class="split" style="margin-top:10px">
+        <div>
+          <div class="kv"><span class="kv__key">Drinking water quality</span><span class="kv__val">Shoal Lake · all 2026 tests in guidelines</span></div>
+          <div class="kv"><span class="kv__key">Radon</span><span class="kv__val">High-radon region — test recommended</span></div>
+          <div class="kv"><span class="kv__key">River levels</span><span class="kv__val">James Ave gauge · normal range · not in flood zone</span></div>
+        </div>
+        <div>
+          <div class="kv"><span class="kv__key">Mosquito fogging zone</span><span class="kv__val">Zone 21 · fogged three times in 2025</span></div>
+          <div class="kv"><span class="kv__key">Heritage designation</span><span class="kv__val">None — Glenelm is not a designated district</span></div>
+          <div class="kv"><span class="kv__key">Rental market (area)</span><span class="kv__val">2-bed avg $1,240 · vacancy 3.4%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-head">Where this comes from</div>
+  <div class="card card--wide">
+    <div class="split">
+      <div>
+        <div class="kv"><span class="kv__key">Assessment, taxes &amp; sale history</span><span class="kv__val">City assessment roll · 2026</span></div>
+        <div class="kv"><span class="kv__key">Permits, orders &amp; planning</span><span class="kv__val">City open data · weekly</span></div>
+        <div class="kv"><span class="kv__key">Emergency &amp; fire calls</span><span class="kv__val">WFPS incidents · daily</span></div>
+        <div class="kv"><span class="kv__key">Crime</span><span class="kv__val">WPS neighbourhood stats · monthly</span></div>
+        <div class="kv"><span class="kv__key">Overdose response</span><span class="kv__val">WFPS naloxone data · quarterly</span></div>
+        <div class="kv"><span class="kv__key">Lead service lines</span><span class="kv__val">City lead registry · 2026</span></div>
+      </div>
+      <div>
+        <div class="kv"><span class="kv__key">Demographics</span><span class="kv__val">Statistics Canada census · 2021</span></div>
+        <div class="kv"><span class="kv__key">Transit</span><span class="kv__val">Winnipeg Transit · live</span></div>
+        <div class="kv"><span class="kv__key">ER wait times</span><span class="kv__val">Shared Health feed · live</span></div>
+        <div class="kv"><span class="kv__key">Rental market</span><span class="kv__val">CMHC survey · 2025</span></div>
+        <div class="kv"><span class="kv__key">Rooming houses &amp; STRs</span><span class="kv__val">City licensing · 2026</span></div>
+        <div class="kv"><span class="kv__key">Tree inventory</span><span class="kv__val">City forestry · 2026</span></div>
+      </div>
+    </div>
+    <p class="note">Every card in a real report carries its dataset and retrieval date. A module that fails to load says so on the page — it never silently disappears.</p>
+  </div>
+
+  <div class="foot">
+    <p><b>This is a sample.</b> 418 Chalmers Avenue is a fictional address and every figure on these pages is illustrative,
+    written to show the shape of a Krokva report on an older, mixed block. A real report is assembled from the City of
+    Winnipeg's open data, Statistics Canada census releases and provincial sources, and each card names its source and date.</p>
+    <p style="margin-top:8px">Krokva · krokva.com · hello@krokva.com</p>
+  </div>
+</div>
+</body>
+</html>
